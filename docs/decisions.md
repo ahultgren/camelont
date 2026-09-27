@@ -18,7 +18,7 @@ owner's existing Spotify developer app, add friends to its allowlist, and inject
 technical for friends).
 
 ### 3. GitHub Pages, public repo `ahultgren/camelont` (2026-09-27)
-History-mode routing with a `404.html` fallback, base path `/camelont/`. The Client ID
+Served at `https://andreashultgren.se/camelont/` (the owner's custom domain on their GitHub user site; HTTPS enforced). History-mode routing with a `404.html` fallback, base path `/camelont/`. The Client ID
 isn't secret under PKCE; it's stored as an Actions *variable*.
 
 ### 4. The user's directional chart is the only rule set, kept as data (2026-09-27)

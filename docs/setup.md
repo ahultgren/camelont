@@ -9,7 +9,7 @@ Credentials are handled by the owner, never by an agent.
 2. Add **both** redirect URIs exactly (no trailing slash):
    - `http://127.0.0.1:5173/camelont/callback` (local dev; Spotify requires the loopback
      IP for http, not `localhost`)
-   - `https://ahultgren.github.io/camelont/callback` (GitHub Pages)
+   - `https://andreashultgren.se/camelont/callback` (GitHub Pages)
 3. Make sure **Web API** is ticked.
 4. **User Management:** add each friend's name and Spotify email. Only allowlisted users
    can log in (development mode), and the app owner needs Premium.
@@ -42,7 +42,9 @@ matches. Common scripts (defined during scaffolding; keep this list in sync):
 ## GitHub
 
 - Repo: `ahultgren/camelont` (public).
-- **Pages:** Settings → Pages → Source = **GitHub Actions** (enabled at repo creation).
+- **Pages:** Source = **GitHub Actions** (enabled at repo creation). Served at
+  `https://andreashultgren.se/camelont/`, because the user site has a custom domain, and
+  `ahultgren.github.io/camelont/` redirects there.
 - **Actions variable** `VITE_SPOTIFY_CLIENT_ID` (a variable, not a secret; the owner
   sets it):
   ```bash
