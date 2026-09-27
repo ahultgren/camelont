@@ -8,7 +8,10 @@ import { server } from '@/test/msw'
 import { renderRoutes, route } from '@/test/render'
 import { RECCOBEATS } from '@/test/spotify-mocks'
 import { loggedInStorage } from '@/test/storage'
-import { OverridesTransfer, TrackTable, useOverridesStore, useTrackFeatures } from './index'
+import { useOverridesStore } from '../model/overrides-store'
+import { useTrackFeatures } from '../model/useTrackFeatures'
+import OverridesTransfer from './OverridesTransfer.vue'
+import TrackTable from './TrackTable.vue'
 
 const id = (n: number) => `track${'0'.repeat(16)}${String(n)}`
 const rows = [
