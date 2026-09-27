@@ -44,8 +44,3 @@ export function entryIds(trackIds: readonly string[]): string[] {
     return n === 1 ? id : `${id}#${String(n)}`
   })
 }
-
-export const formatDuration = (ms: number): string => {
-  const total = Math.round(ms / 1000)
-  return `${String(Math.floor(total / 60))}:${String(total % 60).padStart(2, '0')}`
-}

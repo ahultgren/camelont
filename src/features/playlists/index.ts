@@ -1,6 +1,5 @@
 // Public API of the playlists feature. Other layers import only from here.
 export {
-  formatDuration,
   type PlaylistContents,
   type PlaylistEntry,
   type PlaylistSummary,
@@ -14,3 +13,4 @@ export {
   type SaveMixInput,
 } from './model/queries'
 export { default as PlaylistPicker } from './ui/PlaylistPicker.vue'
+export { default as SavePlaylistButton } from './ui/SavePlaylistButton.vue'

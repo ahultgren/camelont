@@ -50,13 +50,13 @@ green and a commit.
 - [x] Export/import JSON (zod-validated, merge strategy: incoming wins, reported)
 
 ## Phase 6 — Mix UI
-- [ ] Playlist → tracks view with data status + "fix missing" flow
-- [ ] Constraints panel (start, end, follows, exclude)
-- [ ] Candidate comparison cards (sparkline + stats), infeasibility view with diagnostics
-- [ ] Mix explorer: tempo-arc chart (move badges, hover/focus card, arc curve), key wheel, running order with connectors
+- [x] Playlist → tracks view with data status + "fix missing" flow
+- [x] Constraints panel (start, end, follows, exclude)
+- [x] Candidate comparison cards (sparkline + stats), infeasibility view with diagnostics
+- [x] Mix explorer: tempo-arc chart (move badges, hover/focus card, arc curve), key wheel, running order with connectors
 
 ## Phase 7 — Save
-- [ ] `POST /me/playlists` (private, name "<source> · Camelot mix", description with profile) → `POST /playlists/{id}/items` batches of 100 → link
+- [x] `POST /me/playlists` (private, name "<source> · Camelot mix", description with profile) → `POST /playlists/{id}/items` batches of 100 → link
 
 ## Phase 8 — Ship
 - [ ] E2E happy path + infeasible path, all mocked

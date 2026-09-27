@@ -14,3 +14,11 @@ describe('Result', () => {
     expect(err('no')).toEqual({ ok: false, error: 'no' })
   })
 })
+
+describe('formatDuration', () => {
+  it('formats minutes and seconds', async () => {
+    const { formatDuration } = await import('./format')
+    expect(formatDuration(225_000)).toBe('3:45')
+    expect(formatDuration(62_400)).toBe('1:02')
+  })
+})

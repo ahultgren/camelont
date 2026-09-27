@@ -27,18 +27,22 @@ const dialogOpen = computed({
 </script>
 
 <template>
-  <ol class="grid gap-1.5">
+  <ol class="grid grid-cols-1 gap-1.5">
     <li
       v-for="(row, i) in rows"
       :key="row.entryId"
-      class="grid grid-cols-[28px_1fr_auto] items-center gap-x-3.5 gap-y-1 rounded-lg border bg-surface px-3.5 py-2.5 sm:grid-cols-[28px_1fr_auto_auto_auto]"
+      class="grid grid-cols-[28px_minmax(0,1fr)_auto] items-center gap-x-3.5 gap-y-1 rounded-lg border bg-surface px-3.5 py-2.5 sm:grid-cols-[28px_minmax(0,1fr)_auto_auto_auto]"
       :class="isMixable(features.get(row.trackId)) ? 'border-rule' : 'border-warn'"
     >
       <span class="num text-[13px] text-muted">{{ i + 1 }}</span>
       <div class="min-w-0">
         <div class="truncate font-semibold">{{ row.title }}</div>
         <div class="truncate text-[13px] text-muted">{{ row.artists.join(', ') }}</div>
-        <div v-if="features.get(row.trackId)?.note" class="text-xs text-muted italic">
+        <div
+          v-if="features.get(row.trackId)?.note"
+          class="line-clamp-2 text-xs text-muted italic"
+          :title="features.get(row.trackId)?.note ?? undefined"
+        >
           {{ features.get(row.trackId)?.note }}
         </div>
       </div>

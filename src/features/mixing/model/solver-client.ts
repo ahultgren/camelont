@@ -1,5 +1,6 @@
+import { inject, type App, type InjectionKey } from 'vue'
 import { wrap } from 'comlink'
-import type { SolveOutcome } from '../domain/solver/solve'
+import { solveMix, type SolveOutcome } from '../domain/solver/solve'
 import type { SolverWorkerApi, WorkerSolveRequest } from './solver.worker'
 
 /** Runs one solve; `cancel` stops it (for a worker: terminates it). */
@@ -27,3 +28,23 @@ export const workerSolverClient: SolverClient = (request) => {
     },
   }
 }
+
+const SOLVER_CLIENT: InjectionKey<SolverClient> = Symbol('camelont.solver-client')
+
+/** Overrides the solver client (tests run the solver in-process). */
+export function installMixing(app: App, options: { client?: SolverClient } = {}): void {
+  if (options.client) app.provide(SOLVER_CLIENT, options.client)
+}
+
+export function useSolverClient(): SolverClient {
+  return inject(
+    SOLVER_CLIENT,
+    typeof Worker === 'undefined' ? inlineSolverClient : workerSolverClient,
+  )
+}
+
+/** Runs the solver on the calling thread (tests; browsers without module workers). */
+export const inlineSolverClient: SolverClient = (request) => ({
+  result: Promise.resolve().then(() => solveMix(request)),
+  cancel: () => undefined,
+})

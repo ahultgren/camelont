@@ -208,6 +208,30 @@ type, beats greedy from the same opener, matches the hand-tuned order under the
 two-waves profile, and reports Bloodstream-style bottlenecks when made infeasible. The
 chart equals the JSON for all 576 pairs.
 
+## Mix UI (`mixing/model`, `mixing/ui`, `mix-view`, `pages/PlaylistPage.vue`)
+
+- `mixing/model/mix-input.ts` maps playlist entries + merged track features to
+  `MixTrack`s and sets aside entries without data. `useMixPlanner` holds the
+  constraints and arc choice, blocks mixing while a track lacks data and isn't
+  excluded, validates constraints instantly, and re-solves (debounced 250 ms) whenever
+  the input changes; `useMixer` cancels the stale run. The solver client is injectable
+  (`installMixing`); without `Worker` it falls back to `inlineSolverClient`.
+- `mixing/ui`: `ConstraintsPanel` (first/last track, "must be followed by" pairs; the
+  exclude toggles sit on the track table), `ArcPicker`, `CandidateList` (a radio group
+  of cards: sparkline, move-tone counts, BPM range, peaks, opener, closer, cost) and
+  `MixProblems` (constraint errors and diagnostics in plain language).
+- `mix-view`: `TempoArcChart` (hand-built SVG; key-coloured dots, a move badge per
+  segment, the arc target dashed, each point focusable with a full `aria-label`, and a
+  card on hover/tap/focus), `KeyWheel`, `RunningOrder` (connectors: keys, move, BPM
+  change) and `MixExplorer` composing them. Pure geometry lives in
+  `mix-view/domain/layout.ts`. The chart scrolls horizontally inside its card on
+  narrow screens; row grids use `minmax(0,1fr)` so long titles never widen the page.
+- Saving: `mixing/domain/describe.ts` builds the new playlist's name
+  (`<source> · Camelot mix`) and description (moves, BPM range, profile, arc; ≤ 300
+  characters); `playlists/ui/SavePlaylistButton` creates the private playlist and adds
+  the URIs in batches of 100, then links to it. The page is the glue: it maps the
+  chosen mix's entry IDs to URIs.
+
 ## Auth (`features/auth`)
 
 - PKCE S256 with `state` (`domain/pkce.ts`). The verifier and state go in

@@ -48,7 +48,7 @@ const countLabel = (p: PlaylistSummary) =>
         <component
           :is="p.canMix ? RouterLink : 'div'"
           v-bind="p.canMix ? { to: linkTo(p) } : { 'aria-disabled': 'true' }"
-          class="grid grid-cols-[48px_1fr] items-center gap-x-3.5 rounded-lg border border-rule bg-surface px-3.5 py-2.5"
+          class="grid grid-cols-[48px_minmax(0,1fr)] items-center gap-x-3.5 rounded-lg border border-rule bg-surface px-3.5 py-2.5"
           :class="p.canMix ? 'hover:border-accent' : 'opacity-70'"
         >
           <img

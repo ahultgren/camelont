@@ -4,6 +4,7 @@ import { createPinia } from 'pinia'
 import { defineComponent, h, type Component } from 'vue'
 import { createMemoryHistory, createRouter, RouterView, type RouteRecordRaw } from 'vue-router'
 import { installAuth, requireLogin } from '@/features/auth'
+import { inlineSolverClient, installMixing } from '@/features/mixing'
 import { installTrackFeatures } from '@/features/track-features'
 import { createMemoryStore, type KeyValueStore } from '@/shared/storage'
 import { MemoryStorage } from './storage'
@@ -46,6 +47,7 @@ export async function renderRoutes(options: RenderPageOptions) {
               cacheStore: options.cacheStore ?? createMemoryStore(),
               overridesStore: options.overridesStore ?? createMemoryStore(),
             })
+            installMixing(app, { client: inlineSolverClient })
           },
         },
         router,

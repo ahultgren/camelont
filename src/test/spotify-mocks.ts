@@ -52,3 +52,24 @@ export const spotifyHandlers = () => [
     HttpResponse.json({ items: wcsItems(), next: null }),
   ),
 ]
+
+/** ReccoBeats knowing every WCS track (corrected values) except the ones listed. */
+export const reccoBeatsHandler = (unknownTitles: string[] = []) =>
+  http.get(`${RECCOBEATS}/audio-features`, ({ request }) => {
+    const ids = new URL(request.url).searchParams.get('ids')?.split(',') ?? []
+    const content = wcs.tracks
+      .filter((t) => ids.includes(t.id) && !unknownTitles.some((u) => t.title.startsWith(u)))
+      .map((t) => {
+        const n = Number(t.camelot.slice(0, -1)) % 12
+        const mode = t.camelot.endsWith('B') ? 1 : 0
+        const key = ((((n - (mode ? 8 : 5)) * 7) % 12) + 12) % 12
+        return {
+          href: `https://open.spotify.com/track/${t.id}`,
+          key,
+          mode,
+          tempo: t.bpm,
+          energy: t.energy,
+        }
+      })
+    return HttpResponse.json({ content })
+  })

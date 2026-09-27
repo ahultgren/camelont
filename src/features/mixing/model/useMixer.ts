@@ -1,4 +1,4 @@
-import { onScopeDispose, readonly, shallowRef } from 'vue'
+import { computed, onScopeDispose, shallowRef } from 'vue'
 import type { SolveOutcome } from '../domain/solver/solve'
 import { workerSolverClient, type SolverClient, type SolverRun } from './solver-client'
 import type { WorkerSolveRequest } from './solver.worker'
@@ -44,9 +44,9 @@ export function useMixer(client: SolverClient = workerSolverClient) {
   onScopeDispose(cancel)
 
   return {
-    status: readonly(status),
-    outcome: readonly(outcome),
-    error: readonly(error),
+    status: computed(() => status.value),
+    outcome: computed(() => outcome.value),
+    error: computed(() => error.value),
     run,
     cancel,
   }
