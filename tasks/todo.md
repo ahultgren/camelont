@@ -59,10 +59,40 @@ green and a commit.
 - [x] `POST /me/playlists` (private, name "<source> · Camelot mix", description with profile) → `POST /playlists/{id}/items` batches of 100 → link
 
 ## Phase 8 — Ship
-- [ ] E2E happy path + infeasible path, all mocked
-- [ ] Deploy to Pages; owner verifies against real Spotify (agent can't log in)
-- [ ] Review section below
+- [x] E2E happy path + infeasible path, all mocked (plus PKCE login, guard, 404.html)
+- [ ] Deploy to Pages (runs on merge to `main`); owner verifies against real Spotify (agent can't log in)
+- [x] Review section below
 
 ## Review
 
-_(filled in when done)_
+**State (2026-09-27):** Phases 0–7 built; Phase 8 E2E done. `pnpm check` is green:
+lint incl. boundaries, format, typecheck, 216 unit/component tests (domain line
+coverage 98%), build, 5 Playwright specs. Everything external is mocked.
+
+**Not verified:** nothing has run against real Spotify or ReccoBeats. A cloud session
+can't log in. Before relying on it, the owner should, on the Pages deploy or locally:
+1. log in (checks the redirect URIs and scopes in the dashboard);
+2. open a real playlist: check track counts and that followed playlists are disabled
+   (the `/me/playlists` count field is read from `items.total` or `tracks.total`,
+   since the Feb 2026 shape wasn't confirmed);
+3. check ReccoBeats data loads (CORS, batch size 40);
+4. save a mix and confirm a new **private** playlist appears and the source is
+   unchanged.
+
+**How it went against the plan:**
+- The solver is beam search with scarcity pruning, an exact 1-D arc bound, or-opt +
+  swap local search and edge penalties for diversity. On the WCS set it beats greedy
+  and, under "two waves", returns the user's hand-tuned order as the best mix. 100
+  tracks take about 1 s in-process.
+- The two-waves preset had to be reshaped after the hand-tuned set (decision #20); a
+  generic two-hump curve preferred the greedy order.
+- Key names follow the approved charts (3B = D♭ major), not the script (decision #21).
+- Test tooling surprises: typescript-eslint doesn't support TypeScript 7 (pinned 6.0);
+  eslint-plugin-boundaries v7 has a new config format; a `step="0.1"` BPM input
+  rejects valid tempos in happy-dom and could in browsers (now `step="any"`).
+
+**Open questions for the owner:**
+- The arc weight (8) and diversity threshold (30% of transitions differ) are first
+  guesses; try them on real sets.
+- Mixes re-solve automatically 250 ms after any change. If that feels jumpy, a
+  "Generate" button is a small change.
