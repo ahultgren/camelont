@@ -36,8 +36,8 @@ green and a commit.
 - [x] Worker + Comlink wrapper, `useMixer` with cancellation
 
 ## Phase 3 — Auth
-- [ ] PKCE (verifier, S256 challenge, state), callback route, token store, refresh with single-flight, 401 retry, logout, route guard
-- [ ] Tests: MSW for token endpoint; state mismatch rejected
+- [x] PKCE (verifier, S256 challenge, state), callback route, token store, refresh with single-flight, 401 retry, logout, route guard
+- [x] Tests: MSW for token endpoint; state mismatch rejected
 
 ## Phase 4 — Playlists
 - [ ] `GET /me/playlists` paginated; own/collaborative vs followed (disabled + reason); search; track counts

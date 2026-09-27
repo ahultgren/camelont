@@ -184,13 +184,20 @@ chart equals the JSON for all 576 pairs.
 
 ## Auth (`features/auth`)
 
-- PKCE S256 with `state`. The verifier and state go in `sessionStorage` during the
-  redirect; tokens go in `localStorage` (access token, expiry, refresh token, scopes).
-- `redirect_uri` = `${location.origin}${import.meta.env.BASE_URL}callback`. Register
-  both the local and the Pages URL in the Spotify dashboard (see `setup.md`).
-- The API wrapper asks auth for a valid token (refreshing when < 60 s left, with a
-  single in-flight refresh), retries a 401 once after a refresh, and logs out if the
-  refresh fails.
+- PKCE S256 with `state` (`domain/pkce.ts`). The verifier and state go in
+  `sessionStorage` during the redirect and are cleared on callback; tokens go in
+  `localStorage` (`camelont.auth.tokens`: access token, expiry, refresh token, scope),
+  validated with zod on read.
+- `redirect_uri` = `${location.origin}${import.meta.env.BASE_URL}callback`, built in
+  `app/config.ts`. Register both the local and the Pages URL in the Spotify dashboard
+  (see `setup.md`).
+- `model/session.ts` is plain TypeScript (`createAuthSession`); `installAuth(app, …)`
+  provides it and `useAuthStore` (Pinia) exposes `loggedIn`, `login`, `logout`,
+  `handleCallback` and a `tokenSource` for API clients.
+- The shared HTTP client asks the token source for a valid token (refreshing when
+  < 60 s left, with a single in-flight refresh), retries a 401 once after a refresh,
+  and the session logs out if the refresh fails. `App.vue` then leaves pages that need
+  a login; `requireLogin` guards routes with `meta.requiresAuth`.
 - Scopes: `playlist-read-private playlist-read-collaborative playlist-modify-private`.
 
 ## Config
