@@ -25,15 +25,15 @@ green and a commit.
 - [x] `shared/ui`: AppButton, AppCard, KeyChip (both notations + hue), MoveBadge, StatTile, EmptyState
 
 ## Phase 2 — Mixing domain (test-first, before any UI needs it)
-- [ ] Copy fixtures: `docs/domain/camelot-chart.json`, `docs/reference/wcs-set.json` → `src/test/fixtures/`
-- [ ] `chart.ts` + test: all 576 pairs equal the JSON; spot checks
-- [ ] `tempo.ts`, `profile.ts` (DEFAULT_PROFILE = reference weights)
-- [ ] `evaluate.ts` + tests: hand_tuned = 9 perfect / 7 boost / 3 drop, clash-free; script_greedy clash-free; stats (peaks, opener/closer, BPM range)
-- [ ] `constraints.ts` + validation errors
-- [ ] `arc.ts` (presets none/two waves/steady build, BPM signal)
-- [ ] `solver/`: digraph, chain collapse, beam + scarcity, local search, diversity, time box. Tests: WCS set solvable; start/end/follows/exclude respected; determinism by seed; beats greedy's cost
-- [ ] `diagnostics.ts` + tests (e.g. constrain the WCS set so Bloodstream has no legal neighbour)
-- [ ] Worker + Comlink wrapper, `useMixer` with cancellation
+- [x] Copy fixtures: `docs/domain/camelot-chart.json`, `docs/reference/wcs-set.json` → `src/test/fixtures/`
+- [x] `chart.ts` + test: all 576 pairs equal the JSON; spot checks
+- [x] `tempo.ts`, `profile.ts` (DEFAULT_PROFILE = reference weights)
+- [x] `evaluate.ts` + tests: hand_tuned = 9 perfect / 7 boost / 3 drop, clash-free; script_greedy clash-free; stats (peaks, opener/closer, BPM range)
+- [x] `constraints.ts` + validation errors
+- [x] `arc.ts` (presets none/two waves/steady build, BPM signal)
+- [x] `solver/`: digraph, chain collapse, beam + scarcity, local search, diversity, time box. Tests: WCS set solvable; start/end/follows/exclude respected; determinism by seed; beats greedy's cost
+- [x] `diagnostics.ts` + tests (e.g. constrain the WCS set so Bloodstream has no legal neighbour)
+- [x] Worker + Comlink wrapper, `useMixer` with cancellation
 
 ## Phase 3 — Auth
 - [ ] PKCE (verifier, S256 challenge, state), callback route, token store, refresh with single-flight, 401 retry, logout, route guard

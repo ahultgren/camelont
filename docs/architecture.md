@@ -118,49 +118,68 @@ mixing/model ── MixRequest {tracks, constraints, profileId, k, seed} ──�
 
 The heart of the app, pure TS and fully unit tested.
 
+- `types.ts`: `MixTrack { id, label, camelot, bpm, energy }`, the engine's own input
+  (the entry ID, a label for messages, and the features). `mixing/model` maps merged
+  track features to it, so the domain never imports another feature.
 - `chart.ts`: `Move` union (`perfect | boost1 | boost2 | boost3 | boost3Alt | drop1 |
-  drop2 | drop3 | drop3Alt | mood`), move metadata (symbol, label, tone), the chart
-  loaded from typed data equal to `docs/domain/camelot-chart.json`, and
-  `moveBetween(from, to): Move | null`.
-- `profile.ts`: `MixProfile { id, name, moveCost: Record<Move, number>, tempoWeight,
-  arc: ArcConfig | null }`. `DEFAULT_PROFILE` reproduces the reference weights.
+  drop2 | drop3 | drop3Alt | mood`), `MOVE_META` (symbol, label, tone; plus `clash`
+  for evaluating given orders), the chart as wheel arithmetic (the table in
+  `camelot-chart.md`), and `moveBetween(from, to): Move | null`. A test asserts all 576
+  pairs equal the JSON.
+- `profile.ts`: `MixProfile { id, name, moveCost: Record<Move, number>, clashCost,
+  tempoWeight, arc: ArcConfig | null }`. `DEFAULT_PROFILE` reproduces the reference
+  weights; `withArc(profile, arc)` applies the user's arc choice.
 - `tempo.ts`: `tempoGap(a, b)`, half/double tolerant.
-- `arc.ts`: `ArcConfig { preset, signal, weight }`; presets are data (normalised target
-  curves over position 0..1); signals are functions `TrackFeatures → number | null`
-  (BPM first). Removing arcs means deleting this file and the one term in `evaluate`.
-- `evaluate.ts`: `evaluateMix(order, features, chart, profile) → EvaluatedMix`
-  (transitions with move + cost, total cost, stats: move histogram, peaks, opener,
-  closer, BPM range). **The solver and the UI both use this one function.** It is the
-  single source of truth for scoring.
-- `constraints.ts`: `MixConstraints { start?, end?, follows: [from, to][], excluded }`
-  and `validateConstraints` → typed errors (cycle, branch, clash pair, start with a
-  required predecessor, end with a required successor, excluded track in a constraint).
+- `arc.ts`: `ArcConfig { preset, signal, weight }`; presets are data (piecewise-linear
+  target curves over position 0..1); signals are functions `MixTrack → number | null`
+  (BPM first), normalised over the set's range. `arcTermCost` is the per-track term.
+  Removing arcs means deleting this file and the one term in `evaluate`.
+- `evaluate.ts`: `evaluateMix(order, profile) → EvaluatedMix` (transitions with move +
+  cost, transition cost, arc cost + target curve, total cost, clash count, stats: move
+  and tone histograms, peaks, opener, closer, BPM range). `transitionCost` and the arc
+  term are the primitives. **The solver and the UI both use these.** They are the
+  single source of truth for scoring; a test checks the solver's path cost equals
+  `evaluateMix` exactly.
+- `constraints.ts`: `MixConstraints { start, end, follows: [from, to][], excluded }`
+  and `validateConstraints` → typed errors (unknown/excluded track in a constraint,
+  start = end, self-follow, clash pair, branch out/in, cycle, start with a required
+  predecessor, end with a required successor, a chain joining start to end too early),
+  plus `describeConstraintError` for plain-English messages.
 - `solver/`:
-  1. Build the legal-move digraph over the included entries (edges only for chart
-     moves). Clashes are never edges.
-  2. Collapse follow-chains into blocks (a block's in-key is its first track and its
-     out-key its last).
-  3. Search: beam search over partial paths, ordered by cost-so-far plus a scarcity
-     heuristic (prefer extending with, or reserving, low-remaining-degree nodes,
-     Warnsdorff-style), respecting start/end.
-  4. Improve: local search (or-opt block relocation; only moves that keep every edge
-     legal), under the full objective including the arc.
-  5. Diversify: keep the top-k by cost where each pair differs in at least X% of
-     adjacencies.
-  Deterministic given `seed` (`shared/lib/prng`). Time-boxed, and returns the best
-  found so far.
-- `diagnostics.ts`: when no path is found, explain it. Cheap checks come first: nodes
-  with in-degree or out-degree 0 (considering start/end), more than two degree-1
-  "bottleneck" nodes that must be endpoints, constraint conflicts. Otherwise a generic
-  "no order found within the search budget" message listing the lowest-degree tracks as
+  1. `problem.ts`: collapse follow-chains into blocks (a block's in-key is its first
+     track, its out-key its last) and build the legal-move digraph between blocks.
+     Clashes are never edges. Edge and arc costs are precomputed from `evaluate.ts`.
+  2. `search.ts`: beam search over partial paths. Each state tracks, per unvisited
+     block, how many predecessors and successors are still available; a block that
+     can no longer be reached, two blocks that can only follow the current one, or too
+     many dead ends prune the state (this is how low-degree tracks like Bloodstream
+     get placed instead of stranded). States are ranked by cost so far + a lower bound
+     on the rest (cheapest incoming edges + an exact 1-D bound on the arc term) + a
+     scarcity penalty (Warnsdorff-style). Extensions are pre-ranked by a cheap
+     estimate and only the most promising are materialised. A depth-first search with
+     the same pruning is the fallback when the beam loses every path.
+  3. `local-search.ts`: or-opt (move 1–3 blocks) and pairwise swaps, keeping every
+     edge legal, under the full objective including the arc.
+  4. `diversity.ts` + `solve.ts`: up to k + 1 rounds; each round penalises the edges
+     earlier results used, so later rounds explore different orders. Keep the top k by
+     cost where each pair differs in at least 30% of adjacencies.
+  Deterministic given `seed` (`shared/lib/prng`). An 8 s time limit is a safety net
+  only (results are deterministic unless it's reached); 100 tracks take about 1 s.
+- `diagnostics.ts`: when no path is found, explain it. Structural checks: tracks with
+  no possible neighbour at all, tracks nothing can precede (or follow) given the start
+  (end), more such tracks than can open (close) the mix, and several tracks competing
+  for the same only neighbour. Each names excluded tracks that would fit. Otherwise a
+  generic "no clash-free order was found" message listing the tightest tracks as
   exclusion candidates.
-- `solver.worker.ts` exposes `solve(request)` via Comlink. `model/useMixer` wraps it
-  with cancellation for when inputs change.
+- `model/solver.worker.ts` exposes `solve(request)` via Comlink; `model/solver-client.ts`
+  starts one worker per run (cancel = terminate). `model/useMixer` wraps it and cancels
+  the run in flight when inputs change or the component unmounts.
 
 **Required tests using the WCS fixture:** the `hand_tuned` and `script_greedy` orders
 evaluate as clash-free with the documented move counts (hand-tuned: 9 perfect, 7 boost,
-3 drop). The solver finds ≥ 1 clash-free order for the full set, respects each
-constraint type, and reports Bloodstream-style bottlenecks when made infeasible. The
+3 drop). The solver finds clash-free orders for the full set, respects each constraint
+type, beats greedy from the same opener, matches the hand-tuned order under the
+two-waves profile, and reports Bloodstream-style bottlenecks when made infeasible. The
 chart equals the JSON for all 576 pairs.
 
 ## Auth (`features/auth`)

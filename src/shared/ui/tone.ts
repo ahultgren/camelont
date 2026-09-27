@@ -1,5 +1,6 @@
-/** Visual tone of a transition; the move metadata (mixing) maps each move to one. */
-export type MoveTone = 'perfect' | 'boost' | 'drop' | 'mood' | 'clash'
+import type { MoveTone } from '@/shared/music'
+
+export type { MoveTone }
 
 /** Text colour class per tone, as on the reference charts. */
 export const TONE_TEXT: Record<MoveTone, string> = {
