@@ -1,5 +1,6 @@
 export { default as AppButton } from './AppButton.vue'
 export { default as AppCard } from './AppCard.vue'
+export { default as AppDialog } from './AppDialog.vue'
 export { default as EmptyState } from './EmptyState.vue'
 export { default as KeyChip } from './KeyChip.vue'
 export { default as MoveBadge } from './MoveBadge.vue'

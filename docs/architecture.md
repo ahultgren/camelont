@@ -117,6 +117,29 @@ mixing/model ── MixRequest {tracks, constraints, profileId, k, seed} ──�
 - Playlist items that can't be mixed (local files, episodes, removed tracks) are
   skipped and counted, so the UI can say what was left out.
 
+## Track features (`features/track-features`)
+
+- `domain/features.ts`: `FetchedFeatures` (the provider's answer, including "not
+  found"), `Override` (null fields are not overridden), and `mergeFeatures` → per-field
+  `Sourced<T> { value, source: 'reccobeats' | 'manual' }`. Overrides always win, field by
+  field. A track is mixable only with both a key and a BPM.
+- `api/reccobeats.ts` implements a `FeatureProvider` (the seam for a second opinion):
+  batches of 40, rows matched by `href`, each row validated on its own, `key < 0` →
+  no key, BPM rounded to 0.1.
+- `api/repositories.ts`: the features cache and the overrides repo on the
+  `KeyValueStore` port (IndexedDB databases `camelont-features` and
+  `camelont-overrides`). Records are `{ v: 1, data }`; anything that fails the zod
+  schema reads as missing. "Not found" answers are retried after a week.
+- Export/import: a versioned JSON file (`app: "camelont", kind: "track-overrides",
+  version: 1, overrides: [...]`), validated with zod; on import the incoming values
+  win, and the report counts added, updated and unchanged overrides.
+- `model/`: `installTrackFeatures(app)` wires storage and the provider;
+  `useOverridesStore` (Pinia); `useTrackFeatures(trackIds)` reads the cache, fetches
+  the rest per batch (a failed batch degrades to missing data plus a message), and
+  merges with overrides.
+- `ui/`: `TrackTable` (key in both notations, BPM, source badge per value, Fix/Edit
+  per row, an `actions` slot for the page), `OverrideDialog`, `OverridesTransfer`.
+
 ## Mixing engine (`features/mixing/domain`)
 
 The heart of the app, pure TS and fully unit tested.

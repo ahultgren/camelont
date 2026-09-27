@@ -44,10 +44,10 @@ green and a commit.
 - [x] `GET /playlists/{id}/items` paginated → domain `Track[]` (skip local files / episodes / null items, report them)
 
 ## Phase 5 — Track features
-- [ ] ReccoBeats client (batches of 40, match by `href`, `key < 0` = unknown, zod)
-- [ ] Features cache + overrides repo (IndexedDB, versioned schema), merge with per-field provenance
-- [ ] Override edit dialog (Camelot picker showing both notations, BPM, note)
-- [ ] Export/import JSON (zod-validated, merge strategy: incoming wins, reported)
+- [x] ReccoBeats client (batches of 40, match by `href`, `key < 0` = unknown, zod)
+- [x] Features cache + overrides repo (IndexedDB, versioned schema), merge with per-field provenance
+- [x] Override edit dialog (Camelot picker showing both notations, BPM, note)
+- [x] Export/import JSON (zod-validated, merge strategy: incoming wins, reported)
 
 ## Phase 6 — Mix UI
 - [ ] Playlist → tracks view with data status + "fix missing" flow

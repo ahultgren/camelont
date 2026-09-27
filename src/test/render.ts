@@ -4,6 +4,8 @@ import { createPinia } from 'pinia'
 import { defineComponent, h, type Component } from 'vue'
 import { createMemoryHistory, createRouter, RouterView, type RouteRecordRaw } from 'vue-router'
 import { installAuth, requireLogin } from '@/features/auth'
+import { installTrackFeatures } from '@/features/track-features'
+import { createMemoryStore, type KeyValueStore } from '@/shared/storage'
 import { MemoryStorage } from './storage'
 
 export interface RenderPageOptions {
@@ -12,6 +14,9 @@ export interface RenderPageOptions {
   /** Token storage; defaults to logged out. */
   storage?: Storage
   redirect?: (url: string) => void
+  /** Overrides storage; defaults to empty. */
+  overridesStore?: KeyValueStore
+  cacheStore?: KeyValueStore
 }
 
 /** Renders routes inside the app's plugins (Pinia, Vue Query, auth, router). */
@@ -36,6 +41,10 @@ export async function renderRoutes(options: RenderPageOptions) {
               storage: options.storage ?? new MemoryStorage(),
               flowStorage: new MemoryStorage(),
               redirect: options.redirect ?? (() => undefined),
+            })
+            installTrackFeatures(app, {
+              cacheStore: options.cacheStore ?? createMemoryStore(),
+              overridesStore: options.overridesStore ?? createMemoryStore(),
             })
           },
         },
