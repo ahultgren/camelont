@@ -18,11 +18,11 @@ green and a commit.
 - [x] Update `docs/setup.md` script table to match `package.json`
 
 ## Phase 1 — Shared kernel
-- [ ] `shared/music`: `CamelotKey`, parse/format, `fromPitchClass` (anchors in camelot-chart.md), `keyName`, `keyHue`
-- [ ] `shared/lib`: seeded PRNG, `assertNever`
-- [ ] `shared/api`: fetch wrapper (auth header hook, 429 Retry-After, zod parse, typed errors), `paginate`
-- [ ] `shared/storage`: `KeyValueStore` port, IndexedDB + in-memory adapters
-- [ ] `shared/ui`: AppButton, AppCard, KeyChip (both notations + hue), MoveBadge, StatTile, EmptyState
+- [x] `shared/music`: `CamelotKey`, parse/format, `fromPitchClass` (anchors in camelot-chart.md), `keyName`, `keyHue`
+- [x] `shared/lib`: seeded PRNG, `assertNever`
+- [x] `shared/api`: fetch wrapper (auth header hook, 429 Retry-After, zod parse, typed errors), `paginate`
+- [x] `shared/storage`: `KeyValueStore` port, IndexedDB + in-memory adapters
+- [x] `shared/ui`: AppButton, AppCard, KeyChip (both notations + hue), MoveBadge, StatTile, EmptyState
 
 ## Phase 2 — Mixing domain (test-first, before any UI needs it)
 - [ ] Copy fixtures: `docs/domain/camelot-chart.json`, `docs/reference/wcs-set.json` → `src/test/fixtures/`
