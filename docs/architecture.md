@@ -111,8 +111,11 @@ mixing/model ── MixRequest {tracks, constraints, profileId, k, seed} ──�
 
 - Domain types never carry DTO shapes. `api/` maps DTOs to domain types.
 - Track identity everywhere is the Spotify track ID (22-char base62). Duplicates of the
-  same track in one playlist are treated as distinct *entries* (`entryId` = position-
-  independent unique ID) but share features by track ID.
+  same track in one playlist are treated as distinct *entries* (`entryId` = the track ID
+  for the first occurrence, `<trackId>#2`, `#3`… for later ones; position-independent)
+  but share features by track ID.
+- Playlist items that can't be mixed (local files, episodes, removed tracks) are
+  skipped and counted, so the UI can say what was left out.
 
 ## Mixing engine (`features/mixing/domain`)
 

@@ -40,8 +40,8 @@ green and a commit.
 - [x] Tests: MSW for token endpoint; state mismatch rejected
 
 ## Phase 4 — Playlists
-- [ ] `GET /me/playlists` paginated; own/collaborative vs followed (disabled + reason); search; track counts
-- [ ] `GET /playlists/{id}/items` paginated → domain `Track[]` (skip local files / episodes / null items, report them)
+- [x] `GET /me/playlists` paginated; own/collaborative vs followed (disabled + reason); search; track counts
+- [x] `GET /playlists/{id}/items` paginated → domain `Track[]` (skip local files / episodes / null items, report them)
 
 ## Phase 5 — Track features
 - [ ] ReccoBeats client (batches of 40, match by `href`, `key < 0` = unknown, zod)

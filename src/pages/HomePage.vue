@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { LoginButton, useAuthStore } from '@/features/auth'
+import { PlaylistPicker, type PlaylistSummary } from '@/features/playlists'
 
 const auth = useAuthStore()
+const linkTo = (p: PlaylistSummary) => ({ name: 'playlist', params: { id: p.id } })
 </script>
 
 <template>
@@ -17,4 +19,5 @@ const auth = useAuthStore()
   <div v-if="!auth.loggedIn">
     <LoginButton />
   </div>
+  <PlaylistPicker v-else :link-to="linkTo" />
 </template>
