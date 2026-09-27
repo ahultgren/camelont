@@ -88,3 +88,7 @@ The source playlist is never modified. Reordering in place isn't offered.
 It's a third-party image. The committed spec is the hand transcription
 (`domain/camelot-chart.json`), cross-checked against the reference script with zero
 mismatches over 576 pairs.
+
+### 19. Self-hosted fonts (2026-09-27)
+**Context:** the reference pages load Google Fonts, but the spec allows network calls only
+to Spotify and ReccoBeats. **Decision:** bundle the three families via Fontsource.

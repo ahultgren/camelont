@@ -5,17 +5,17 @@ tracks **progress only**. Tick items as they land. Each phase ends with `pnpm ch
 green and a commit.
 
 ## Phase 0 — Scaffold & tooling
-- [ ] Scaffold Vite + Vue + TS with pnpm (`packageManager` pinned, `.nvmrc` = 24); strict tsconfig per architecture.md
-- [ ] Vite config: base `/camelont/`, dev server `127.0.0.1:5173`, `@/` alias → `src/`
-- [ ] ESLint flat config (typescript-eslint strict-type-checked, vue, **boundaries** with the layer/feature rules) + Prettier
-- [ ] Vitest (happy-dom, Testing Library, MSW setup file) + coverage threshold on `**/domain/**`
-- [ ] Playwright (Chromium, runs against `vite preview`, route-mock helpers for Spotify/ReccoBeats)
-- [ ] Tailwind v4 via `@tailwindcss/vite`; tokens from `docs/reference/charts/` (light + dark), fonts
-- [ ] `src/app/config.ts` (zod-validated env), router with empty pages, Pinia, Vue Query
-- [ ] Empty feature folders with `index.ts` so the boundaries config is exercised; one deliberate violation test proving lint catches it (then remove)
-- [ ] lefthook (pre-commit: format + lint staged; pre-push: typecheck + unit)
-- [ ] GitHub Actions: `ci.yml` (lint, typecheck, unit, build, e2e), `deploy.yml` (Pages, uses `vars.VITE_SPOTIFY_CLIENT_ID`), `404.html` fallback
-- [ ] Update `docs/setup.md` script table to match `package.json`
+- [x] Scaffold Vite + Vue + TS with pnpm (`packageManager` pinned, `.nvmrc` = 24); strict tsconfig per architecture.md
+- [x] Vite config: base `/camelont/`, dev server `127.0.0.1:5173`, `@/` alias → `src/`
+- [x] ESLint flat config (typescript-eslint strict-type-checked, vue, **boundaries** with the layer/feature rules) + Prettier
+- [x] Vitest (happy-dom, Testing Library, MSW setup file) + coverage threshold on `**/domain/**`
+- [x] Playwright (Chromium, runs against `vite preview`, route-mock helpers for Spotify/ReccoBeats)
+- [x] Tailwind v4 via `@tailwindcss/vite`; tokens from `docs/reference/charts/` (light + dark), fonts
+- [x] `src/app/config.ts` (zod-validated env), router with empty pages, Pinia, Vue Query
+- [x] Empty feature folders with `index.ts` so the boundaries config is exercised; one deliberate violation test proving lint catches it (then remove)
+- [x] lefthook (pre-commit: format + lint staged; pre-push: typecheck + unit)
+- [x] GitHub Actions: `ci.yml` (lint, typecheck, unit, build, e2e), `deploy.yml` (Pages, uses `vars.VITE_SPOTIFY_CLIENT_ID`), `404.html` fallback
+- [x] Update `docs/setup.md` script table to match `package.json`
 
 ## Phase 1 — Shared kernel
 - [ ] `shared/music`: `CamelotKey`, parse/format, `fromPitchClass` (anchors in camelot-chart.md), `keyName`, `keyHue`

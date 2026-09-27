@@ -1,0 +1,833 @@
+{
+  "$comment": "Hand transcription of the user's Camelot compatibility chart image (the spec). Keys: source Camelot key -> move -> target keys. boost3Alt/drop3Alt are the parenthesised weaker alternatives. Any target not listed is a clash. See docs/domain/camelot-chart.md.",
+  "moves": [
+    "perfect",
+    "boost1",
+    "boost2",
+    "boost3",
+    "boost3Alt",
+    "drop1",
+    "drop2",
+    "drop3",
+    "drop3Alt",
+    "mood"
+  ],
+  "chart": {
+    "1A": {
+      "perfect": [
+        "1A",
+        "12B"
+      ],
+      "boost1": [
+        "1B",
+        "2A"
+      ],
+      "boost2": [
+        "10A"
+      ],
+      "boost3": [
+        "3A"
+      ],
+      "boost3Alt": [
+        "8A"
+      ],
+      "drop1": [
+        "12A"
+      ],
+      "drop2": [
+        "4A"
+      ],
+      "drop3": [
+        "11A"
+      ],
+      "drop3Alt": [
+        "6A"
+      ],
+      "mood": [
+        "4B"
+      ]
+    },
+    "2A": {
+      "perfect": [
+        "2A",
+        "1B"
+      ],
+      "boost1": [
+        "2B",
+        "3A"
+      ],
+      "boost2": [
+        "11A"
+      ],
+      "boost3": [
+        "4A"
+      ],
+      "boost3Alt": [
+        "9A"
+      ],
+      "drop1": [
+        "1A"
+      ],
+      "drop2": [
+        "5A"
+      ],
+      "drop3": [
+        "12A"
+      ],
+      "drop3Alt": [
+        "7A"
+      ],
+      "mood": [
+        "5B"
+      ]
+    },
+    "3A": {
+      "perfect": [
+        "3A",
+        "2B"
+      ],
+      "boost1": [
+        "3B",
+        "4A"
+      ],
+      "boost2": [
+        "12A"
+      ],
+      "boost3": [
+        "5A"
+      ],
+      "boost3Alt": [
+        "10A"
+      ],
+      "drop1": [
+        "2A"
+      ],
+      "drop2": [
+        "6A"
+      ],
+      "drop3": [
+        "1A"
+      ],
+      "drop3Alt": [
+        "8A"
+      ],
+      "mood": [
+        "6B"
+      ]
+    },
+    "4A": {
+      "perfect": [
+        "4A",
+        "3B"
+      ],
+      "boost1": [
+        "4B",
+        "5A"
+      ],
+      "boost2": [
+        "1A"
+      ],
+      "boost3": [
+        "6A"
+      ],
+      "boost3Alt": [
+        "11A"
+      ],
+      "drop1": [
+        "3A"
+      ],
+      "drop2": [
+        "7A"
+      ],
+      "drop3": [
+        "2A"
+      ],
+      "drop3Alt": [
+        "9A"
+      ],
+      "mood": [
+        "7B"
+      ]
+    },
+    "5A": {
+      "perfect": [
+        "5A",
+        "4B"
+      ],
+      "boost1": [
+        "5B",
+        "6A"
+      ],
+      "boost2": [
+        "2A"
+      ],
+      "boost3": [
+        "7A"
+      ],
+      "boost3Alt": [
+        "12A"
+      ],
+      "drop1": [
+        "4A"
+      ],
+      "drop2": [
+        "8A"
+      ],
+      "drop3": [
+        "3A"
+      ],
+      "drop3Alt": [
+        "10A"
+      ],
+      "mood": [
+        "8B"
+      ]
+    },
+    "6A": {
+      "perfect": [
+        "6A",
+        "5B"
+      ],
+      "boost1": [
+        "6B",
+        "7A"
+      ],
+      "boost2": [
+        "3A"
+      ],
+      "boost3": [
+        "8A"
+      ],
+      "boost3Alt": [
+        "1A"
+      ],
+      "drop1": [
+        "5A"
+      ],
+      "drop2": [
+        "9A"
+      ],
+      "drop3": [
+        "4A"
+      ],
+      "drop3Alt": [
+        "11A"
+      ],
+      "mood": [
+        "9B"
+      ]
+    },
+    "7A": {
+      "perfect": [
+        "7A",
+        "6B"
+      ],
+      "boost1": [
+        "7B",
+        "8A"
+      ],
+      "boost2": [
+        "4A"
+      ],
+      "boost3": [
+        "9A"
+      ],
+      "boost3Alt": [
+        "2A"
+      ],
+      "drop1": [
+        "6A"
+      ],
+      "drop2": [
+        "10A"
+      ],
+      "drop3": [
+        "5A"
+      ],
+      "drop3Alt": [
+        "12A"
+      ],
+      "mood": [
+        "10B"
+      ]
+    },
+    "8A": {
+      "perfect": [
+        "8A",
+        "7B"
+      ],
+      "boost1": [
+        "8B",
+        "9A"
+      ],
+      "boost2": [
+        "5A"
+      ],
+      "boost3": [
+        "10A"
+      ],
+      "boost3Alt": [
+        "3A"
+      ],
+      "drop1": [
+        "7A"
+      ],
+      "drop2": [
+        "11A"
+      ],
+      "drop3": [
+        "6A"
+      ],
+      "drop3Alt": [
+        "1A"
+      ],
+      "mood": [
+        "11B"
+      ]
+    },
+    "9A": {
+      "perfect": [
+        "9A",
+        "8B"
+      ],
+      "boost1": [
+        "9B",
+        "10A"
+      ],
+      "boost2": [
+        "6A"
+      ],
+      "boost3": [
+        "11A"
+      ],
+      "boost3Alt": [
+        "4A"
+      ],
+      "drop1": [
+        "8A"
+      ],
+      "drop2": [
+        "12A"
+      ],
+      "drop3": [
+        "7A"
+      ],
+      "drop3Alt": [
+        "2A"
+      ],
+      "mood": [
+        "12B"
+      ]
+    },
+    "10A": {
+      "perfect": [
+        "10A",
+        "9B"
+      ],
+      "boost1": [
+        "10B",
+        "11A"
+      ],
+      "boost2": [
+        "7A"
+      ],
+      "boost3": [
+        "12A"
+      ],
+      "boost3Alt": [
+        "5A"
+      ],
+      "drop1": [
+        "9A"
+      ],
+      "drop2": [
+        "1A"
+      ],
+      "drop3": [
+        "8A"
+      ],
+      "drop3Alt": [
+        "3A"
+      ],
+      "mood": [
+        "1B"
+      ]
+    },
+    "11A": {
+      "perfect": [
+        "11A",
+        "10B"
+      ],
+      "boost1": [
+        "11B",
+        "12A"
+      ],
+      "boost2": [
+        "8A"
+      ],
+      "boost3": [
+        "1A"
+      ],
+      "boost3Alt": [
+        "6A"
+      ],
+      "drop1": [
+        "10A"
+      ],
+      "drop2": [
+        "2A"
+      ],
+      "drop3": [
+        "9A"
+      ],
+      "drop3Alt": [
+        "4A"
+      ],
+      "mood": [
+        "2B"
+      ]
+    },
+    "12A": {
+      "perfect": [
+        "12A",
+        "11B"
+      ],
+      "boost1": [
+        "12B",
+        "1A"
+      ],
+      "boost2": [
+        "9A"
+      ],
+      "boost3": [
+        "2A"
+      ],
+      "boost3Alt": [
+        "7A"
+      ],
+      "drop1": [
+        "11A"
+      ],
+      "drop2": [
+        "3A"
+      ],
+      "drop3": [
+        "10A"
+      ],
+      "drop3Alt": [
+        "5A"
+      ],
+      "mood": [
+        "3B"
+      ]
+    },
+    "1B": {
+      "perfect": [
+        "1B",
+        "2A"
+      ],
+      "boost1": [
+        "2B"
+      ],
+      "boost2": [
+        "10B"
+      ],
+      "boost3": [
+        "3B"
+      ],
+      "boost3Alt": [
+        "8B"
+      ],
+      "drop1": [
+        "1A",
+        "12B"
+      ],
+      "drop2": [
+        "4B"
+      ],
+      "drop3": [
+        "11B"
+      ],
+      "drop3Alt": [
+        "6B"
+      ],
+      "mood": [
+        "10A"
+      ]
+    },
+    "2B": {
+      "perfect": [
+        "2B",
+        "3A"
+      ],
+      "boost1": [
+        "3B"
+      ],
+      "boost2": [
+        "11B"
+      ],
+      "boost3": [
+        "4B"
+      ],
+      "boost3Alt": [
+        "9B"
+      ],
+      "drop1": [
+        "2A",
+        "1B"
+      ],
+      "drop2": [
+        "5B"
+      ],
+      "drop3": [
+        "12B"
+      ],
+      "drop3Alt": [
+        "7B"
+      ],
+      "mood": [
+        "11A"
+      ]
+    },
+    "3B": {
+      "perfect": [
+        "3B",
+        "4A"
+      ],
+      "boost1": [
+        "4B"
+      ],
+      "boost2": [
+        "12B"
+      ],
+      "boost3": [
+        "5B"
+      ],
+      "boost3Alt": [
+        "10B"
+      ],
+      "drop1": [
+        "3A",
+        "2B"
+      ],
+      "drop2": [
+        "6B"
+      ],
+      "drop3": [
+        "1B"
+      ],
+      "drop3Alt": [
+        "8B"
+      ],
+      "mood": [
+        "12A"
+      ]
+    },
+    "4B": {
+      "perfect": [
+        "4B",
+        "5A"
+      ],
+      "boost1": [
+        "5B"
+      ],
+      "boost2": [
+        "1B"
+      ],
+      "boost3": [
+        "6B"
+      ],
+      "boost3Alt": [
+        "11B"
+      ],
+      "drop1": [
+        "4A",
+        "3B"
+      ],
+      "drop2": [
+        "7B"
+      ],
+      "drop3": [
+        "2B"
+      ],
+      "drop3Alt": [
+        "9B"
+      ],
+      "mood": [
+        "1A"
+      ]
+    },
+    "5B": {
+      "perfect": [
+        "5B",
+        "6A"
+      ],
+      "boost1": [
+        "6B"
+      ],
+      "boost2": [
+        "2B"
+      ],
+      "boost3": [
+        "7B"
+      ],
+      "boost3Alt": [
+        "12B"
+      ],
+      "drop1": [
+        "5A",
+        "4B"
+      ],
+      "drop2": [
+        "8B"
+      ],
+      "drop3": [
+        "3B"
+      ],
+      "drop3Alt": [
+        "10B"
+      ],
+      "mood": [
+        "2A"
+      ]
+    },
+    "6B": {
+      "perfect": [
+        "6B",
+        "7A"
+      ],
+      "boost1": [
+        "7B"
+      ],
+      "boost2": [
+        "3B"
+      ],
+      "boost3": [
+        "8B"
+      ],
+      "boost3Alt": [
+        "1B"
+      ],
+      "drop1": [
+        "6A",
+        "5B"
+      ],
+      "drop2": [
+        "9B"
+      ],
+      "drop3": [
+        "4B"
+      ],
+      "drop3Alt": [
+        "11B"
+      ],
+      "mood": [
+        "3A"
+      ]
+    },
+    "7B": {
+      "perfect": [
+        "7B",
+        "8A"
+      ],
+      "boost1": [
+        "8B"
+      ],
+      "boost2": [
+        "4B"
+      ],
+      "boost3": [
+        "9B"
+      ],
+      "boost3Alt": [
+        "2B"
+      ],
+      "drop1": [
+        "7A",
+        "6B"
+      ],
+      "drop2": [
+        "10B"
+      ],
+      "drop3": [
+        "5B"
+      ],
+      "drop3Alt": [
+        "12B"
+      ],
+      "mood": [
+        "4A"
+      ]
+    },
+    "8B": {
+      "perfect": [
+        "8B",
+        "9A"
+      ],
+      "boost1": [
+        "9B"
+      ],
+      "boost2": [
+        "5B"
+      ],
+      "boost3": [
+        "10B"
+      ],
+      "boost3Alt": [
+        "3B"
+      ],
+      "drop1": [
+        "8A",
+        "7B"
+      ],
+      "drop2": [
+        "11B"
+      ],
+      "drop3": [
+        "6B"
+      ],
+      "drop3Alt": [
+        "1B"
+      ],
+      "mood": [
+        "5A"
+      ]
+    },
+    "9B": {
+      "perfect": [
+        "9B",
+        "10A"
+      ],
+      "boost1": [
+        "10B"
+      ],
+      "boost2": [
+        "6B"
+      ],
+      "boost3": [
+        "11B"
+      ],
+      "boost3Alt": [
+        "4B"
+      ],
+      "drop1": [
+        "9A",
+        "8B"
+      ],
+      "drop2": [
+        "12B"
+      ],
+      "drop3": [
+        "7B"
+      ],
+      "drop3Alt": [
+        "2B"
+      ],
+      "mood": [
+        "6A"
+      ]
+    },
+    "10B": {
+      "perfect": [
+        "10B",
+        "11A"
+      ],
+      "boost1": [
+        "11B"
+      ],
+      "boost2": [
+        "7B"
+      ],
+      "boost3": [
+        "12B"
+      ],
+      "boost3Alt": [
+        "5B"
+      ],
+      "drop1": [
+        "10A",
+        "9B"
+      ],
+      "drop2": [
+        "1B"
+      ],
+      "drop3": [
+        "8B"
+      ],
+      "drop3Alt": [
+        "3B"
+      ],
+      "mood": [
+        "7A"
+      ]
+    },
+    "11B": {
+      "perfect": [
+        "11B",
+        "12A"
+      ],
+      "boost1": [
+        "12B"
+      ],
+      "boost2": [
+        "8B"
+      ],
+      "boost3": [
+        "1B"
+      ],
+      "boost3Alt": [
+        "6B"
+      ],
+      "drop1": [
+        "11A",
+        "10B"
+      ],
+      "drop2": [
+        "2B"
+      ],
+      "drop3": [
+        "9B"
+      ],
+      "drop3Alt": [
+        "4B"
+      ],
+      "mood": [
+        "8A"
+      ]
+    },
+    "12B": {
+      "perfect": [
+        "12B",
+        "1A"
+      ],
+      "boost1": [
+        "1B"
+      ],
+      "boost2": [
+        "9B"
+      ],
+      "boost3": [
+        "2B"
+      ],
+      "boost3Alt": [
+        "7B"
+      ],
+      "drop1": [
+        "12A",
+        "11B"
+      ],
+      "drop2": [
+        "3B"
+      ],
+      "drop3": [
+        "10B"
+      ],
+      "drop3Alt": [
+        "5B"
+      ],
+      "mood": [
+        "9A"
+      ]
+    }
+  }
+}

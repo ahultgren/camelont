@@ -29,15 +29,19 @@ matches. Common scripts (defined during scaffolding; keep this list in sync):
 
 | Script | Does |
 |---|---|
-| `pnpm dev` | Vite dev server |
-| `pnpm build` | type-check + production build (+ `404.html` copy) |
-| `pnpm preview` | serve the build |
+| `pnpm dev` | Vite dev server on `http://127.0.0.1:5173/camelont/` |
+| `pnpm build` | type-check (`vue-tsc -b`) + production build, plus the `404.html` copy |
+| `pnpm preview` | serve the build on `http://127.0.0.1:4173/camelont/` (E2E runs against this) |
 | `pnpm lint` / `pnpm lint:fix` | ESLint (incl. boundaries) |
-| `pnpm format` | Prettier write |
-| `pnpm typecheck` | `vue-tsc --noEmit` |
+| `pnpm format` / `pnpm format:check` | Prettier write / check (Markdown is excluded; docs are hand-formatted) |
+| `pnpm typecheck` | `vue-tsc -b` |
 | `pnpm test` / `pnpm test:watch` | Vitest |
-| `pnpm test:e2e` | Playwright (first run: `pnpm exec playwright install --with-deps chromium`) |
-| `pnpm check` | everything CI runs: lint + typecheck + test + build + e2e |
+| `pnpm test:coverage` | Vitest with coverage; fails below 90% lines in `**/domain/**` |
+| `pnpm test:e2e` | Playwright against `pnpm preview` (build first; first run: `pnpm exec playwright install --with-deps chromium`) |
+| `pnpm check` | everything CI runs: lint + format check + typecheck + unit with coverage + build + e2e |
+
+`pnpm install` runs `prepare`, which installs the lefthook git hooks (pre-commit: Prettier
+and ESLint on staged files; pre-push: typecheck and unit tests).
 
 ## GitHub
 
@@ -55,8 +59,11 @@ matches. Common scripts (defined during scaffolding; keep this list in sync):
 
 ## Working in a cloud (remote) Claude Code session
 
-- Needs Node 24 and network access to the npm registry. `corepack enable` provides pnpm.
-  Playwright needs `pnpm exec playwright install --with-deps chromium`.
+- Needs Node 22+ (24 preferred) and network access to the npm registry. `corepack enable`
+  provides pnpm. Create a `.env.local` with any placeholder Client ID so the build works.
+- Playwright needs a Chromium. If one is pre-installed (e.g. `/opt/pw-browsers`), point
+  `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` at its binary instead of running
+  `playwright install`.
 - Everything automated (lint, typecheck, unit, E2E) runs with **no Spotify or ReccoBeats
   access**: all network is mocked. Don't call the real APIs from tests.
 - A cloud session **can't** log in to Spotify. Real end-to-end verification against a

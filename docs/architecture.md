@@ -10,14 +10,14 @@ How the app is built. The *what* is in [`spec.md`](spec.md) and the *why* is in
 | Package manager / runtime | pnpm (via corepack, pinned in `packageManager`), Node 24 LTS (`.nvmrc`) |
 | Build | Vite |
 | UI | Vue 3 (`<script setup lang="ts">`, Composition API only) |
-| Language | TypeScript, `strict` + `noUncheckedIndexedAccess` + `exactOptionalPropertyTypes`; `vue-tsc` for type checks |
+| Language | TypeScript 6.0 (typescript-eslint does not support 7 yet), `strict` + `noUncheckedIndexedAccess` + `exactOptionalPropertyTypes`; `vue-tsc` for type checks |
 | Routing | vue-router, history mode, base `/camelont/`; `404.html` copy of `index.html` for GitHub Pages deep links |
 | Client state | Pinia (setup stores) |
 | Server state | TanStack Vue Query (Spotify + ReccoBeats reads; caching, retries, dedupe) |
 | Validation | zod, at every boundary: Spotify, ReccoBeats, IndexedDB reads, JSON import |
 | Persistence | IndexedDB via `idb-keyval`, behind a `KeyValueStore` port |
 | Worker | Web Worker via Vite's `new Worker(new URL(…), { type: 'module' })` + Comlink |
-| Styling | Tailwind CSS v4 (`@tailwindcss/vite`), design tokens as CSS custom properties in `@theme`; Reka UI for accessible primitives (dialog, combobox, tooltip, …) when needed; own components |
+| Styling | Tailwind CSS v4 (`@tailwindcss/vite`), design tokens as CSS custom properties in `@theme` (`src/app/styles.css`); fonts self-hosted via Fontsource; Reka UI for accessible primitives (dialog, combobox, tooltip, …) when needed; own components |
 | Charts | Hand-built SVG Vue components (no chart library); tiny local scale helpers |
 | Unit/component tests | Vitest + @testing-library/vue + happy-dom; MSW for HTTP |
 | E2E | Playwright (Chromium) against the Vite preview build; Spotify + ReccoBeats mocked via `page.route` |
@@ -76,10 +76,19 @@ app → pages → features → shared
   circular feature dependencies. Allowed edges today: `playlists → auth`,
   `mixing → track-features`, `mix-view → mixing, track-features`. Adding an edge is a
   design decision: record it here.
-- Inside a feature: `ui → model → (api, domain)`, `api → domain`; `domain` imports only
-  `shared/music` and `shared/lib`.
+- Inside a feature: `ui → (model, domain)`, `model → (api, domain)`, `api → domain`;
+  `domain` imports only `shared/music` and `shared/lib`. `ui` may use domain types and
+  pure helpers (e.g. move metadata), never `api`.
+- Cross-feature imports come from a feature's `ui` or `model` only; `api` and `domain`
+  stay self-contained (e.g. `mixing/domain` defines its own `MixTrack` input instead of
+  importing `TrackFeatures`).
+- `domain/`, `shared/music` and `shared/lib` import no packages at all (no Vue, no I/O);
+  a separate `no-restricted-imports` rule enforces this, since boundaries only governs
+  local files.
+- Test helpers in `src/test/` (MSW server, fixtures) may be imported only by `*.test.ts`.
 - `pages` import features and shared, never feature internals.
 
+The rules live in `eslint.config.ts` (`FEATURE_EDGES` lists the cross-feature edges).
 If you need to break a rule, the design is wrong. Move the code (usually down into
 `shared` or into the owning feature's public API) instead of adding an eslint-disable.
 
