@@ -1,0 +1,30 @@
+# Dependencies & builds
+node_modules/
+dist/
+dist-ssr/
+coverage/
+*.tsbuildinfo
+
+# Test output
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+
+# Env — only .env.example is committed
+.env
+.env.*
+!.env.example
+
+# Local, never-committed research material (private sources, third-party images)
+.private/
+
+# Editors & OS
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.log
+
+# Python bytecode (docs/reference/camelot.py)
+__pycache__/
