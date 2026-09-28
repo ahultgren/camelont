@@ -1,6 +1,6 @@
-import { ARC_PRESETS, ARC_SIGNALS, arcPosition, arcTarget, arcTermCost, normalise } from '../arc'
+import { ARC_PRESETS, arcPosition, arcTarget, arcTermCost, normalise } from '../arc'
 import type { MixConstraints } from '../constraints'
-import { arcRange, transitionCost } from '../evaluate'
+import { profileArcScale, transitionCost } from '../evaluate'
 import type { MixProfile } from '../profile'
 import type { MixTrack } from '../types'
 
@@ -120,21 +120,21 @@ export function buildProblem(
 
   let arcCost: Float64Array | null = null
   let arcBound: ArcBoundInput | null = null
-  const range = arcRange(tracks, profile)
-  if (profile.arc && range) {
+  const scale = profileArcScale(tracks, profile)
+  if (profile.arc && scale) {
     const arc = profile.arc
     const n = tracks.length
     arcCost = new Float64Array(n * n)
     for (let t = 0; t < n; t++) {
       const track = tracks[t]
       if (!track) continue
-      for (let p = 0; p < n; p++) arcCost[t * n + p] = arcTermCost(track, p, n, arc, range)
+      for (let p = 0; p < n; p++) arcCost[t * n + p] = arcTermCost(track, p, n, arc, scale)
     }
-    const values = tracks.map(ARC_SIGNALS[arc.signal])
+    const values = tracks.map(scale.value)
     if (values.every((v) => v !== null)) {
       arcBound = {
         weight: arc.weight,
-        values: values.map((v) => normalise(v, range)),
+        values: values.map((v) => normalise(v, scale.range)),
         targets: tracks.map((_, p) => arcTarget(ARC_PRESETS[arc.preset], arcPosition(p, n))),
       }
     }

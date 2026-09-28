@@ -111,3 +111,13 @@ and sparkline although the gap treated it as a smooth step. **Decision:** mix vi
 `tempoLine`, each track folded the way `tempoGap` matched it to its predecessor, with the
 listed BPM in parentheses. Peaks and BPM range use it too. Track lists stay raw, and
 scoring is unchanged. Amends 10.
+
+### 23. The arc scores the set tempo, not raw BPM (2026-09-28)
+**Context:** the arc normalised raw BPM, so a double-time track (listed 175 among ~90s)
+counted as the fastest in the set, was steered onto a peak, and squashed everyone
+else's level. **Decision:** the BPM signal is the set tempo: each BPM halved or doubled,
+the way `tempoGap` matches, into the octave most of the set is listed in (the slower on
+a tie). It has to be per track and order-independent because the solver precomputes a
+cost per track and position, so it can't reuse the chart's neighbour-by-neighbour line;
+that line is shifted into the same octave instead. Changes which mixes win when a set
+has double-time tracks; transition costs are unchanged.

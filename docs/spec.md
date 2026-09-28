@@ -91,7 +91,8 @@ the chart, so the scoring can change without touching the rules. A profile conta
   `+++`/`−−−` 2; `++`/`−−` 3; `(+++)`/`(−−−)`/mood 4;
 - a tempo weight (default 20, so a 10% gap ≈ one `+++`);
 - an optional **energy arc**: a target curve over set position (presets: two waves,
-  steady build), a signal it applies to (BPM at first; energy can be added later), and
+  steady build), a signal it applies to (BPM at first, as the set tempo: halved or
+  doubled into the octave most of the set is listed in; energy can be added later), and
   a weight.
 
 Mix cost = Σ transitions (move cost + tempo weight × gap) + arc weight × Σ deviation of

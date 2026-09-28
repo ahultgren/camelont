@@ -51,6 +51,27 @@ describe('evaluateMix on the WCS fixture', () => {
     expect(mix.stats.peaks).toEqual([])
   })
 
+  it('scores the arc on the set tempo, so a double-time track does not count as fast', () => {
+    const profile = withArc(DEFAULT_PROFILE, { preset: 'steadyBuild', signal: 'bpm', weight: 10 })
+    const tracks = mixTracks(
+      [88, 92, 184, 96].map((bpm, i) => ({
+        id: String(i),
+        label: String(bpm),
+        camelot: '8A',
+        bpm,
+        energy: null,
+      })),
+    )
+    const mix = evaluateMix(tracks, profile)
+    expect(mix.arc?.range).toEqual({ min: 88, max: 96 })
+    // 184 is scored as 92, the middle of the range, not as the fastest track.
+    const asNinetyTwo = evaluateMix(
+      tracks.map((t) => (t.bpm === 184 ? { ...t, bpm: 92 } : t)),
+      profile,
+    )
+    expect(mix.arc?.cost).toBeCloseTo(asNinetyTwo.arc?.cost ?? NaN)
+  })
+
   it('sums move and tempo costs into the total', () => {
     const mix = evaluateMix(handTuned, DEFAULT_PROFILE)
     const sum = mix.transitions.reduce((s, t) => s + t.cost, 0)

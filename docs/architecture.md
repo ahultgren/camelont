@@ -155,12 +155,15 @@ The heart of the app, pure TS and fully unit tested.
 - `profile.ts`: `MixProfile { id, name, moveCost: Record<Move, number>, clashCost,
   tempoWeight, arc: ArcConfig | null }`. `DEFAULT_PROFILE` reproduces the reference
   weights; `withArc(profile, arc)` applies the user's arc choice.
-- `tempo.ts`: `tempoGap(a, b)`, half/double tolerant, and `tempoLine(bpms)`: BPM per
-  position folded the way each gap matched its predecessor (shifted by octaves so most
-  tracks keep their listed BPM). Display only; costs use `tempoGap`.
+- `tempo.ts`: `tempoGap(a, b)`, half/double tolerant; `setTempo(bpms)`, which folds a
+  BPM (halving/doubling as the gap matches) into the octave most of the set is listed
+  in, independent of order; and `tempoLine(bpms)`, BPM per position folded the way each
+  gap matched its predecessor, shifted by octaves to sit at the set tempo. Transitions
+  cost by `tempoGap`, the arc by set tempo, and the charts plot `tempoLine`.
 - `arc.ts`: `ArcConfig { preset, signal, weight }`; presets are data (piecewise-linear
-  target curves over position 0..1); signals are functions `MixTrack → number | null`
-  (BPM first), normalised over the set's range. `arcTermCost` is the per-track term.
+  target curves over position 0..1); signals are built per set (`arcScale(tracks,
+  signal)` → each track's value and the set's range; BPM is the set tempo), so the
+  solver can precompute a cost per track and position. `arcTermCost` is the per-track term.
   Removing arcs means deleting this file and the one term in `evaluate`.
 - `evaluate.ts`: `evaluateMix(order, profile) → EvaluatedMix` (transitions with move +
   cost, transition cost, arc cost + target curve, total cost, clash count, the tempo

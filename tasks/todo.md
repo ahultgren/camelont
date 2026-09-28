@@ -103,7 +103,8 @@ can't log in. Before relying on it, the owner should, on the Pages deploy or loc
 - [x] `EvaluatedMix.tempo`; peaks and BPM range from it
 - [x] Tempo chart, sparkline and running order use it; listed BPM in parentheses
 - [x] Spec, architecture, decision #22
+- [x] Arc scores the set tempo (`setTempo`); tempo line aligned to its octave (#23)
 
 **Review:** a double-time track (e.g. 175 next to 88) now plots at 87.5 with
-"(listed 175)". Scoring is unchanged. Open: the arc still normalises raw BPM, so such a
-track stretches the arc's range and its dashed target line can leave the chart's axis.
+"(listed 175)". Scoring is unchanged. The arc now scores the set tempo (decision #23), and the chart axis
+covers the arc range.

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { tempoGap, tempoLine } from './tempo'
+import { setTempo, tempoGap, tempoLine } from './tempo'
 
 describe('tempoGap', () => {
   it('is relative to the faster track', () => {
@@ -22,6 +22,39 @@ describe('tempoGap', () => {
   })
 })
 
+describe('setTempo', () => {
+  it('folds a double- or half-time track into the octave most of the set is listed in', () => {
+    const fold = setTempo([88, 90, 175, 92, 46])
+    expect([88, 90, 175, 92, 46].map(fold)).toEqual([88, 90, 87.5, 92, 92])
+  })
+
+  it('folds as often as needed, the way the gap matches', () => {
+    const fold = setTempo([88, 90, 92])
+    expect(fold(350)).toBe(87.5)
+    expect(fold(22.5)).toBe(90)
+    // 145 is matched as is against 100 (45 < 55); 155 as double time.
+    expect(setTempo([100, 100, 145])(145)).toBe(145)
+    expect(setTempo([100, 100, 155])(155)).toBe(77.5)
+  })
+
+  it('follows the majority, whichever octave it is', () => {
+    const fold = setTempo([170, 176, 180, 90])
+    expect(fold(90)).toBe(180)
+    expect(fold(176)).toBe(176)
+  })
+
+  it('does not depend on the order, and prefers the slower octave on a tie', () => {
+    const a = setTempo([88, 176, 180, 92])
+    const b = setTempo([180, 92, 88, 176])
+    for (const bpm of [88, 176, 180, 92]) expect(a(bpm)).toBe(b(bpm))
+    expect(a(180)).toBe(90)
+  })
+
+  it('leaves values alone for an empty set', () => {
+    expect(setTempo([])(120)).toBe(120)
+  })
+})
+
 describe('tempoLine', () => {
   it('is the raw BPM when no neighbour is matched at half or double time', () => {
     expect(tempoLine([100, 110, 95])).toEqual([100, 110, 95])
@@ -38,7 +71,7 @@ describe('tempoLine', () => {
     expect(tempoLine([88, 176, 180, 92])).toEqual([88, 88, 90, 92])
   })
 
-  it('keeps most tracks at their listed BPM when the opener is the odd one out', () => {
+  it('sits in the set tempo octave when the opener is the odd one out', () => {
     expect(tempoLine([170, 88, 90, 92])).toEqual([85, 88, 90, 92])
   })
 

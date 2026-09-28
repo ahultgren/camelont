@@ -3,9 +3,10 @@ import {
   ARC_PRESETS,
   arcPosition,
   arcTarget,
+  arcScale,
   arcTermCost,
-  signalRange,
   type ArcConfig,
+  type ArcScale,
   type SignalRange,
 } from './arc'
 import { MOVE_META, moveBetween, type MoveOrClash } from './chart'
@@ -78,9 +79,9 @@ export function transitionCost(from: MixTrack, to: MixTrack, profile: MixProfile
   }
 }
 
-/** The arc's signal range over the whole set being mixed (the solver uses it too). */
-export function arcRange(tracks: readonly MixTrack[], profile: MixProfile): SignalRange | null {
-  return profile.arc ? signalRange(tracks, profile.arc.signal) : null
+/** The arc's signal over the whole set being mixed (the solver uses it too). */
+export function profileArcScale(tracks: readonly MixTrack[], profile: MixProfile): ArcScale | null {
+  return profile.arc ? arcScale(tracks, profile.arc.signal) : null
 }
 
 function emptyCounts<K extends string>(keys: readonly K[]): Record<K, number> {
@@ -138,17 +139,17 @@ export function evaluateMix(order: readonly MixTrack[], profile: MixProfile): Ev
   const transitionTotal = transitions.reduce((sum, t) => sum + t.cost, 0)
 
   let arc: ArcEvaluation | null = null
-  const range = arcRange(order, profile)
-  if (profile.arc && range) {
+  const scale = profileArcScale(order, profile)
+  if (profile.arc && scale) {
     const config = profile.arc
     const cost = order.reduce(
-      (sum, track, i) => sum + arcTermCost(track, i, order.length, config, range),
+      (sum, track, i) => sum + arcTermCost(track, i, order.length, config, scale),
       0,
     )
     const target = order.map((_, i) =>
       arcTarget(ARC_PRESETS[config.preset], arcPosition(i, order.length)),
     )
-    arc = { config, cost, range, target }
+    arc = { config, cost, range: scale.range, target }
   }
 
   const moveCounts = emptyCounts(ALL_MOVES)

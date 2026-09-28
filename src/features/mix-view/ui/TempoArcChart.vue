@@ -28,7 +28,11 @@ const frame = computed(() => ({
   top: 34,
   bottom: 34,
 }))
-const axis = computed(() => niceRange(Math.min(...mix.tempo), Math.max(...mix.tempo)))
+const axis = computed(() => {
+  const range = mix.arc?.range
+  const values = range ? [...mix.tempo, range.min, range.max] : mix.tempo
+  return niceRange(Math.min(...values), Math.max(...values))
+})
 const x = computed(() => linearX(frame.value, mix.order.length))
 const y = computed(() => linearY(frame.value, axis.value.min, axis.value.max))
 
