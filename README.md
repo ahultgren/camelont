@@ -11,8 +11,9 @@ save your favourite as a new playlist. Your source playlist is never touched.
 - Key and BPM from [ReccoBeats](https://reccobeats.com), with manual corrections stored
   on your device
 
-**Status:** specification and plan done; implementation not started.
-See [`docs/spec.md`](docs/spec.md) and [`tasks/todo.md`](tasks/todo.md).
+**Status:** implemented and tested with mocked Spotify and ReccoBeats; not yet
+verified against a real Spotify account. See [`docs/spec.md`](docs/spec.md) and the
+review in [`tasks/todo.md`](tasks/todo.md).
 
 Access is limited to users allowlisted on the Spotify developer app (Spotify
 development mode). Setup: [`docs/setup.md`](docs/setup.md).

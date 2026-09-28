@@ -10,14 +10,14 @@ How the app is built. The *what* is in [`spec.md`](spec.md) and the *why* is in
 | Package manager / runtime | pnpm (via corepack, pinned in `packageManager`), Node 24 LTS (`.nvmrc`) |
 | Build | Vite |
 | UI | Vue 3 (`<script setup lang="ts">`, Composition API only) |
-| Language | TypeScript, `strict` + `noUncheckedIndexedAccess` + `exactOptionalPropertyTypes`; `vue-tsc` for type checks |
+| Language | TypeScript 6.0 (typescript-eslint does not support 7 yet), `strict` + `noUncheckedIndexedAccess` + `exactOptionalPropertyTypes`; `vue-tsc` for type checks |
 | Routing | vue-router, history mode, base `/camelont/`; `404.html` copy of `index.html` for GitHub Pages deep links |
 | Client state | Pinia (setup stores) |
 | Server state | TanStack Vue Query (Spotify + ReccoBeats reads; caching, retries, dedupe) |
 | Validation | zod, at every boundary: Spotify, ReccoBeats, IndexedDB reads, JSON import |
 | Persistence | IndexedDB via `idb-keyval`, behind a `KeyValueStore` port |
 | Worker | Web Worker via Vite's `new Worker(new URL(…), { type: 'module' })` + Comlink |
-| Styling | Tailwind CSS v4 (`@tailwindcss/vite`), design tokens as CSS custom properties in `@theme`; Reka UI for accessible primitives (dialog, combobox, tooltip, …) when needed; own components |
+| Styling | Tailwind CSS v4 (`@tailwindcss/vite`), design tokens as CSS custom properties in `@theme` (`src/app/styles.css`); fonts self-hosted via Fontsource; Reka UI for accessible primitives (dialog, combobox, tooltip, …) when needed; own components |
 | Charts | Hand-built SVG Vue components (no chart library); tiny local scale helpers |
 | Unit/component tests | Vitest + @testing-library/vue + happy-dom; MSW for HTTP |
 | E2E | Playwright (Chromium) against the Vite preview build; Spotify + ReccoBeats mocked via `page.route` |
@@ -76,10 +76,19 @@ app → pages → features → shared
   circular feature dependencies. Allowed edges today: `playlists → auth`,
   `mixing → track-features`, `mix-view → mixing, track-features`. Adding an edge is a
   design decision: record it here.
-- Inside a feature: `ui → model → (api, domain)`, `api → domain`; `domain` imports only
-  `shared/music` and `shared/lib`.
+- Inside a feature: `ui → (model, domain)`, `model → (api, domain)`, `api → domain`;
+  `domain` imports only `shared/music` and `shared/lib`. `ui` may use domain types and
+  pure helpers (e.g. move metadata), never `api`.
+- Cross-feature imports come from a feature's `ui` or `model` only; `api` and `domain`
+  stay self-contained (e.g. `mixing/domain` defines its own `MixTrack` input instead of
+  importing `TrackFeatures`).
+- `domain/`, `shared/music` and `shared/lib` import no packages at all (no Vue, no I/O);
+  a separate `no-restricted-imports` rule enforces this, since boundaries only governs
+  local files.
+- Test helpers in `src/test/` (MSW server, fixtures) may be imported only by `*.test.ts`.
 - `pages` import features and shared, never feature internals.
 
+The rules live in `eslint.config.ts` (`FEATURE_EDGES` lists the cross-feature edges).
 If you need to break a rule, the design is wrong. Move the code (usually down into
 `shared` or into the owning feature's public API) instead of adding an eslint-disable.
 
@@ -102,67 +111,143 @@ mixing/model ── MixRequest {tracks, constraints, profileId, k, seed} ──�
 
 - Domain types never carry DTO shapes. `api/` maps DTOs to domain types.
 - Track identity everywhere is the Spotify track ID (22-char base62). Duplicates of the
-  same track in one playlist are treated as distinct *entries* (`entryId` = position-
-  independent unique ID) but share features by track ID.
+  same track in one playlist are treated as distinct *entries* (`entryId` = the track ID
+  for the first occurrence, `<trackId>#2`, `#3`… for later ones; position-independent)
+  but share features by track ID.
+- Playlist items that can't be mixed (local files, episodes, removed tracks) are
+  skipped and counted, so the UI can say what was left out.
+
+## Track features (`features/track-features`)
+
+- `domain/features.ts`: `FetchedFeatures` (the provider's answer, including "not
+  found"), `Override` (null fields are not overridden), and `mergeFeatures` → per-field
+  `Sourced<T> { value, source: 'reccobeats' | 'manual' }`. Overrides always win, field by
+  field. A track is mixable only with both a key and a BPM.
+- `api/reccobeats.ts` implements a `FeatureProvider` (the seam for a second opinion):
+  batches of 40, rows matched by `href`, each row validated on its own, `key < 0` →
+  no key, BPM rounded to 0.1.
+- `api/repositories.ts`: the features cache and the overrides repo on the
+  `KeyValueStore` port (IndexedDB databases `camelont-features` and
+  `camelont-overrides`). Records are `{ v: 1, data }`; anything that fails the zod
+  schema reads as missing. "Not found" answers are retried after a week.
+- Export/import: a versioned JSON file (`app: "camelont", kind: "track-overrides",
+  version: 1, overrides: [...]`), validated with zod; on import the incoming values
+  win, and the report counts added, updated and unchanged overrides.
+- `model/`: `installTrackFeatures(app)` wires storage and the provider;
+  `useOverridesStore` (Pinia); `useTrackFeatures(trackIds)` reads the cache, fetches
+  the rest per batch (a failed batch degrades to missing data plus a message), and
+  merges with overrides.
+- `ui/`: `TrackTable` (key in both notations, BPM, source badge per value, Fix/Edit
+  per row, an `actions` slot for the page), `OverrideDialog`, `OverridesTransfer`.
 
 ## Mixing engine (`features/mixing/domain`)
 
 The heart of the app, pure TS and fully unit tested.
 
+- `types.ts`: `MixTrack { id, label, camelot, bpm, energy }`, the engine's own input
+  (the entry ID, a label for messages, and the features). `mixing/model` maps merged
+  track features to it, so the domain never imports another feature.
 - `chart.ts`: `Move` union (`perfect | boost1 | boost2 | boost3 | boost3Alt | drop1 |
-  drop2 | drop3 | drop3Alt | mood`), move metadata (symbol, label, tone), the chart
-  loaded from typed data equal to `docs/domain/camelot-chart.json`, and
-  `moveBetween(from, to): Move | null`.
-- `profile.ts`: `MixProfile { id, name, moveCost: Record<Move, number>, tempoWeight,
-  arc: ArcConfig | null }`. `DEFAULT_PROFILE` reproduces the reference weights.
+  drop2 | drop3 | drop3Alt | mood`), `MOVE_META` (symbol, label, tone; plus `clash`
+  for evaluating given orders), the chart as wheel arithmetic (the table in
+  `camelot-chart.md`), and `moveBetween(from, to): Move | null`. A test asserts all 576
+  pairs equal the JSON.
+- `profile.ts`: `MixProfile { id, name, moveCost: Record<Move, number>, clashCost,
+  tempoWeight, arc: ArcConfig | null }`. `DEFAULT_PROFILE` reproduces the reference
+  weights; `withArc(profile, arc)` applies the user's arc choice.
 - `tempo.ts`: `tempoGap(a, b)`, half/double tolerant.
-- `arc.ts`: `ArcConfig { preset, signal, weight }`; presets are data (normalised target
-  curves over position 0..1); signals are functions `TrackFeatures → number | null`
-  (BPM first). Removing arcs means deleting this file and the one term in `evaluate`.
-- `evaluate.ts`: `evaluateMix(order, features, chart, profile) → EvaluatedMix`
-  (transitions with move + cost, total cost, stats: move histogram, peaks, opener,
-  closer, BPM range). **The solver and the UI both use this one function.** It is the
-  single source of truth for scoring.
-- `constraints.ts`: `MixConstraints { start?, end?, follows: [from, to][], excluded }`
-  and `validateConstraints` → typed errors (cycle, branch, clash pair, start with a
-  required predecessor, end with a required successor, excluded track in a constraint).
+- `arc.ts`: `ArcConfig { preset, signal, weight }`; presets are data (piecewise-linear
+  target curves over position 0..1); signals are functions `MixTrack → number | null`
+  (BPM first), normalised over the set's range. `arcTermCost` is the per-track term.
+  Removing arcs means deleting this file and the one term in `evaluate`.
+- `evaluate.ts`: `evaluateMix(order, profile) → EvaluatedMix` (transitions with move +
+  cost, transition cost, arc cost + target curve, total cost, clash count, stats: move
+  and tone histograms, peaks, opener, closer, BPM range). `transitionCost` and the arc
+  term are the primitives. **The solver and the UI both use these.** They are the
+  single source of truth for scoring; a test checks the solver's path cost equals
+  `evaluateMix` exactly.
+- `constraints.ts`: `MixConstraints { start, end, follows: [from, to][], excluded }`
+  and `validateConstraints` → typed errors (unknown/excluded track in a constraint,
+  start = end, self-follow, clash pair, branch out/in, cycle, start with a required
+  predecessor, end with a required successor, a chain joining start to end too early),
+  plus `describeConstraintError` for plain-English messages.
 - `solver/`:
-  1. Build the legal-move digraph over the included entries (edges only for chart
-     moves). Clashes are never edges.
-  2. Collapse follow-chains into blocks (a block's in-key is its first track and its
-     out-key its last).
-  3. Search: beam search over partial paths, ordered by cost-so-far plus a scarcity
-     heuristic (prefer extending with, or reserving, low-remaining-degree nodes,
-     Warnsdorff-style), respecting start/end.
-  4. Improve: local search (or-opt block relocation; only moves that keep every edge
-     legal), under the full objective including the arc.
-  5. Diversify: keep the top-k by cost where each pair differs in at least X% of
-     adjacencies.
-  Deterministic given `seed` (`shared/lib/prng`). Time-boxed, and returns the best
-  found so far.
-- `diagnostics.ts`: when no path is found, explain it. Cheap checks come first: nodes
-  with in-degree or out-degree 0 (considering start/end), more than two degree-1
-  "bottleneck" nodes that must be endpoints, constraint conflicts. Otherwise a generic
-  "no order found within the search budget" message listing the lowest-degree tracks as
+  1. `problem.ts`: collapse follow-chains into blocks (a block's in-key is its first
+     track, its out-key its last) and build the legal-move digraph between blocks.
+     Clashes are never edges. Edge and arc costs are precomputed from `evaluate.ts`.
+  2. `search.ts`: beam search over partial paths. Each state tracks, per unvisited
+     block, how many predecessors and successors are still available; a block that
+     can no longer be reached, two blocks that can only follow the current one, or too
+     many dead ends prune the state (this is how low-degree tracks like Bloodstream
+     get placed instead of stranded). States are ranked by cost so far + a lower bound
+     on the rest (cheapest incoming edges + an exact 1-D bound on the arc term) + a
+     scarcity penalty (Warnsdorff-style). Extensions are pre-ranked by a cheap
+     estimate and only the most promising are materialised. A depth-first search with
+     the same pruning is the fallback when the beam loses every path.
+  3. `local-search.ts`: or-opt (move 1–3 blocks) and pairwise swaps, keeping every
+     edge legal, under the full objective including the arc.
+  4. `diversity.ts` + `solve.ts`: up to k + 1 rounds; each round penalises the edges
+     earlier results used, so later rounds explore different orders. Keep the top k by
+     cost where each pair differs in at least 30% of adjacencies.
+  Deterministic given `seed` (`shared/lib/prng`). An 8 s time limit is a safety net
+  only (results are deterministic unless it's reached); 100 tracks take about 1 s.
+- `diagnostics.ts`: when no path is found, explain it. Structural checks: tracks with
+  no possible neighbour at all, tracks nothing can precede (or follow) given the start
+  (end), more such tracks than can open (close) the mix, and several tracks competing
+  for the same only neighbour. Each names excluded tracks that would fit. Otherwise a
+  generic "no clash-free order was found" message listing the tightest tracks as
   exclusion candidates.
-- `solver.worker.ts` exposes `solve(request)` via Comlink. `model/useMixer` wraps it
-  with cancellation for when inputs change.
+- `model/solver.worker.ts` exposes `solve(request)` via Comlink; `model/solver-client.ts`
+  starts one worker per run (cancel = terminate). `model/useMixer` wraps it and cancels
+  the run in flight when inputs change or the component unmounts.
 
 **Required tests using the WCS fixture:** the `hand_tuned` and `script_greedy` orders
 evaluate as clash-free with the documented move counts (hand-tuned: 9 perfect, 7 boost,
-3 drop). The solver finds ≥ 1 clash-free order for the full set, respects each
-constraint type, and reports Bloodstream-style bottlenecks when made infeasible. The
+3 drop). The solver finds clash-free orders for the full set, respects each constraint
+type, beats greedy from the same opener, matches the hand-tuned order under the
+two-waves profile, and reports Bloodstream-style bottlenecks when made infeasible. The
 chart equals the JSON for all 576 pairs.
+
+## Mix UI (`mixing/model`, `mixing/ui`, `mix-view`, `pages/PlaylistPage.vue`)
+
+- `mixing/model/mix-input.ts` maps playlist entries + merged track features to
+  `MixTrack`s and sets aside entries without data. `useMixPlanner` holds the
+  constraints and arc choice, blocks mixing while a track lacks data and isn't
+  excluded, validates constraints instantly, and re-solves (debounced 250 ms) whenever
+  the input changes; `useMixer` cancels the stale run. The solver client is injectable
+  (`installMixing`); without `Worker` it falls back to `inlineSolverClient`.
+- `mixing/ui`: `ConstraintsPanel` (first/last track, "must be followed by" pairs; the
+  exclude toggles sit on the track table), `ArcPicker`, `CandidateList` (a radio group
+  of cards: sparkline, move-tone counts, BPM range, peaks, opener, closer, cost) and
+  `MixProblems` (constraint errors and diagnostics in plain language).
+- `mix-view`: `TempoArcChart` (hand-built SVG; key-coloured dots, a move badge per
+  segment, the arc target dashed, each point focusable with a full `aria-label`, and a
+  card on hover/tap/focus), `KeyWheel`, `RunningOrder` (connectors: keys, move, BPM
+  change) and `MixExplorer` composing them. Pure geometry lives in
+  `mix-view/domain/layout.ts`. The chart scrolls horizontally inside its card on
+  narrow screens; row grids use `minmax(0,1fr)` so long titles never widen the page.
+- Saving: `mixing/domain/describe.ts` builds the new playlist's name
+  (`<source> · Camelot mix`) and description (moves, BPM range, profile, arc; ≤ 300
+  characters); `playlists/ui/SavePlaylistButton` creates the private playlist and adds
+  the URIs in batches of 100, then links to it. The page is the glue: it maps the
+  chosen mix's entry IDs to URIs.
 
 ## Auth (`features/auth`)
 
-- PKCE S256 with `state`. The verifier and state go in `sessionStorage` during the
-  redirect; tokens go in `localStorage` (access token, expiry, refresh token, scopes).
-- `redirect_uri` = `${location.origin}${import.meta.env.BASE_URL}callback`. Register
-  both the local and the Pages URL in the Spotify dashboard (see `setup.md`).
-- The API wrapper asks auth for a valid token (refreshing when < 60 s left, with a
-  single in-flight refresh), retries a 401 once after a refresh, and logs out if the
-  refresh fails.
+- PKCE S256 with `state` (`domain/pkce.ts`). The verifier and state go in
+  `sessionStorage` during the redirect and are cleared on callback; tokens go in
+  `localStorage` (`camelont.auth.tokens`: access token, expiry, refresh token, scope),
+  validated with zod on read.
+- `redirect_uri` = `${location.origin}${import.meta.env.BASE_URL}callback`, built in
+  `app/config.ts`. Register both the local and the Pages URL in the Spotify dashboard
+  (see `setup.md`).
+- `model/session.ts` is plain TypeScript (`createAuthSession`); `installAuth(app, …)`
+  provides it and `useAuthStore` (Pinia) exposes `loggedIn`, `login`, `logout`,
+  `handleCallback` and a `tokenSource` for API clients.
+- The shared HTTP client asks the token source for a valid token (refreshing when
+  < 60 s left, with a single in-flight refresh), retries a 401 once after a refresh,
+  and the session logs out if the refresh fails. `App.vue` then leaves pages that need
+  a login; `requireLogin` guards routes with `meta.requiresAuth`.
 - Scopes: `playlist-read-private playlist-read-collaborative playlist-modify-private`.
 
 ## Config

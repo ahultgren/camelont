@@ -88,3 +88,19 @@ The source playlist is never modified. Reordering in place isn't offered.
 It's a third-party image. The committed spec is the hand transcription
 (`domain/camelot-chart.json`), cross-checked against the reference script with zero
 mismatches over 576 pairs.
+
+### 19. Self-hosted fonts (2026-09-27)
+**Context:** the reference pages load Google Fonts, but the spec allows network calls only
+to Spotify and ReccoBeats. **Decision:** bundle the three families via Fontsource.
+
+### 20. The two-waves preset is modelled on the hand-tuned WCS set (2026-09-27)
+**Context:** a generic two-hump curve scored the greedy order (82) better than the
+user's hand-tuned order on the arc term, so it pulled mixes away from the quality bar.
+**Decision:** the preset follows the hand-tuned shape (slow opener, peak about a third
+in, breather, a second wave that dips, a high close). With it the solver rediscovers
+the hand-tuned order as its best mix for the WCS set. Revisit when the owner has
+opinions about arcs for other sets.
+
+### 21. Key names follow the approved reference charts (2026-09-27)
+Flats, except F♯ major and C♯/F♯ minor: `3B` is D♭ major (as in the reference charts
+and the WCS fixture), not C♯ major as the reference script printed.

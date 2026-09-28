@@ -1,0 +1,103 @@
+@import 'tailwindcss';
+@import '@fontsource-variable/bricolage-grotesque/opsz.css';
+@import '@fontsource/ibm-plex-sans/400.css';
+@import '@fontsource/ibm-plex-sans/500.css';
+@import '@fontsource/ibm-plex-sans/600.css';
+@import '@fontsource/ibm-plex-mono/400.css';
+@import '@fontsource/ibm-plex-mono/500.css';
+
+/*
+ * Design tokens, carried over from docs/reference/charts/ (the approved look).
+ * Light by default; dark follows the system.
+ */
+:root {
+  --bg: #f2f3f7;
+  --surface: #ffffff;
+  --ink: #1b1d2a;
+  --muted: #63677d;
+  --rule: #dcdee8;
+  --accent: #3a4bd8;
+  --band: #e6e8f2;
+  --warn: #b4540f;
+  --warn-bg: #fbebdd;
+  --ok: #2e7d5b;
+  --ok-bg: #dff1e8;
+  --chip-l: 62%;
+  --chip-la: 78%;
+  --chip-s: 62%;
+  --chip-ink: #14151e;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #12131b;
+    --surface: #1a1c27;
+    --ink: #e8e9f1;
+    --muted: #9296ad;
+    --rule: #2b2e3d;
+    --accent: #8e9aff;
+    --band: #1f2230;
+    --warn: #f0a35e;
+    --warn-bg: #3a2a1c;
+    --ok: #6cc79e;
+    --ok-bg: #1b3328;
+    --chip-l: 58%;
+    --chip-la: 40%;
+    --chip-s: 55%;
+    --chip-ink: #0e0f15;
+    color-scheme: dark;
+  }
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-rule: var(--rule);
+  --color-accent: var(--accent);
+  --color-band: var(--band);
+  --color-warn: var(--warn);
+  --color-warn-bg: var(--warn-bg);
+  --color-ok: var(--ok);
+  --color-ok-bg: var(--ok-bg);
+  --color-chip-ink: var(--chip-ink);
+  --font-display: 'Bricolage Grotesque Variable', system-ui, sans-serif;
+  --font-sans: 'IBM Plex Sans', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+}
+
+@layer base {
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font: 15px/1.5 var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+}
+
+@utility num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+@utility eyebrow {
+  font: 500 12px/1 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}

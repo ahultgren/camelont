@@ -1,0 +1,9 @@
+dist
+coverage
+pnpm-lock.yaml
+docs/reference
+docs/domain/camelot-chart.json
+src/test/fixtures
+playwright-report
+test-results
+*.md

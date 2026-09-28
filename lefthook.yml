@@ -1,0 +1,19 @@
+# Local git hooks. Install with `pnpm exec lefthook install` (done by `pnpm prepare`).
+pre-commit:
+  parallel: true
+  commands:
+    format:
+      glob: '*.{ts,vue,js,json,css,yml,html}'
+      run: pnpm exec prettier --write --ignore-unknown {staged_files}
+      stage_fixed: true
+    lint:
+      glob: '*.{ts,vue}'
+      run: pnpm exec eslint {staged_files}
+
+pre-push:
+  parallel: true
+  commands:
+    typecheck:
+      run: pnpm typecheck
+    unit:
+      run: pnpm test
