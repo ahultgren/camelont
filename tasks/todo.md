@@ -97,14 +97,19 @@ can't log in. Before relying on it, the owner should, on the Pages deploy or loc
 - Mixes re-solve automatically 250 ms after any change. If that feels jumpy, a
   "Generate" button is a small change.
 
-## Fix — charts plot the BPM the tempo gap used (2026-09-28)
+## Fix — one set tempo for scoring and display (2026-09-28)
 
-- [x] `tempoLine` in `mixing/domain/tempo.ts`, sharing `tempoGap`'s half/double match
-- [x] `EvaluatedMix.tempo`; peaks and BPM range from it
-- [x] Tempo chart, sparkline and running order use it; listed BPM in parentheses
-- [x] Spec, architecture, decision #22
-- [x] Arc scores the set tempo (`setTempo`); tempo line aligned to its octave (#23)
+- [x] Charts plotted raw BPM while scoring matched half/double time (first fix: a
+  per-mix chained line)
+- [x] The arc scored raw BPM (first fix: a majority reference; broke on the owner's set)
+- [x] Adversarial review: the reference window was 2.25× wide, results flipped on small
+  edits, chart and arc scales drifted apart
+- [x] `setTempo`: narrowest one-octave window for the set, placed where most tracks are
+  listed; owner's playlist as a regression fixture, plus a stability test
+- [x] Tempo gap, arc, chart, sparkline, running order, peaks, range and opener/closer all
+  use the set tempo (spec §5.2 changed with the owner's approval; decision #22)
 
-**Review:** a double-time track (e.g. 175 next to 88) now plots at 87.5 with
-"(listed 175)". Scoring is unchanged. The arc now scores the set tempo (decision #23), and the chart axis
-covers the arc range.
+**Review:** on the owner's playlist Price Tag folds to 87.5 and We Are Young to 92.05;
+everything else, including Brother (78) and Shut Up and Dance (129.9), is unchanged.
+Known limit: a set with two tempo groups and no clear gap between them (e.g. only ~80
+and ~120) may fold the wrong way; an override fixes it.

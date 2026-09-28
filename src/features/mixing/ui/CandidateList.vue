@@ -8,8 +8,9 @@ defineProps<{ candidates: readonly EvaluatedMix[] }>()
 const selected = defineModel<number>({ required: true })
 
 const trackLabel = (mix: EvaluatedMix, id: string | null) => {
-  const t = mix.order.find((x) => x.id === id)
-  return t ? `${t.label} (${formatKey(t.camelot)}, ${String(t.bpm)})` : '–'
+  const i = mix.order.findIndex((x) => x.id === id)
+  const t = mix.order[i]
+  return t ? `${t.label} (${formatKey(t.camelot)}, ${String(mix.tempo[i] ?? t.bpm)})` : '–'
 }
 const range = (mix: EvaluatedMix) =>
   mix.stats.bpmRange ? `${String(mix.stats.bpmRange.min)}–${String(mix.stats.bpmRange.max)}` : '–'

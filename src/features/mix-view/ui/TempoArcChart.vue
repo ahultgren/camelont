@@ -13,8 +13,8 @@ import {
 } from '../domain/layout'
 
 /**
- * The primary view: BPM per position on the tempo line (half/double time folded the way
- * the tempo gap matched it), dots coloured by key, the chart move on each
+ * The primary view: set tempo per position (BPM with half/double time folded, as the
+ * scoring sees it), dots coloured by key, the chart move on each
  * segment, the arc target when one is set, and a card on hover, tap or focus.
  */
 const { mix, info } = defineProps<{ mix: EvaluatedMix; info: ReadonlyMap<string, EntryInfo> }>()

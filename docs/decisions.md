@@ -105,19 +105,17 @@ opinions about arcs for other sets.
 Flats, except F♯ major and C♯/F♯ minor: `3B` is D♭ major (as in the reference charts
 and the WCS fixture), not C♯ major as the reference script printed.
 
-### 22. Mix charts plot the tempo line, not raw BPM (2026-09-28)
-**Context:** a double-time track (listed 175, compared as 87.5) spiked the tempo chart
-and sparkline although the gap treated it as a smooth step. **Decision:** mix views plot
-`tempoLine`, each track folded the way `tempoGap` matched it to its predecessor, with the
-listed BPM in parentheses. Peaks and BPM range use it too. Track lists stay raw, and
-scoring is unchanged. Amends 10.
-
-### 23. The arc scores the set tempo, not raw BPM (2026-09-28)
-**Context:** the arc normalised raw BPM, so a double-time track (listed 175 among ~90s)
-counted as the fastest in the set, was steered onto a peak, and squashed everyone
-else's level. **Decision:** the BPM signal is the set tempo: each BPM halved or doubled,
-the way `tempoGap` matches, into the octave most of the set is listed in (the slower on
-a tie). It has to be per track and order-independent because the solver precomputes a
-cost per track and position, so it can't reuse the chart's neighbour-by-neighbour line;
-that line is shifted into the same octave instead. Changes which mixes win when a set
-has double-time tracks; transition costs are unchanged.
+### 22. One set tempo per track, for scoring and display (2026-09-28)
+**Context:** listed BPMs are sometimes double the danced tempo (Price Tag 175, We Are
+Young 184.1). The pairwise half/double-tolerant gap scored those transitions as smooth,
+but the charts plotted raw BPM, and the arc scored raw BPM, so it steered them onto
+peaks and squashed everyone else's level. **Decision:** every BPM is folded once per set
+into one octave (spec §5.2): the narrowest one-octave window holding the whole set,
+placed where most tracks are listed. The tempo gap, the arc and all mix views use it,
+with the listed BPM in parentheses. Track lists stay raw. **Rejected:** a per-mix line
+chained from each neighbour's half/double match (order-dependent, so the arc and the
+BPM range couldn't share it, and it drifted from the arc's scale); a reference BPM that
+keeps the most tracks unfolded under the pairwise matcher (its window is 2.25× wide, not
+an octave, and it left the owner's double-time tracks unfolded). Replaces the pairwise
+gap of 10; a set with no clear gap between tempo groups may fold the wrong way, and an
+override fixes it.

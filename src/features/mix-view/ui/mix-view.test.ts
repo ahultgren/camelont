@@ -101,7 +101,7 @@ describe('RunningOrder', () => {
     expect(screen.getAllByText('3:20')).toHaveLength(20)
   })
 
-  it('shows BPM and its change on the tempo line, with the listed BPM alongside', () => {
+  it('shows set tempo and its change, with the listed BPM alongside', () => {
     render(RunningOrder, { props: { mix: doubled, info: doubledInfo } })
     const [first, second] = screen.getAllByText(/8A → 8A/)
     expect(first).toHaveTextContent('−0.5 BPM')

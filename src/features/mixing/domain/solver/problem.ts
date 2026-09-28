@@ -1,6 +1,7 @@
 import { ARC_PRESETS, arcPosition, arcTarget, arcTermCost, normalise } from '../arc'
 import type { MixConstraints } from '../constraints'
 import { profileArcScale, transitionCost } from '../evaluate'
+import { setTempo } from '../tempo'
 import type { MixProfile } from '../profile'
 import type { MixTrack } from '../types'
 
@@ -83,6 +84,7 @@ export function buildProblem(
   profile: MixProfile,
 ): Problem {
   const tracks = [...included]
+  const tempoOf = setTempo(tracks.map((t) => t.bpm))
   const blocks = buildBlocks(tracks, constraints.follows)
   const B = blocks.length
   const first = (b: number) => tracks[blocks[b]?.[0] ?? -1]
@@ -98,7 +100,7 @@ export function buildProblem(
     for (let i = 1; i < block.length; i++) {
       const a = tracks[block[i - 1] ?? -1]
       const b = tracks[block[i] ?? -1]
-      if (a && b) internalCost += transitionCost(a, b, profile).cost
+      if (a && b) internalCost += transitionCost(a, b, profile, tempoOf).cost
     }
   }
 
@@ -110,7 +112,7 @@ export function buildProblem(
     for (let b = 0; b < B; b++) {
       const to = first(b)
       if (a === b || !from || !to) continue
-      const t = transitionCost(from, to, profile)
+      const t = transitionCost(from, to, profile, tempoOf)
       if (t.move === 'clash') continue
       edgeCost[a * B + b] = t.cost
       succ[a]?.push(b)

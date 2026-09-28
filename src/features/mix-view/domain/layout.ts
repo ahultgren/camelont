@@ -97,7 +97,7 @@ export function wheelCells(center = 110): WheelCell[] {
   return cells
 }
 
-/** The listed BPM, when the tempo line shows it at half or double time. */
+/** The listed BPM, when the set tempo folds it to half or double time. */
 export const listedBpm = (tempo: number, listed: number): string =>
   tempo === listed ? '' : `(listed ${String(listed)})`
 

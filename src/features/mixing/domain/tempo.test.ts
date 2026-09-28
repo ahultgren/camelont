@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { setTempo, tempoGap, tempoLine } from './tempo'
+import { setTempo, tempoGap } from './tempo'
 
 describe('tempoGap', () => {
   it('is relative to the faster track', () => {
@@ -11,10 +11,8 @@ describe('tempoGap', () => {
     expect(tempoGap(120, 120)).toBe(0)
   })
 
-  it('tolerates half and double time', () => {
-    expect(tempoGap(87.5, 175)).toBe(0)
-    expect(tempoGap(176, 88)).toBe(0)
-    expect(tempoGap(90, 184)).toBeCloseTo(4 / 184)
+  it('compares set tempos as they are (half/double time is folded before)', () => {
+    expect(tempoGap(78, 129.9)).toBeCloseTo(51.9 / 129.9)
   })
 
   it('handles zero safely', () => {
@@ -22,19 +20,42 @@ describe('tempoGap', () => {
   })
 })
 
+// The owner's WCS playlist as listed; Price Tag (175) and We Are Young (184.1) are
+// listed at double the danced tempo.
+const OWNER_SET = [
+  78, 88, 88, 175, 91, 184.1, 92.5, 96, 102.1, 102.1, 104, 104, 105, 107, 108.9, 114, 114, 115.7,
+  116, 118, 118.8, 121, 122, 127.4, 129.9,
+]
+
 describe('setTempo', () => {
-  it('folds a double- or half-time track into the octave most of the set is listed in', () => {
-    const fold = setTempo([88, 90, 175, 92, 46])
-    expect([88, 90, 175, 92, 46].map(fold)).toEqual([88, 90, 87.5, 92, 92])
+  it("folds the owner's double-time tracks and nothing else", () => {
+    const folded = OWNER_SET.map(setTempo(OWNER_SET))
+    expect(folded).toEqual(
+      OWNER_SET.map((bpm) => (bpm === 175 ? 87.5 : bpm === 184.1 ? 92.05 : bpm)),
+    )
   })
 
-  it('folds as often as needed, the way the gap matches', () => {
-    const fold = setTempo([88, 90, 92])
-    expect(fold(350)).toBe(87.5)
-    expect(fold(22.5)).toBe(90)
-    // 145 is matched as is against 100 (45 < 55); 155 as double time.
-    expect(setTempo([100, 100, 145])(145)).toBe(145)
-    expect(setTempo([100, 100, 155])(155)).toBe(77.5)
+  it('is stable: nudging one track never refolds another', () => {
+    const base = OWNER_SET.map(setTempo(OWNER_SET))
+    OWNER_SET.forEach((_, i) => {
+      for (const delta of [-1, 1]) {
+        const edited = OWNER_SET.map((b, j) => (j === i ? b + delta : b))
+        const folded = edited.map(setTempo(edited))
+        folded.forEach((v, j) => {
+          if (j !== i) expect(v).toBe(base[j])
+        })
+      }
+    })
+  })
+
+  it('folds half-time tracks up into the octave most of the set is listed in', () => {
+    const house = [120, 122, 124, 126, 128, 63, 64]
+    expect(house.map(setTempo(house))).toEqual([120, 122, 124, 126, 128, 126, 128])
+  })
+
+  it('fits the set into the narrowest octave, however far a track is listed', () => {
+    const fold = setTempo([88, 90, 92, 350, 22.5])
+    expect([350, 22.5].map(fold)).toEqual([87.5, 90])
   })
 
   it('follows the majority, whichever octave it is', () => {
@@ -44,45 +65,13 @@ describe('setTempo', () => {
   })
 
   it('does not depend on the order, and prefers the slower octave on a tie', () => {
-    const a = setTempo([88, 176, 180, 92])
-    const b = setTempo([180, 92, 88, 176])
-    for (const bpm of [88, 176, 180, 92]) expect(a(bpm)).toBe(b(bpm))
-    expect(a(180)).toBe(90)
+    const a = setTempo([60, 61, 120, 122])
+    const b = setTempo([122, 60, 120, 61])
+    for (const bpm of [60, 61, 120, 122]) expect(a(bpm)).toBe(b(bpm))
+    expect([120, 122].map(a)).toEqual([60, 61])
   })
 
   it('leaves values alone for an empty set', () => {
     expect(setTempo([])(120)).toBe(120)
-  })
-})
-
-describe('tempoLine', () => {
-  it('is the raw BPM when no neighbour is matched at half or double time', () => {
-    expect(tempoLine([100, 110, 95])).toEqual([100, 110, 95])
-  })
-
-  it('shows a double-time track at the tempo the comparison matched it at', () => {
-    // 175 is compared with 88 as 87.5; 90 then follows 87.5 as is.
-    expect(tempoLine([88, 175, 90])).toEqual([88, 87.5, 90])
-    expect(tempoLine([92, 45, 94])).toEqual([92, 90, 94])
-  })
-
-  it('carries the folding along the chain', () => {
-    // 176 matches 88; 180 then matches 176 as is, so it is shown halved too.
-    expect(tempoLine([88, 176, 180, 92])).toEqual([88, 88, 90, 92])
-  })
-
-  it('sits in the set tempo octave when the opener is the odd one out', () => {
-    expect(tempoLine([170, 88, 90, 92])).toEqual([85, 88, 90, 92])
-  })
-
-  it('follows the gap exactly, even where it differs from the nearest octave', () => {
-    // 145 / 100 is above √2, but the gap still compares 145 with 100 as is (45 < 55).
-    expect(tempoLine([100, 145])).toEqual([100, 145])
-    expect(tempoLine([100, 155])).toEqual([100, 77.5])
-  })
-
-  it('handles empty and single-track mixes', () => {
-    expect(tempoLine([])).toEqual([])
-    expect(tempoLine([120])).toEqual([120])
   })
 })

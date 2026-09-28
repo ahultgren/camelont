@@ -11,7 +11,7 @@ import {
 } from './arc'
 import { MOVE_META, moveBetween, type MoveOrClash } from './chart'
 import type { MixProfile } from './profile'
-import { tempoGap, tempoLine } from './tempo'
+import { setTempo, tempoGap } from './tempo'
 import type { MixTrack } from './types'
 
 export interface Transition {
@@ -19,6 +19,7 @@ export interface Transition {
   to: string
   move: MoveOrClash
   moveCost: number
+  /** Between the two set tempos. */
   tempoGap: number
   tempoCost: number
   /** moveCost + tempoCost */
@@ -28,7 +29,7 @@ export interface Transition {
 export interface Peak {
   index: number
   id: string
-  /** On the tempo line. */
+  /** Set tempo. */
   bpm: number
 }
 
@@ -38,7 +39,7 @@ export interface MixStats {
   peaks: Peak[]
   opener: string | null
   closer: string | null
-  /** Of the tempo line. */
+  /** Of the set tempo. */
   bpmRange: { min: number; max: number } | null
 }
 
@@ -52,7 +53,7 @@ export interface ArcEvaluation {
 
 export interface EvaluatedMix {
   order: MixTrack[]
-  /** BPM per position as the tempo gap matched it (half/double time folded), for charts. */
+  /** Set tempo per position: BPM with half/double time folded (see tempo.ts). */
   tempo: number[]
   transitions: Transition[]
   transitionCost: number
@@ -62,11 +63,19 @@ export interface EvaluatedMix {
   stats: MixStats
 }
 
-/** Cost of one transition. The solver uses this same function. */
-export function transitionCost(from: MixTrack, to: MixTrack, profile: MixProfile): Transition {
+/**
+ * Cost of one transition; `tempoOf` is the set's `setTempo`. The solver uses this same
+ * function.
+ */
+export function transitionCost(
+  from: MixTrack,
+  to: MixTrack,
+  profile: MixProfile,
+  tempoOf: (bpm: number) => number,
+): Transition {
   const move = moveBetween(from.camelot, to.camelot) ?? 'clash'
   const moveCost = move === 'clash' ? profile.clashCost : profile.moveCost[move]
-  const gap = tempoGap(from.bpm, to.bpm)
+  const gap = tempoGap(tempoOf(from.bpm), tempoOf(to.bpm))
   const tempoCost = profile.tempoWeight * gap
   return {
     from: from.id,
@@ -92,7 +101,7 @@ const ALL_MOVES = Object.keys(MOVE_META) as MoveOrClash[]
 const ALL_TONES: readonly MoveTone[] = ['perfect', 'boost', 'drop', 'mood', 'clash']
 
 /**
- * Local maxima of the tempo line that stand out: a peak's prominence (height above the higher of
+ * Local maxima of the set tempo that stand out: a peak's prominence (height above the higher of
  * the lowest points on each side before a higher track) must be at least
  * max(5 BPM, 10% of the range).
  */
@@ -130,11 +139,13 @@ export function findPeaks(order: readonly MixTrack[], bpm: readonly number[]): P
  * optional arc term, and summary stats. The solver and the UI both use it.
  */
 export function evaluateMix(order: readonly MixTrack[], profile: MixProfile): EvaluatedMix {
+  const tempoOf = setTempo(order.map((t) => t.bpm))
+  const tempo = order.map((t) => tempoOf(t.bpm))
   const transitions: Transition[] = []
   for (let i = 1; i < order.length; i++) {
     const from = order[i - 1]
     const to = order[i]
-    if (from && to) transitions.push(transitionCost(from, to, profile))
+    if (from && to) transitions.push(transitionCost(from, to, profile, tempoOf))
   }
   const transitionTotal = transitions.reduce((sum, t) => sum + t.cost, 0)
 
@@ -158,8 +169,6 @@ export function evaluateMix(order: readonly MixTrack[], profile: MixProfile): Ev
     moveCounts[t.move]++
     toneCounts[MOVE_META[t.move].tone]++
   }
-  const tempo = tempoLine(order.map((t) => t.bpm))
-
   return {
     order: [...order],
     tempo,

@@ -4,7 +4,7 @@ import { KeyChip, TONE_TEXT } from '@/shared/ui'
 import { formatDuration } from '@/shared/lib'
 import { formatBpmDelta, listedBpm, type EntryInfo } from '../domain/layout'
 
-/** Track cards with a connector between each pair: keys, move, BPM change (tempo line). */
+/** Track cards with a connector between each pair: keys, move, BPM change (set tempo). */
 const { mix, info } = defineProps<{ mix: EvaluatedMix; info: ReadonlyMap<string, EntryInfo> }>()
 
 const bpm = (i: number) => mix.tempo[i] ?? mix.order[i]?.bpm ?? 0

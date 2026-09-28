@@ -51,7 +51,7 @@ describe('signals', () => {
 
   it('costs weight × deviation', () => {
     const arc = { preset: 'steadyBuild', signal: 'bpm', weight: 10 } as const
-    const scale = arcScale([track(80), track(120)], 'bpm')
+    const scale = arcScale([track(80), track(100), track(120)], 'bpm')
     if (!scale) throw new Error('no scale')
     // last position: target 1; bpm 100 normalises to 0.5
     expect(arcTermCost(track(100), 4, 5, arc, scale)).toBeCloseTo(5)

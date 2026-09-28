@@ -155,20 +155,19 @@ The heart of the app, pure TS and fully unit tested.
 - `profile.ts`: `MixProfile { id, name, moveCost: Record<Move, number>, clashCost,
   tempoWeight, arc: ArcConfig | null }`. `DEFAULT_PROFILE` reproduces the reference
   weights; `withArc(profile, arc)` applies the user's arc choice.
-- `tempo.ts`: `tempoGap(a, b)`, half/double tolerant; `setTempo(bpms)`, which folds a
-  BPM (halving/doubling as the gap matches) into the octave most of the set is listed
-  in, independent of order; and `tempoLine(bpms)`, BPM per position folded the way each
-  gap matched its predecessor, shifted by octaves to sit at the set tempo. Transitions
-  cost by `tempoGap`, the arc by set tempo, and the charts plot `tempoLine`.
+- `tempo.ts`: `setTempo(bpms)` → a function from listed BPM to set tempo (spec §5.2),
+  built once per set and independent of order; `tempoGap(a, b)` between two set
+  tempos. Transitions, the arc and every mix view use the set tempo.
 - `arc.ts`: `ArcConfig { preset, signal, weight }`; presets are data (piecewise-linear
   target curves over position 0..1); signals are built per set (`arcScale(tracks,
   signal)` → each track's value and the set's range; BPM is the set tempo), so the
   solver can precompute a cost per track and position. `arcTermCost` is the per-track term.
   Removing arcs means deleting this file and the one term in `evaluate`.
 - `evaluate.ts`: `evaluateMix(order, profile) → EvaluatedMix` (transitions with move +
-  cost, transition cost, arc cost + target curve, total cost, clash count, the tempo
-  line, stats: move and tone histograms, peaks, opener, closer, BPM range; peaks and
-  range are of the tempo line). `transitionCost` and the arc
+  cost, transition cost, arc cost + target curve, total cost, clash count, the set
+  tempo per position, stats: move and tone histograms, peaks, opener, closer, BPM
+  range; peaks and range are of the set tempo). `transitionCost` (given the set's
+  `setTempo`) and the arc
   term are the primitives. **The solver and the UI both use these.** They are the
   single source of truth for scoring; a test checks the solver's path cost equals
   `evaluateMix` exactly.
@@ -226,7 +225,7 @@ chart equals the JSON for all 576 pairs.
   exclude toggles sit on the track table), `ArcPicker`, `CandidateList` (a radio group
   of cards: sparkline, move-tone counts, BPM range, peaks, opener, closer, cost) and
   `MixProblems` (constraint errors and diagnostics in plain language).
-- `mix-view`: `TempoArcChart` (hand-built SVG of the tempo line; key-coloured dots, a move badge per
+- `mix-view`: `TempoArcChart` (hand-built SVG of the set tempo; key-coloured dots, a move badge per
   segment, the arc target dashed, each point focusable with a full `aria-label`, and a
   card on hover/tap/focus), `KeyWheel`, `RunningOrder` (connectors: keys, move, BPM
   change) and `MixExplorer` composing them. Pure geometry lives in

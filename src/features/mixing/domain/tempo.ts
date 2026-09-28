@@ -1,78 +1,55 @@
-/**
- * How the tempo comparison matches `b` to `a`: as is, halved or doubled, and the
- * resulting relative gap min(|a − b|, |2a − b|, |a − 2b|) / max(a, b).
- */
-function tempoMatch(a: number, b: number): { factor: 1 | 0.5 | 2; gap: number } {
+/** Relative tempo gap between neighbours' set tempos: |a − b| / max(a, b). */
+export function tempoGap(a: number, b: number): number {
   const max = Math.max(a, b)
-  if (max <= 0) return { factor: 1, gap: 0 }
-  const same = Math.abs(a - b)
-  const halved = Math.abs(2 * a - b)
-  const doubled = Math.abs(a - 2 * b)
-  const min = Math.min(same, halved, doubled)
-  const factor = min === same ? 1 : min === halved ? 0.5 : 2
-  return { factor, gap: min / max }
+  return max <= 0 ? 0 : Math.abs(a - b) / max
 }
 
-/** Relative tempo gap between neighbours, tolerant of half/double time. */
-export const tempoGap = (a: number, b: number): number => tempoMatch(a, b).gap
-
-/** `bpm` halved or doubled, the way the gap matches it, until it matches `reference` as is. */
-function foldTo(reference: number, bpm: number): number {
-  let value = bpm
-  for (let i = 0; i < 8; i++) {
-    const { factor } = tempoMatch(reference, value)
-    if (factor === 1) break
-    value *= factor
-  }
-  return value
-}
+const EPSILON = 1e-9
+const isTempo = (bpm: number) => bpm > 0 && Number.isFinite(bpm)
 
 /**
- * The set's tempo octave, as a function from a track's BPM to its set tempo: the BPM
- * halved or doubled into the octave most of the set is listed in (the slower one on a
- * tie). It depends on the set, not the order, so the arc can score a track at any
- * position.
+ * The set tempo, as a function of a track's listed BPM: halved or doubled into the
+ * narrowest one-octave window that holds the whole set, placed at the octave most of
+ * the set is listed in (the slower one on a tie). The window is cut at the widest gap
+ * between the set's tempos on the octave circle (log2 BPM mod 1). It depends on the
+ * set, not the order, so the solver can cost transitions and the arc per track.
  */
 export function setTempo(bpms: readonly number[]): (bpm: number) => number {
-  const candidates = [...new Set(bpms)].filter((b) => b > 0).sort((a, b) => a - b)
-  let reference: number | null = null
-  let kept = -1
-  for (const r of candidates) {
-    const n = bpms.filter((b) => foldTo(r, b) === b).length
-    if (n > kept) {
-      kept = n
-      reference = r
+  const listed = bpms.filter(isTempo)
+  const tones = [
+    ...new Set(
+      listed.map((bpm) => {
+        const log = Math.log2(bpm)
+        return log - Math.floor(log)
+      }),
+    ),
+  ].sort((a, b) => a - b)
+  const lowest = tones[0]
+  const highest = tones[tones.length - 1]
+  if (lowest === undefined || highest === undefined) return (bpm) => bpm
+
+  // The window starts just after the widest gap; the wrap-around gap is the default.
+  let start = lowest
+  let widest = lowest + 1 - highest
+  for (let i = 1; i < tones.length; i++) {
+    const tone = tones[i] ?? 0
+    const gap = tone - (tones[i - 1] ?? 0)
+    if (gap > widest) {
+      widest = gap
+      start = tone
     }
   }
-  const ref = reference
-  return ref === null ? (bpm) => bpm : (bpm) => foldTo(ref, bpm)
-}
+  const octave = (bpm: number) => Math.floor(Math.log2(bpm) - start + EPSILON)
 
-/**
- * BPM per position as the tempo comparison saw it: each track halved or doubled the way
- * it was matched to its predecessor, so neighbours sit where the gap measured them.
- * The whole line is then shifted by octaves so most tracks sit at their set tempo, the
- * scale the arc uses.
- */
-export function tempoLine(bpms: readonly number[]): number[] {
-  const scales: number[] = []
-  bpms.forEach((bpm, i) => {
-    const prev = bpms[i - 1]
-    const prevScale = scales[i - 1]
-    scales.push(
-      prev === undefined || prevScale === undefined ? 1 : prevScale * tempoMatch(prev, bpm).factor,
-    )
-  })
-  const fold = setTempo(bpms)
   const counts = new Map<number, number>()
-  bpms.forEach((bpm, i) => {
-    const shift = fold(bpm) / (bpm * (scales[i] ?? 1))
-    counts.set(shift, (counts.get(shift) ?? 0) + 1)
-  })
-  let base = 1
-  for (const [s, n] of counts) {
-    const best = counts.get(base) ?? 0
-    if (n > best || (n === best && Math.abs(Math.log2(s)) < Math.abs(Math.log2(base)))) base = s
+  for (const bpm of listed) counts.set(octave(bpm), (counts.get(octave(bpm)) ?? 0) + 1)
+  let home = 0
+  let most = 0
+  for (const [o, n] of counts) {
+    if (n > most || (n === most && o < home)) {
+      most = n
+      home = o
+    }
   }
-  return bpms.map((bpm, i) => bpm * (scales[i] ?? 1) * base)
+  return (bpm) => (isTempo(bpm) ? bpm * 2 ** (home - octave(bpm)) : bpm)
 }

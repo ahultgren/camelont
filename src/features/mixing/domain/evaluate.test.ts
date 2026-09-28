@@ -39,7 +39,7 @@ describe('evaluateMix on the WCS fixture', () => {
     expect(stats.peaks.map((p) => p.index)).toEqual([6, 11, 19])
   })
 
-  it('reports the tempo line, range and peaks with half/double time folded', () => {
+  it('reports the set tempo, range and peaks with half/double time folded', () => {
     const tracks = mixTracks([
       { id: 'a', label: 'A', camelot: '8A', bpm: 88, energy: null },
       { id: 'b', label: 'B', camelot: '8A', bpm: 184, energy: null },
@@ -49,6 +49,23 @@ describe('evaluateMix on the WCS fixture', () => {
     expect(mix.tempo).toEqual([88, 92, 90])
     expect(mix.stats.bpmRange).toEqual({ min: 88, max: 92 })
     expect(mix.stats.peaks).toEqual([])
+  })
+
+  it('scores tempo gaps between set tempos', () => {
+    const tracks = mixTracks(
+      [78, 129.9, 175, 88, 96, 104, 112, 120].map((bpm, i) => ({
+        id: String(i),
+        label: String(bpm),
+        camelot: '8A',
+        bpm,
+        energy: null,
+      })),
+    )
+    const gaps = evaluateMix(tracks, DEFAULT_PROFILE).transitions.map((t) => t.tempoGap)
+    // 129.9 is not a double-time 64.95 next to 78; 175 is a double-time 87.5.
+    expect(gaps[0]).toBeCloseTo(51.9 / 129.9)
+    expect(gaps[1]).toBeCloseTo(42.4 / 129.9)
+    expect(gaps[2]).toBeCloseTo(0.5 / 88)
   })
 
   it('scores the arc on the set tempo, so a double-time track does not count as fast', () => {
