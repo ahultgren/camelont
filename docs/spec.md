@@ -51,8 +51,12 @@ runs entirely in the browser: no backend, Spotify login via OAuth PKCE.
   - fetched features are cached locally, so a playlist isn't refetched on every visit.
 - A track without a key or BPM can't be mixed. It is flagged until the user fills it in
   or excludes it.
-- BPM is shown **raw**. Half- and double-time are handled in the comparison (§5.2), and
-  a user who wants a different displayed value sets an override.
+- Track lists show BPM **raw**. Half- and double-time are handled in the comparison
+  (§5.2), and a user who wants a different value sets an override.
+- Mix charts and the running order show BPM **as the comparison matched it**: a track
+  compared with its neighbour at half or double time is plotted at that tempo, so the
+  line shows what the scoring saw. The listed BPM is shown alongside, e.g.
+  `87.5 BPM (listed 175)`.
 
 ## 5. Mixing rules
 

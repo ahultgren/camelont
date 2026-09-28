@@ -96,3 +96,14 @@ can't log in. Before relying on it, the owner should, on the Pages deploy or loc
   guesses; try them on real sets.
 - Mixes re-solve automatically 250 ms after any change. If that feels jumpy, a
   "Generate" button is a small change.
+
+## Fix — charts plot the BPM the tempo gap used (2026-09-28)
+
+- [x] `tempoLine` in `mixing/domain/tempo.ts`, sharing `tempoGap`'s half/double match
+- [x] `EvaluatedMix.tempo`; peaks and BPM range from it
+- [x] Tempo chart, sparkline and running order use it; listed BPM in parentheses
+- [x] Spec, architecture, decision #22
+
+**Review:** a double-time track (e.g. 175 next to 88) now plots at 87.5 with
+"(listed 175)". Scoring is unchanged. Open: the arc still normalises raw BPM, so such a
+track stretches the arc's range and its dashed target line can leave the chart's axis.

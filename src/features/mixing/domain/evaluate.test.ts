@@ -39,6 +39,18 @@ describe('evaluateMix on the WCS fixture', () => {
     expect(stats.peaks.map((p) => p.index)).toEqual([6, 11, 19])
   })
 
+  it('reports the tempo line, range and peaks with half/double time folded', () => {
+    const tracks = mixTracks([
+      { id: 'a', label: 'A', camelot: '8A', bpm: 88, energy: null },
+      { id: 'b', label: 'B', camelot: '8A', bpm: 184, energy: null },
+      { id: 'c', label: 'C', camelot: '8A', bpm: 90, energy: null },
+    ])
+    const mix = evaluateMix(tracks, DEFAULT_PROFILE)
+    expect(mix.tempo).toEqual([88, 92, 90])
+    expect(mix.stats.bpmRange).toEqual({ min: 88, max: 92 })
+    expect(mix.stats.peaks).toEqual([])
+  })
+
   it('sums move and tempo costs into the total', () => {
     const mix = evaluateMix(handTuned, DEFAULT_PROFILE)
     const sum = mix.transitions.reduce((s, t) => s + t.cost, 0)

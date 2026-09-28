@@ -10,7 +10,7 @@ import {
 } from './arc'
 import { MOVE_META, moveBetween, type MoveOrClash } from './chart'
 import type { MixProfile } from './profile'
-import { tempoGap } from './tempo'
+import { tempoGap, tempoLine } from './tempo'
 import type { MixTrack } from './types'
 
 export interface Transition {
@@ -27,6 +27,7 @@ export interface Transition {
 export interface Peak {
   index: number
   id: string
+  /** On the tempo line. */
   bpm: number
 }
 
@@ -36,6 +37,7 @@ export interface MixStats {
   peaks: Peak[]
   opener: string | null
   closer: string | null
+  /** Of the tempo line. */
   bpmRange: { min: number; max: number } | null
 }
 
@@ -49,6 +51,8 @@ export interface ArcEvaluation {
 
 export interface EvaluatedMix {
   order: MixTrack[]
+  /** BPM per position as the tempo gap matched it (half/double time folded), for charts. */
+  tempo: number[]
   transitions: Transition[]
   transitionCost: number
   arc: ArcEvaluation | null
@@ -87,12 +91,11 @@ const ALL_MOVES = Object.keys(MOVE_META) as MoveOrClash[]
 const ALL_TONES: readonly MoveTone[] = ['perfect', 'boost', 'drop', 'mood', 'clash']
 
 /**
- * Local BPM maxima that stand out: a peak's prominence (height above the higher of
+ * Local maxima of the tempo line that stand out: a peak's prominence (height above the higher of
  * the lowest points on each side before a higher track) must be at least
  * max(5 BPM, 10% of the range).
  */
-export function findPeaks(order: readonly MixTrack[]): Peak[] {
-  const bpm = order.map((t) => t.bpm)
+export function findPeaks(order: readonly MixTrack[], bpm: readonly number[]): Peak[] {
   if (bpm.length < 2) return []
   const range = Math.max(...bpm) - Math.min(...bpm)
   const minProminence = Math.max(5, 0.1 * range)
@@ -154,10 +157,11 @@ export function evaluateMix(order: readonly MixTrack[], profile: MixProfile): Ev
     moveCounts[t.move]++
     toneCounts[MOVE_META[t.move].tone]++
   }
-  const bpms = order.map((t) => t.bpm)
+  const tempo = tempoLine(order.map((t) => t.bpm))
 
   return {
     order: [...order],
+    tempo,
     transitions,
     transitionCost: transitionTotal,
     arc,
@@ -166,10 +170,10 @@ export function evaluateMix(order: readonly MixTrack[], profile: MixProfile): Ev
     stats: {
       moveCounts,
       toneCounts,
-      peaks: findPeaks(order),
+      peaks: findPeaks(order, tempo),
       opener: order[0]?.id ?? null,
       closer: order[order.length - 1]?.id ?? null,
-      bpmRange: bpms.length ? { min: Math.min(...bpms), max: Math.max(...bpms) } : null,
+      bpmRange: tempo.length ? { min: Math.min(...tempo), max: Math.max(...tempo) } : null,
     },
   }
 }

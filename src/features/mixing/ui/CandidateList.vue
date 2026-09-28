@@ -38,7 +38,7 @@ const range = (mix: EvaluatedMix) =>
         <span class="num text-[13px] text-muted">cost {{ mix.totalCost.toFixed(1) }}</span>
       </span>
       <SparkLine
-        :values="mix.order.map((t) => t.bpm)"
+        :values="mix.tempo"
         :colors="mix.order.map((t) => keyColor(t.camelot))"
         :width="240"
         :label="`Tempo of mix ${i + 1}, ${range(mix)} BPM`"

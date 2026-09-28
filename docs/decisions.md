@@ -104,3 +104,10 @@ opinions about arcs for other sets.
 ### 21. Key names follow the approved reference charts (2026-09-27)
 Flats, except F♯ major and C♯/F♯ minor: `3B` is D♭ major (as in the reference charts
 and the WCS fixture), not C♯ major as the reference script printed.
+
+### 22. Mix charts plot the tempo line, not raw BPM (2026-09-28)
+**Context:** a double-time track (listed 175, compared as 87.5) spiked the tempo chart
+and sparkline although the gap treated it as a smooth step. **Decision:** mix views plot
+`tempoLine`, each track folded the way `tempoGap` matched it to its predecessor, with the
+listed BPM in parentheses. Peaks and BPM range use it too. Track lists stay raw, and
+scoring is unchanged. Amends 10.

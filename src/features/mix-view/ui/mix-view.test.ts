@@ -21,7 +21,35 @@ const info = new Map<string, EntryInfo>(
   order.map((t) => [t.id, { title: t.label, artists: ['Artist A', 'B'], durationMs: 200_000 }]),
 )
 
+// Price Tag listed at double time (175), between tracks near 90.
+const doubled = evaluateMix(
+  (
+    [
+      ['a', 'Opener', '8A', 88],
+      ['b', 'Price Tag', '8A', 175],
+      ['c', 'Closer', '8A', 90],
+    ] as const
+  ).map(([id, label, camelot, bpm]) => ({ id, label, camelot, bpm, energy: null })),
+  DEFAULT_PROFILE,
+)
+const doubledInfo = new Map<string, EntryInfo>(
+  doubled.order.map((t) => [t.id, { title: t.label, artists: ['X'], durationMs: 200_000 }]),
+)
+
 describe('TempoArcChart', () => {
+  it('plots the tempo the gap used, with the listed BPM alongside', async () => {
+    render(TempoArcChart, { props: { mix: doubled, info: doubledInfo } })
+    const points = screen.getAllByRole('img')
+    expect(points[1]).toHaveAccessibleName(
+      '2. Price Tag, 8A, A minor, 87.5 BPM (listed 175), perfect match from 8A',
+    )
+    expect(points[2]).toHaveAccessibleName('3. Closer, 8A, A minor, 90 BPM, perfect match from 8A')
+    const priceTag = points[1]
+    if (!priceTag) throw new Error('no point')
+    await fireEvent.focus(priceTag)
+    expect(screen.getByTestId('point-card')).toHaveTextContent('87.5 BPM (listed 175)')
+  })
+
   it('labels every point with position, title, both key notations, BPM and the move in', () => {
     render(TempoArcChart, { props: { mix, info } })
     const points = screen.getAllByRole('img')
@@ -71,6 +99,14 @@ describe('RunningOrder', () => {
     render(RunningOrder, { props: { mix, info } })
     expect(screen.getAllByText(/12B → 11B · energy −/)[0]).toHaveTextContent('+10 BPM')
     expect(screen.getAllByText('3:20')).toHaveLength(20)
+  })
+
+  it('shows BPM and its change on the tempo line, with the listed BPM alongside', () => {
+    render(RunningOrder, { props: { mix: doubled, info: doubledInfo } })
+    const [first, second] = screen.getAllByText(/8A → 8A/)
+    expect(first).toHaveTextContent('−0.5 BPM')
+    expect(second).toHaveTextContent('+2.5 BPM')
+    expect(screen.getByText('(listed 175)')).toBeInTheDocument()
   })
 })
 

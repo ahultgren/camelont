@@ -155,14 +155,17 @@ The heart of the app, pure TS and fully unit tested.
 - `profile.ts`: `MixProfile { id, name, moveCost: Record<Move, number>, clashCost,
   tempoWeight, arc: ArcConfig | null }`. `DEFAULT_PROFILE` reproduces the reference
   weights; `withArc(profile, arc)` applies the user's arc choice.
-- `tempo.ts`: `tempoGap(a, b)`, half/double tolerant.
+- `tempo.ts`: `tempoGap(a, b)`, half/double tolerant, and `tempoLine(bpms)`: BPM per
+  position folded the way each gap matched its predecessor (shifted by octaves so most
+  tracks keep their listed BPM). Display only; costs use `tempoGap`.
 - `arc.ts`: `ArcConfig { preset, signal, weight }`; presets are data (piecewise-linear
   target curves over position 0..1); signals are functions `MixTrack → number | null`
   (BPM first), normalised over the set's range. `arcTermCost` is the per-track term.
   Removing arcs means deleting this file and the one term in `evaluate`.
 - `evaluate.ts`: `evaluateMix(order, profile) → EvaluatedMix` (transitions with move +
-  cost, transition cost, arc cost + target curve, total cost, clash count, stats: move
-  and tone histograms, peaks, opener, closer, BPM range). `transitionCost` and the arc
+  cost, transition cost, arc cost + target curve, total cost, clash count, the tempo
+  line, stats: move and tone histograms, peaks, opener, closer, BPM range; peaks and
+  range are of the tempo line). `transitionCost` and the arc
   term are the primitives. **The solver and the UI both use these.** They are the
   single source of truth for scoring; a test checks the solver's path cost equals
   `evaluateMix` exactly.
@@ -220,7 +223,7 @@ chart equals the JSON for all 576 pairs.
   exclude toggles sit on the track table), `ArcPicker`, `CandidateList` (a radio group
   of cards: sparkline, move-tone counts, BPM range, peaks, opener, closer, cost) and
   `MixProblems` (constraint errors and diagnostics in plain language).
-- `mix-view`: `TempoArcChart` (hand-built SVG; key-coloured dots, a move badge per
+- `mix-view`: `TempoArcChart` (hand-built SVG of the tempo line; key-coloured dots, a move badge per
   segment, the arc target dashed, each point focusable with a full `aria-label`, and a
   card on hover/tap/focus), `KeyWheel`, `RunningOrder` (connectors: keys, move, BPM
   change) and `MixExplorer` composing them. Pure geometry lives in
