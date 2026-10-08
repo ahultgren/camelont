@@ -3,18 +3,10 @@ import { computed, ref } from 'vue'
 import { MOVE_META, type EvaluatedMix } from '@/features/mixing'
 import { keyName } from '@/shared/music'
 import { KeyChip, keyColor, TONE_COLOR } from '@/shared/ui'
-import {
-  chartWidth,
-  linearX,
-  linearY,
-  listedBpm,
-  niceRange,
-  type EntryInfo,
-} from '../domain/layout'
+import { chartWidth, linearX, linearY, niceRange, type EntryInfo } from '../domain/layout'
 
 /**
- * The primary view: set tempo per position (BPM with half/double time folded, as the
- * scoring sees it), dots coloured by key, the chart move on each
+ * The primary view: BPM per position, dots coloured by key, the chart move on each
  * segment, the arc target when one is set, and a card on hover, tap or focus.
  */
 const { mix, info } = defineProps<{ mix: EvaluatedMix; info: ReadonlyMap<string, EntryInfo> }>()
@@ -29,18 +21,14 @@ const frame = computed(() => ({
   bottom: 34,
 }))
 const axis = computed(() => {
-  const range = mix.arc?.range
-  const values = range ? [...mix.tempo, range.min, range.max] : mix.tempo
-  return niceRange(Math.min(...values), Math.max(...values))
+  const bpms = mix.order.map((t) => t.bpm)
+  return niceRange(Math.min(...bpms), Math.max(...bpms))
 })
 const x = computed(() => linearX(frame.value, mix.order.length))
 const y = computed(() => linearY(frame.value, axis.value.min, axis.value.max))
 
 const points = computed(() =>
-  mix.order.map((track, i) => {
-    const bpm = mix.tempo[i] ?? track.bpm
-    return { track, i, bpm, listed: listedBpm(bpm, track.bpm), cx: x.value(i), cy: y.value(bpm) }
-  }),
+  mix.order.map((track, i) => ({ track, i, cx: x.value(i), cy: y.value(track.bpm) })),
 )
 
 const badges = computed(() =>
@@ -75,13 +63,12 @@ const into = computed(() => {
 
 const pointLabel = (i: number) => {
   const t = mix.order[i]
-  const p = points.value[i]
-  if (!t || !p) return ''
+  if (!t) return ''
   const move = i > 0 ? mix.transitions[i - 1] : undefined
   const moveText = move
     ? `, ${MOVE_META[move.move].label} from ${mix.order[i - 1]?.camelot ?? ''}`
     : ''
-  return `${String(i + 1)}. ${t.label}, ${t.camelot}, ${keyName(t.camelot)}, ${String(p.bpm)} BPM${p.listed ? ` ${p.listed}` : ''}${moveText}`
+  return `${String(i + 1)}. ${t.label}, ${t.camelot}, ${keyName(t.camelot)}, ${String(t.bpm)} BPM${moveText}`
 }
 
 /** Card position as a share of the chart so it follows the responsive SVG. */
@@ -215,10 +202,7 @@ const cardStyle = computed(() => {
         <div class="text-muted">{{ info.get(activePoint.track.id)?.artists.join(', ') }}</div>
         <div class="flex flex-wrap items-center gap-1.5">
           <KeyChip :camelot="activePoint.track.camelot" size="sm" />
-          <span class="num"
-            >· {{ activePoint.bpm }} BPM
-            <span v-if="activePoint.listed" class="text-muted">{{ activePoint.listed }}</span></span
-          >
+          <span class="num">· {{ activePoint.track.bpm }} BPM</span>
         </div>
         <div v-if="into" class="num text-xs" :style="{ color: TONE_COLOR[into.meta.tone] }">
           {{ into.meta.symbol }} {{ into.meta.label }} from {{ into.from.camelot }} ·

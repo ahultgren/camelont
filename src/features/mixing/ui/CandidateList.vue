@@ -8,9 +8,8 @@ defineProps<{ candidates: readonly EvaluatedMix[] }>()
 const selected = defineModel<number>({ required: true })
 
 const trackLabel = (mix: EvaluatedMix, id: string | null) => {
-  const i = mix.order.findIndex((x) => x.id === id)
-  const t = mix.order[i]
-  return t ? `${t.label} (${formatKey(t.camelot)}, ${String(mix.tempo[i] ?? t.bpm)})` : '–'
+  const t = mix.order.find((x) => x.id === id)
+  return t ? `${t.label} (${formatKey(t.camelot)}, ${String(t.bpm)})` : '–'
 }
 const range = (mix: EvaluatedMix) =>
   mix.stats.bpmRange ? `${String(mix.stats.bpmRange.min)}–${String(mix.stats.bpmRange.max)}` : '–'
@@ -39,7 +38,7 @@ const range = (mix: EvaluatedMix) =>
         <span class="num text-[13px] text-muted">cost {{ mix.totalCost.toFixed(1) }}</span>
       </span>
       <SparkLine
-        :values="mix.tempo"
+        :values="mix.order.map((t) => t.bpm)"
         :colors="mix.order.map((t) => keyColor(t.camelot))"
         :width="240"
         :label="`Tempo of mix ${i + 1}, ${range(mix)} BPM`"

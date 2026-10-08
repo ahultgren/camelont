@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { ARC_PRESETS, arcPosition, arcScale, arcTarget, arcTermCost, normalise } from './arc'
+import { ARC_PRESETS, arcPosition, arcTarget, arcTermCost, normalise, signalRange } from './arc'
 import type { MixTrack } from './types'
 
 const track = (bpm: number): MixTrack => ({
@@ -30,18 +30,11 @@ describe('arcTarget', () => {
 
 describe('signals', () => {
   it('normalises over the set range', () => {
-    const scale = arcScale([track(80), track(120), track(100)], 'bpm')
-    expect(scale?.range).toEqual({ min: 80, max: 120 })
-    expect(scale?.value(track(100))).toBe(100)
+    const range = signalRange([track(80), track(120), track(100)], 'bpm')
+    expect(range).toEqual({ min: 80, max: 120 })
     expect(normalise(100, { min: 80, max: 120 })).toBe(0.5)
     expect(normalise(100, { min: 100, max: 100 })).toBe(0.5)
-    expect(arcScale([], 'bpm')).toBeNull()
-  })
-
-  it('uses the set tempo, so a double-time track is neither a peak nor stretches the range', () => {
-    const scale = arcScale([track(88), track(175), track(90), track(96)], 'bpm')
-    expect(scale?.value(track(175))).toBe(87.5)
-    expect(scale?.range).toEqual({ min: 87.5, max: 96 })
+    expect(signalRange([], 'bpm')).toBeNull()
   })
 
   it('positions tracks evenly', () => {
@@ -51,9 +44,8 @@ describe('signals', () => {
 
   it('costs weight × deviation', () => {
     const arc = { preset: 'steadyBuild', signal: 'bpm', weight: 10 } as const
-    const scale = arcScale([track(80), track(100), track(120)], 'bpm')
-    if (!scale) throw new Error('no scale')
+    const range = { min: 80, max: 120 }
     // last position: target 1; bpm 100 normalises to 0.5
-    expect(arcTermCost(track(100), 4, 5, arc, scale)).toBeCloseTo(5)
+    expect(arcTermCost(track(100), 4, 5, arc, range)).toBeCloseTo(5)
   })
 })

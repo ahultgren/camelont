@@ -97,10 +97,6 @@ export function wheelCells(center = 110): WheelCell[] {
   return cells
 }
 
-/** The listed BPM, when the set tempo folds it to half or double time. */
-export const listedBpm = (tempo: number, listed: number): string =>
-  tempo === listed ? '' : `(listed ${String(listed)})`
-
 export const formatBpmDelta = (delta: number): string =>
   `${delta >= 0 ? '+' : '−'}${String(Math.round(Math.abs(delta) * 10) / 10)} BPM`
 

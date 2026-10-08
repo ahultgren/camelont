@@ -2,12 +2,10 @@
 import { MOVE_META, type EvaluatedMix } from '@/features/mixing'
 import { KeyChip, TONE_TEXT } from '@/shared/ui'
 import { formatDuration } from '@/shared/lib'
-import { formatBpmDelta, listedBpm, type EntryInfo } from '../domain/layout'
+import { formatBpmDelta, type EntryInfo } from '../domain/layout'
 
-/** Track cards with a connector between each pair: keys, move, BPM change (set tempo). */
+/** Track cards with a connector between each pair: keys, move, BPM change. */
 const { mix, info } = defineProps<{ mix: EvaluatedMix; info: ReadonlyMap<string, EntryInfo> }>()
-
-const bpm = (i: number) => mix.tempo[i] ?? mix.order[i]?.bpm ?? 0
 </script>
 
 <template>
@@ -20,7 +18,9 @@ const bpm = (i: number) => mix.tempo[i] ?? mix.order[i]?.bpm ?? 0
       >
         {{ mix.order[i - 1]?.camelot }} → {{ track.camelot }} ·
         {{ MOVE_META[mix.transitions[i - 1]?.move ?? 'clash'].label }}
-        <span class="text-muted">{{ formatBpmDelta(bpm(i) - bpm(i - 1)) }}</span>
+        <span class="text-muted">{{
+          formatBpmDelta(track.bpm - (mix.order[i - 1]?.bpm ?? track.bpm))
+        }}</span>
       </li>
       <li
         class="grid grid-cols-[24px_minmax(0,1fr)_auto] items-center gap-x-3.5 gap-y-1 rounded-lg border border-rule bg-surface px-3.5 py-2.5 sm:grid-cols-[28px_minmax(0,1fr)_auto_auto]"
@@ -37,10 +37,7 @@ const bpm = (i: number) => mix.tempo[i] ?? mix.order[i]?.bpm ?? 0
         </div>
         <KeyChip :camelot="track.camelot" size="sm" />
         <span class="num col-start-2 text-sm sm:col-start-auto sm:min-w-[62px] sm:text-right">
-          {{ bpm(i) }} <small class="text-[11px] text-muted">BPM</small>
-          <small v-if="listedBpm(bpm(i), track.bpm)" class="block text-[11px] text-muted">{{
-            listedBpm(bpm(i), track.bpm)
-          }}</small>
+          {{ track.bpm }} <small class="text-[11px] text-muted">BPM</small>
         </span>
       </li>
     </template>

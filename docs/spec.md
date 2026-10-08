@@ -51,10 +51,10 @@ runs entirely in the browser: no backend, Spotify login via OAuth PKCE.
   - fetched features are cached locally, so a playlist isn't refetched on every visit.
 - A track without a key or BPM can't be mixed. It is flagged until the user fills it in
   or excludes it.
-- Track lists show BPM **raw**. Half- and double-time are handled by the set tempo
-  (§5.2), and a user who wants a different value sets an override.
-- Mixes show the **set tempo**, the value the scoring uses, with the listed BPM
-  alongside when they differ, e.g. `87.5 BPM (listed 175)`.
+- The BPM saved for a track (the fetched value, or the user's override) is the only
+  BPM the app uses, in track lists, in scoring and in every mix view. Nothing halves or
+  doubles it automatically. Detectors often report double or half the danced tempo, so
+  the override dialog has **Half** and **Double** buttons to fix a track in one click.
 
 ## 5. Mixing rules
 
@@ -74,19 +74,14 @@ while `1B → 2A` is `perfect`.
 
 ### 5.2 Tempo
 
-Listed BPMs are sometimes double or half the danced tempo. Each track's **set tempo**
-is its BPM halved or doubled into one octave for the whole set: the narrowest
-one-octave window that holds every track (on the octave circle, log2 BPM mod 1, the
-window is cut at the widest gap), placed at the octave most tracks are listed in (the
-slower one on a tie). It depends on the set, not the order. A set whose tempos leave no
-clear gap (e.g. only tracks near 80 and near 120) may fold the wrong way; an override
-fixes it.
-
-The relative tempo gap between neighbours compares set tempos `a'`, `b'`:
+The relative tempo gap between neighbours compares their saved BPMs as they are:
 
 ```
-gap(a, b) = |a' − b'| / max(a', b')
+gap(a, b) = |a − b| / max(a, b)
 ```
+
+Half and double time are not matched: 175 next to 88 is a 50% gap until the user halves
+the 175 with an override (§4).
 
 ### 5.3 Profiles (tunable scoring)
 
@@ -97,8 +92,7 @@ the chart, so the scoring can change without touching the rules. A profile conta
   `+++`/`−−−` 2; `++`/`−−` 3; `(+++)`/`(−−−)`/mood 4;
 - a tempo weight (default 20, so a 10% gap ≈ one `+++`);
 - an optional **energy arc**: a target curve over set position (presets: two waves,
-  steady build), a signal it applies to (BPM at first, as the set tempo of §5.2;
-  energy can be added later), and
+  steady build), a signal it applies to (BPM at first; energy can be added later), and
   a weight.
 
 Mix cost = Σ transitions (move cost + tempo weight × gap) + arc weight × Σ deviation of

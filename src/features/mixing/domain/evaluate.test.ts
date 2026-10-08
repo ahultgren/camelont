@@ -39,21 +39,9 @@ describe('evaluateMix on the WCS fixture', () => {
     expect(stats.peaks.map((p) => p.index)).toEqual([6, 11, 19])
   })
 
-  it('reports the set tempo, range and peaks with half/double time folded', () => {
-    const tracks = mixTracks([
-      { id: 'a', label: 'A', camelot: '8A', bpm: 88, energy: null },
-      { id: 'b', label: 'B', camelot: '8A', bpm: 184, energy: null },
-      { id: 'c', label: 'C', camelot: '8A', bpm: 90, energy: null },
-    ])
-    const mix = evaluateMix(tracks, DEFAULT_PROFILE)
-    expect(mix.tempo).toEqual([88, 92, 90])
-    expect(mix.stats.bpmRange).toEqual({ min: 88, max: 92 })
-    expect(mix.stats.peaks).toEqual([])
-  })
-
-  it('scores tempo gaps between set tempos', () => {
+  it('uses each BPM as saved: a double-time track is a big gap, a peak and the top of the range', () => {
     const tracks = mixTracks(
-      [78, 129.9, 175, 88, 96, 104, 112, 120].map((bpm, i) => ({
+      [88, 175, 90].map((bpm, i) => ({
         id: String(i),
         label: String(bpm),
         camelot: '8A',
@@ -61,17 +49,16 @@ describe('evaluateMix on the WCS fixture', () => {
         energy: null,
       })),
     )
-    const gaps = evaluateMix(tracks, DEFAULT_PROFILE).transitions.map((t) => t.tempoGap)
-    // 129.9 is not a double-time 64.95 next to 78; 175 is a double-time 87.5.
-    expect(gaps[0]).toBeCloseTo(51.9 / 129.9)
-    expect(gaps[1]).toBeCloseTo(42.4 / 129.9)
-    expect(gaps[2]).toBeCloseTo(0.5 / 88)
+    const mix = evaluateMix(tracks, DEFAULT_PROFILE)
+    expect(mix.transitions.map((t) => t.tempoGap)).toEqual([87 / 175, 85 / 175])
+    expect(mix.stats.bpmRange).toEqual({ min: 88, max: 175 })
+    expect(mix.stats.peaks).toEqual([{ index: 1, id: '1', bpm: 175 }])
   })
 
-  it('scores the arc on the set tempo, so a double-time track does not count as fast', () => {
+  it('scores the arc on the saved BPM, so a double-time track counts as the fastest', () => {
     const profile = withArc(DEFAULT_PROFILE, { preset: 'steadyBuild', signal: 'bpm', weight: 10 })
     const tracks = mixTracks(
-      [88, 92, 184, 96].map((bpm, i) => ({
+      [88, 92, 96, 184].map((bpm, i) => ({
         id: String(i),
         label: String(bpm),
         camelot: '8A',
@@ -79,14 +66,7 @@ describe('evaluateMix on the WCS fixture', () => {
         energy: null,
       })),
     )
-    const mix = evaluateMix(tracks, profile)
-    expect(mix.arc?.range).toEqual({ min: 88, max: 96 })
-    // 184 is scored as 92, the middle of the range, not as the fastest track.
-    const asNinetyTwo = evaluateMix(
-      tracks.map((t) => (t.bpm === 184 ? { ...t, bpm: 92 } : t)),
-      profile,
-    )
-    expect(mix.arc?.cost).toBeCloseTo(asNinetyTwo.arc?.cost ?? NaN)
+    expect(evaluateMix(tracks, profile).arc?.range).toEqual({ min: 88, max: 184 })
   })
 
   it('sums move and tempo costs into the total', () => {

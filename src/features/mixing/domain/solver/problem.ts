@@ -1,7 +1,6 @@
-import { ARC_PRESETS, arcPosition, arcTarget, arcTermCost, normalise } from '../arc'
+import { ARC_PRESETS, ARC_SIGNALS, arcPosition, arcTarget, arcTermCost, normalise } from '../arc'
 import type { MixConstraints } from '../constraints'
-import { profileArcScale, transitionCost } from '../evaluate'
-import { setTempo } from '../tempo'
+import { arcRange, transitionCost } from '../evaluate'
 import type { MixProfile } from '../profile'
 import type { MixTrack } from '../types'
 
@@ -84,7 +83,6 @@ export function buildProblem(
   profile: MixProfile,
 ): Problem {
   const tracks = [...included]
-  const tempoOf = setTempo(tracks.map((t) => t.bpm))
   const blocks = buildBlocks(tracks, constraints.follows)
   const B = blocks.length
   const first = (b: number) => tracks[blocks[b]?.[0] ?? -1]
@@ -100,7 +98,7 @@ export function buildProblem(
     for (let i = 1; i < block.length; i++) {
       const a = tracks[block[i - 1] ?? -1]
       const b = tracks[block[i] ?? -1]
-      if (a && b) internalCost += transitionCost(a, b, profile, tempoOf).cost
+      if (a && b) internalCost += transitionCost(a, b, profile).cost
     }
   }
 
@@ -112,7 +110,7 @@ export function buildProblem(
     for (let b = 0; b < B; b++) {
       const to = first(b)
       if (a === b || !from || !to) continue
-      const t = transitionCost(from, to, profile, tempoOf)
+      const t = transitionCost(from, to, profile)
       if (t.move === 'clash') continue
       edgeCost[a * B + b] = t.cost
       succ[a]?.push(b)
@@ -122,21 +120,21 @@ export function buildProblem(
 
   let arcCost: Float64Array | null = null
   let arcBound: ArcBoundInput | null = null
-  const scale = profileArcScale(tracks, profile)
-  if (profile.arc && scale) {
+  const range = arcRange(tracks, profile)
+  if (profile.arc && range) {
     const arc = profile.arc
     const n = tracks.length
     arcCost = new Float64Array(n * n)
     for (let t = 0; t < n; t++) {
       const track = tracks[t]
       if (!track) continue
-      for (let p = 0; p < n; p++) arcCost[t * n + p] = arcTermCost(track, p, n, arc, scale)
+      for (let p = 0; p < n; p++) arcCost[t * n + p] = arcTermCost(track, p, n, arc, range)
     }
-    const values = tracks.map(scale.value)
+    const values = tracks.map(ARC_SIGNALS[arc.signal])
     if (values.every((v) => v !== null)) {
       arcBound = {
         weight: arc.weight,
-        values: values.map((v) => normalise(v, scale.range)),
+        values: values.map((v) => normalise(v, range)),
         targets: tracks.map((_, p) => arcTarget(ARC_PRESETS[arc.preset], arcPosition(p, n))),
       }
     }

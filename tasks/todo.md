@@ -113,3 +113,23 @@ can't log in. Before relying on it, the owner should, on the Pages deploy or loc
 everything else, including Brother (78) and Shut Up and Dance (129.9), is unchanged.
 Known limit: a set with two tempo groups and no clear gap between them (e.g. only ~80
 and ~120) may fold the wrong way; an override fixes it.
+
+## Change — use the saved BPM only, no automatic half/double (2026-10-08)
+
+Owner's request: the algorithm never halves or doubles a BPM by itself. The only BPM
+used is the one saved for the track (fetched, or the override). The Half/Double buttons
+in the override dialog stay as the manual fix.
+
+- [x] Tests first: `tempoGap` is the plain relative gap; evaluator, arc and views use
+  the saved BPM (a 175 next to 88 is a big gap, a peak and the top of the range)
+- [x] Remove `setTempo`; `transitionCost`, the arc signal and the solver read `track.bpm`
+- [x] Remove `EvaluatedMix.tempo` and the "(listed …)" display from the mix views
+- [x] Docs: spec §4 and §5.2, architecture, decision #23 (reverses #22 and the
+  half/double part of #10)
+- [x] `pnpm check` green
+
+**Review:** `setTempo`, `EvaluatedMix.tempo`, `ArcScale` and `listedBpm` are gone;
+`tempoGap` is `|a − b| / max(a, b)` and everything reads `track.bpm`. On the owner's
+playlist Price Tag (175) and We Are Young (184.1) now count as the fastest tracks until
+they are halved with an override. Not run against real Spotify.
+

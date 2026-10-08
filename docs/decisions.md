@@ -119,3 +119,13 @@ keeps the most tracks unfolded under the pairwise matcher (its window is 2.25× 
 an octave, and it left the owner's double-time tracks unfolded). Replaces the pairwise
 gap of 10; a set with no clear gap between tempo groups may fold the wrong way, and an
 override fixes it.
+
+### 23. The saved BPM is the only BPM; no automatic half/double (2026-10-08)
+**Context:** the set tempo of 22 guessed which tracks were listed at double time. It
+needed an octave-window heuristic, a second value per track in every mix view
+(`87.5 BPM (listed 175)`) and a known case where it folds the wrong way. **Decision
+(owner):** the algorithm never halves or doubles. The tempo gap, the arc, peaks, range
+and all views use the BPM saved for the track (fetched, or the override), and the gap is
+`|a − b| / max(a, b)`. The override dialog's Half/Double buttons are the fix for a
+double-time track. Reverses 22 and the half/double tolerance of 10. **Consequence:** a
+double-time track is scored and plotted as the fastest in the set until it is overridden.

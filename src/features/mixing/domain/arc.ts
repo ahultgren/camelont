@@ -1,4 +1,3 @@
-import { setTempo } from './tempo'
 import type { MixTrack } from './types'
 
 /**
@@ -72,18 +71,9 @@ export function arcTarget(preset: ArcPreset, position: number): number {
   return last[1]
 }
 
-/**
- * Signals, built for a set: each gives a track's value in that set (null when unknown).
- * BPM is the set tempo, so a track listed at double time isn't scored as the fastest.
- */
-const ARC_SIGNALS: Record<
-  ArcSignalId,
-  (tracks: readonly MixTrack[]) => (track: MixTrack) => number | null
-> = {
-  bpm: (tracks) => {
-    const fold = setTempo(tracks.map((t) => t.bpm))
-    return (track) => fold(track.bpm)
-  },
+/** Raw signal value of a track (null when unknown). */
+export const ARC_SIGNALS: Record<ArcSignalId, (track: MixTrack) => number | null> = {
+  bpm: (track) => track.bpm,
 }
 
 export interface SignalRange {
@@ -91,17 +81,11 @@ export interface SignalRange {
   max: number
 }
 
-/** A signal over a set: each track's value and the range used to normalise it to 0..1. */
-export interface ArcScale {
-  value: (track: MixTrack) => number | null
-  range: SignalRange
-}
-
-export function arcScale(tracks: readonly MixTrack[], signal: ArcSignalId): ArcScale | null {
-  const value = ARC_SIGNALS[signal](tracks)
-  const values = tracks.map(value).filter((v): v is number => v !== null)
+/** The signal's range over a set of tracks, used to normalise it to 0..1. */
+export function signalRange(tracks: readonly MixTrack[], signal: ArcSignalId): SignalRange | null {
+  const values = tracks.map(ARC_SIGNALS[signal]).filter((v): v is number => v !== null)
   if (values.length === 0) return null
-  return { value, range: { min: Math.min(...values), max: Math.max(...values) } }
+  return { min: Math.min(...values), max: Math.max(...values) }
 }
 
 export function normalise(value: number, range: SignalRange): number {
@@ -118,10 +102,10 @@ export function arcTermCost(
   index: number,
   count: number,
   arc: ArcConfig,
-  scale: ArcScale,
+  range: SignalRange,
 ): number {
-  const value = scale.value(track)
+  const value = ARC_SIGNALS[arc.signal](track)
   if (value === null) return 0
   const target = arcTarget(ARC_PRESETS[arc.preset], arcPosition(index, count))
-  return arc.weight * Math.abs(normalise(value, scale.range) - target)
+  return arc.weight * Math.abs(normalise(value, range) - target)
 }
