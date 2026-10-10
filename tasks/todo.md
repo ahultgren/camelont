@@ -184,7 +184,7 @@ New feature `features/sets`. Proposed edges: `sets → playlists, track-features
   only the picks it must)
 - [x] `domain/playlist-diff.ts`: stored copy vs Spotify → added, removed, and which
   marks and rules a removal drops
-- [ ] `api/`: sets repository on `KeyValueStore` (`camelont-sets`, `{ v: 1, data }`,
+- [x] `api/`: sets repository on `KeyValueStore` (`camelont-sets`, `{ v: 1, data }`,
   zod; an unreadable set is reported, not dropped)
 - [ ] `model/`: sets store (list, create, rename, duplicate, delete, save-as-you-go)
 

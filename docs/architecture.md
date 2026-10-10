@@ -280,6 +280,13 @@ no other feature; pages map playlists, track features and mix results to and fro
   function, so what is announced is what is dropped. The chosen mix is not touched
   here: it is checked against the current selection when it is read (track data can
   change outside the set too).
+- `api/repository.ts`: `createSetsRepo(store)` on the `KeyValueStore` port (IndexedDB
+  database `camelont-sets`), one record per set, keyed by set ID and shaped
+  `{ v: 1, data }`. `all()` returns `{ sets, unreadable }`: a record that fails the zod
+  schema, has another version, or sits under the wrong key is reported as an
+  `UnreadableSet { id, name, problem }` and left in storage untouched, never dropped or
+  half-loaded (spec §6). `put` validates before writing, so nothing is stored that
+  couldn't be read back.
 
 ## Auth (`features/auth`)
 
