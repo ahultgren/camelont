@@ -182,7 +182,7 @@ New feature `features/sets`. Proposed edges: `sets → playlists, track-features
   per-track status + reason, per-playlist counts; the pick method is injected
 - [x] `domain/random-pick.ts`: stable seeded rank per track (a change in the pool moves
   only the picks it must)
-- [ ] `domain/playlist-diff.ts`: stored copy vs Spotify → added, removed, and which
+- [x] `domain/playlist-diff.ts`: stored copy vs Spotify → added, removed, and which
   marks and rules a removal drops
 - [ ] `api/`: sets repository on `KeyValueStore` (`camelont-sets`, `{ v: 1, data }`,
   zod; an unreadable set is reported, not dropped)

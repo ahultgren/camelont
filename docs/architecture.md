@@ -271,6 +271,15 @@ no other feature; pages map playlists, track features and mix results to and fro
   lowest ranks. A rank doesn't depend on the other candidates, so the same seed gives the
   same picks and a track joining or leaving the candidates changes at most one pick.
   Reshuffle is a new seed.
+- `domain/playlist-diff.ts`: `diffPlaylist(set, playlistId, fresh)` → tracks added and
+  removed (by track ID, each once; a new order is no change) and what an update would
+  drop; `playlistRemoval(set, playlistId)` gives the same answer for removing a whole
+  playlist. `Dropped` lists the tracks that leave the pool, their marks, and the mix
+  rules naming them. A track another playlist of the set still has leaves nothing
+  behind. `updatePlaylist` and `removePlaylist` make the change through the same
+  function, so what is announced is what is dropped. The chosen mix is not touched
+  here: it is checked against the current selection when it is read (track data can
+  change outside the set too).
 
 ## Auth (`features/auth`)
 

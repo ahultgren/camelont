@@ -22,6 +22,15 @@ export {
   type PlaylistCopy,
   type SaveState,
 } from './domain/set'
+export {
+  diffPlaylist,
+  playlistRemoval,
+  removePlaylist,
+  updatePlaylist,
+  type Dropped,
+  type DroppedRule,
+  type PlaylistDiff,
+} from './domain/playlist-diff'
 export { randomPick, randomRank } from './domain/random-pick'
 export {
   selectTracks,
