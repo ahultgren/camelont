@@ -42,7 +42,7 @@ src/
     api/               fetch wrapper (base URL, auth header injection, 429 Retry-After, zod parse, typed errors), paginate()
     storage/           KeyValueStore port + IndexedDB adapter + in-memory adapter (tests)
     ui/                base components: AppButton, AppCard, KeyChip, MoveBadge, StatTile, EmptyState, …
-    lib/               seeded PRNG, assertNever, small pure helpers
+    lib/               seeded PRNG, string hash, assertNever, small pure helpers
 e2e/                   Playwright specs + fixtures + route mocks
 docs/                  spec, architecture, decisions, domain, research, reference
 ```
