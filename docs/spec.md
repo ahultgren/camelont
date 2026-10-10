@@ -31,10 +31,10 @@ Sets are specified in §8 and the workspace in §9.
 |---|---|---|
 | U1 | log in with Spotify and stay logged in across reloads; log out | PKCE with `state`; the token refreshes silently; logout clears all tokens. Sets and overrides stay on the device. |
 | U2 | see my sets and create a new one | The first page after login lists my sets (name, playlists, tracks in the set, last edited, saved to Spotify or not) and offers "New set". A new set gets a name and one or more playlists, chosen from a paginated, searchable list (name, image, track count, owner; followed playlists disabled with the reason). |
-| U3 | see every track's key and BPM, with where each value came from | Each track shows its Camelot code **and** key name ("11B · A major"), its BPM, and a source badge (ReccoBeats / manual). Tracks with no data are clearly marked. |
+| U3 | see every track's key and BPM, with where each value came from | Each track shows its Camelot code **and** key name ("11B · A major"), and its BPM. A value set by hand carries a mark; an unmarked value came from ReccoBeats. The edit dialog shows each value's full source. Tracks with no data are clearly marked. |
 | U4 | correct or fill in a track's key/BPM | Edit dialog: Camelot key, BPM, optional note or source. The override persists on this device, applies in every set, and always beats fetched data. Export/import all overrides as JSON. |
 | U5 | mix the set using the Camelot system | Generates mixes where **every** transition is a move in the chart (§5). Runs off the main thread, and the UI stays responsive at 100 tracks. |
-| U6 | set mix rules | Opening track, closing track, "track A must be followed by track B" (repeatable, forms chains). |
+| U6 | set mix rules | Opening track, closing track, "track A must be followed by track B" (repeatable, forms chains). A pair can join tracks from different playlists and is made in two clicks (§9.1). |
 | U7 | understand why no mix is possible | If no clash-free order exists, the app names the blocking tracks or rules in plain language (e.g. "Bloodstream (2A) can only follow 12A and precede 1B; none are in the set"), and names left-out tracks that would unblock it. The user fixes it by changing which tracks are in the set or changing the rules. |
 | U8 | choose between different possible mixes | Several distinct valid mixes of the same tracks, side by side, each with a tempo sparkline and stats: move distribution, peaks, opener and closer, BPM range, total cost. |
 | U9 | explore a mix | Tempo-arc chart with a move badge between points and a hover/tap card per track; a key wheel; a running order with transition connectors (§7). |
@@ -55,7 +55,9 @@ Sets are specified in §8 and the workspace in §9.
   relative major/minor swaps at the same wheel number. So:
   - manual overrides are first-class, persisted locally (IndexedDB), exportable and
     importable as JSON, and always win over fetched data;
-  - every value shows its source;
+  - a value set by hand is marked wherever it appears, an unmarked value came from
+    ReccoBeats, and the edit dialog shows each value's full source (ReccoBeats, or
+    manual with the user's note);
   - fetched features are cached locally, so a playlist isn't refetched on every visit.
 - Overrides belong to the track, not to a set: fixing a track fixes it in every set.
 - A track without a key or BPM can't be mixed. It is left out of the set and flagged
@@ -317,6 +319,25 @@ Two columns at laptop width, under a top bar with the set's name and **Save to S
   ‹playlist›); an excluded row needs none, its toggle says it. Locking a pick is turning
   on "always include" and rejecting it is turning on "exclude"; there are no separate
   controls. Rows that joined or left the set in the last change are marked.
+- **Key and BPM on the row.** Clicking a track's key or BPM opens the edit dialog (U4),
+  which shows where each value came from. On the row, only a value set by hand is
+  marked.
+- **Playlist menu.** The header bar has a small menu with **Update** (when Spotify
+  changed) and **Remove from set**.
+- **Follow pairs** are made in two ways, and both work across playlists:
+  - *Pin a transition.* In the running order, the connector between two neighbouring
+    tracks has a pin: keep these two together.
+  - *"Followed by…" from a row.* A link button on a track row arms it; a notice at the
+    top of the track column says which track is waiting and how to cancel (Esc). The
+    next row the user chooses, in any playlist, completes the pair. While armed, the
+    list scrolls, folds and filters as usual, every other row shows the chart move it
+    would make, and rows that would clash can't be chosen. It works from the keyboard.
+    Arming the second track of a pair extends it into a chain.
+
+  A pair shows on both rows (the partner's name, and pointing at it highlights the
+  partner), in the mix column's list of pairs (where it can be removed), and as the pin
+  in the running order. The link button is separate from the row's toggle group: an
+  opener can also have a follower.
 - **Mix (right, about 40%).** Always in view: the change summary (W4), the tempo chart,
   the headline numbers, the alternatives, the arc, the follow pairs, and the key wheel
   and running order. The running order scrolls in its own area.

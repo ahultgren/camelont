@@ -168,3 +168,19 @@ playlist's choices change; the app says which.
 **Decision (owner):** sets are built on a laptop or desktop. The "mix stays in view, no
 page scroll" promise holds from 1280 × 720 up. Phone width keeps every tool reachable
 as tabs under a compact chart, without that promise.
+
+### 29. Only hand-set values are marked; the full source is in the edit dialog (2026-10-10)
+**Context:** the workspace's track rows are one line each, and a source badge on every
+key and BPM was most of the noise. **Decision (owner):** a value set by hand carries a
+small mark; an unmarked value came from ReccoBeats. Clicking the key or BPM opens the
+edit dialog, which shows each value's full source. Relaxes the earlier rule that every
+value shows its source wherever it appears.
+
+### 30. Follow pairs are pinned or picked, not dragged (2026-10-10)
+**Context:** with tracks grouped under several foldable playlists, the owner asked how
+to connect two tracks, possibly from different playlists. **Decision (owner):** two
+ways: a pin on the connector between two neighbours in the running order, and a
+"Followed by…" button on a track row that arms it until the next row is chosen, showing
+each candidate's chart move and refusing clashes. **Rejected as the main way:**
+drag-and-drop (reads as reordering, fails when the target is folded or far away, no
+keyboard path). It may come later as a shortcut for the second way.

@@ -175,9 +175,12 @@ Proposed by the agent and written into the spec; the owner approved them as a wh
   guidance for layout only; the owner finds the prototype's look ugly, so the visual
   design follows spec §7 and the existing components
 - [ ] Component split in `architecture.md` (with Step 5)
-- [ ] Open: how to create a follow pair, including across playlists (suggestions with
-  the owner)
-- [ ] Open: where "remove playlist from set" lives (the prototype has no control for it)
+- [x] Follow pairs: a pin on running-order connectors plus a two-click "Followed by…"
+  from a row; no drag-and-drop (owner, 2026-10-10; spec §9.1)
+- [x] "Remove from set" lives in a menu on the playlist header bar (spec §9.1)
+- [x] Only hand-set values are marked on rows; the edit dialog, opened from the key or
+  BPM, shows the full source (decision 29)
+- [ ] The prototype's phone board is out of date; redo it with Step 5
 
 ### Step 2 — sets domain and storage (parallel with 1 and 3; new files only)
 New feature `features/sets`. Proposed edges: `sets → playlists, track-features, mixing`
