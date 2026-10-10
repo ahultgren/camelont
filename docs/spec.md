@@ -300,7 +300,28 @@ without scrolling the page.
 | W9 | **Problems appear where the mix would be.** A missing key on a must-include track, a rule error or "no mix possible" replaces the result in place, with the fix one step away. |
 | W10 | **Phone.** At phone width the same tools are reachable as tabs under a compact chart. The no-scroll promise applies to laptop widths only. |
 
-The layout that meets these is chosen from prototypes and then recorded here.
+### 9.1 Layout
+
+Two columns at laptop width, under a top bar with the set's name and **Save to Spotify**.
+
+- **Tracks (left, about 60%).** The one track list (W7), grouped by playlist. Each
+  playlist is a header bar over its own tracks, and the bar carries that playlist's
+  controls: name, tracks in the set out of tracks in the pool, the BPM range over the
+  BPM distribution (W8), the limit, the pick method (shown only when there is a limit),
+  and the change notice (shown only when Spotify changed). A playlist's tracks can be
+  folded away; any number of playlists can be open. The column scrolls by itself.
+- **Track rows.** One line per track: title and artist, key in both notations, BPM, and
+  one group of toggles of which at most one is on: opener, closer, always include,
+  exclude. Left-out rows are dimmed. A short tag gives the reason only when the app
+  made the call (outside range, not picked, picked, needs key/BPM, already in
+  ‹playlist›); an excluded row needs none, its toggle says it. Locking a pick is turning
+  on "always include" and rejecting it is turning on "exclude"; there are no separate
+  controls. Rows that joined or left the set in the last change are marked.
+- **Mix (right, about 40%).** Always in view: the change summary (W4), the tempo chart,
+  the headline numbers, the alternatives, the arc, the follow pairs, and the key wheel
+  and running order. The running order scrolls in its own area.
+
+The prototype this came from settles the layout only. The look follows §7.
 
 ## 10. Out of scope (for now)
 

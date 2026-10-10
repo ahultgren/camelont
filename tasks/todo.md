@@ -170,8 +170,14 @@ Proposed by the agent and written into the spec; the owner approved them as a wh
 - [x] Three layout directions for §9 on a Design canvas, same realistic state in each
   (several playlists, a range, marks, a limited playlist with picks, five alternatives),
   plus the sets list and a phone variant
-- [ ] Owner picks one; record the layout in spec §9 and the component split in
-  `architecture.md`
+- [x] Owner picked the refined direction C (2026-10-10): two columns, playlists as
+  header bars on the track list, the mix on the right. Recorded in spec §9.1. It is
+  guidance for layout only; the owner finds the prototype's look ugly, so the visual
+  design follows spec §7 and the existing components
+- [ ] Component split in `architecture.md` (with Step 5)
+- [ ] Open: how to create a follow pair, including across playlists (suggestions with
+  the owner)
+- [ ] Open: where "remove playlist from set" lives (the prototype has no control for it)
 
 ### Step 2 — sets domain and storage (parallel with 1 and 3; new files only)
 New feature `features/sets`. Proposed edges: `sets → playlists, track-features, mixing`
