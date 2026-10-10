@@ -168,3 +168,55 @@ playlist's choices change; the app says which.
 **Decision (owner):** sets are built on a laptop or desktop. The "mix stays in view, no
 page scroll" promise holds from 1280 × 720 up. Phone width keeps every tool reachable
 as tabs under a compact chart, without that promise.
+
+### 29. Best fit: a place in one solved order, then an order-free added cost (2026-10-11)
+**Context:** 27 left the best-fit score open. Two were compared, as the plan asked:
+(a) cheapest legal insertion into the solver's best order of the fixed tracks, and
+(b) a plain neighbour score (cheapest move in + cheapest move out, no ordering). Measured
+on the WCS set (29 splits: 12 tracks fixed, 3 picked from the other 8) as the cost the
+picks add to the solver's best mix, and as the share of picks that survive removing one
+track from the set (WCS and a synthetic three-playlist pool):
+
+| Score | Added cost, 87 picks | Picks kept after one removal |
+|---|---|---|
+| Solving once per candidate (reference; far too slow) | 15.7 | |
+| (a) insertion into the solved order | 20.0 | 65–74% |
+| **Chosen** | 31.5 | 88–96% |
+| (b) neighbours | 62.9 | 95–98% |
+| Random draw (mean of 5) | 132.9 | |
+
+**Decision:** neither alone. `pickBestFit` (`mixing/domain/fit.ts`) ranks a candidate by
+(1) whether it has *a place*: the clashes its best slot adds to one clash-free order of
+the fixed tracks, from the solver; (2) its *added cost*, order-free: the cheapest
+`a → t → b` over tracks of the set, less `a → b` when that is one of the two cheapest
+legal moves out of a or into b; (3) its ID. Picks are made one at a time and join the
+set and the order, so later picks see earlier ones. With no fixed tracks the first pick
+is the middle of the tightest group of candidates (best possible seed in 4 of 6 trials).
+All costs are `transitionCost`; the solver is called, not changed.
+**Why not (a):** it scores best, but every edit to the set re-solves the order, and the
+insertion costs with it: removing one unrelated track left the picks untouched in only
+about 20% of cases (55–80% for the chosen score). The 0.13 it saves per pick is an
+eighth of a `+` move. The order is still what proves a pick keeps the set mixable and
+finds a track that bridges two groups of keys, so it is kept for that alone.
+**Why not (b):** twice the added cost, and no way to tell a track with good neighbours
+from one with a place: a track with cheap moves to two tracks that are never adjacent
+scores well and makes the set unmixable (the `noPlace` test).
+**Not scored: the arc and the mix rules' preferences.** Picks are track choices and
+shouldn't change when the arc does (spec §8.4: "the same set and choices always give
+the same picks"). Measured too: inserting under the full arc cost was noisy; a
+lower-bound arc term halved the added cost under two waves on WCS (41 against 83) but
+made no measurable difference on the pool, and the picks then moved with every tempo
+in the set. The opener, closer and follow pairs only rule slots out.
+**Known limits:** (i) a place is checked in one order, so a track can be marked as
+having none and still fit another order; it is then only picked last. (ii) The score
+prices a slot; it doesn't look for a track that lets the solver rearrange the whole mix.
+On the synthetic singalongs (four tempo clusters, mix cost 100) the picks added 0.2 as
+scored, while three random draws happened to lower the total by 6–9. (iii) On sets of
+35+ tracks with a wide tempo spread the solver's own result moves by several cost units
+when one track is added, more than the scores differ, so there the comparison only
+holds in aggregate. (iv) The pool is synthetic; a real multi-playlist pool from the
+owner is still owed (lesson of 2026-09-28).
+**Cost:** one solver run (k = 1) plus a scan: about 40 ms for 20 fixed tracks and 65
+candidates, 0.1 s for 45 and 100, 0.4 s for 100 and 315 with 10 picks. Run it in the
+worker with the solve. When several playlists pick in turn, passing the previous
+call's `order` skips the solver run.

@@ -16,6 +16,7 @@ export {
   type Peak,
   type Transition,
 } from './domain/evaluate'
+export { pickBestFit, type FitRequest, type FitResult, type FitScore } from './domain/fit'
 export { DEFAULT_PROFILE, PROFILES, profileById, withArc, type MixProfile } from './domain/profile'
 export { DEFAULT_K, type SolveOutcome } from './domain/solver/solve'
 export { tempoGap } from './domain/tempo'

@@ -198,6 +198,21 @@ The heart of the app, pure TS and fully unit tested.
   for the same only neighbour. Each names excluded tracks that would fit. Otherwise a
   generic "no clash-free order was found" message listing the tightest tracks as
   exclusion candidates.
+- `fit.ts`: `pickBestFit({ fixed, candidates, count, profile, constraints?, order? })`
+  → the picks, a score for every candidate, and the order used. It chooses a limited
+  playlist's best-fit tracks before the solver orders anything (spec §8.4, decision 29).
+  Picks are made one at a time, each seeing the earlier ones, by: (1) *a place*: the
+  clashes the track's best slot adds to one clash-free order of the fixed tracks
+  (`solveMix` with k = 1, or the caller's `order` when playlists pick in turn), so a
+  pick with a place cannot make a mixable set unmixable, and a track that mends a
+  clash of an unmixable set comes first; (2) *added cost*: the cheapest
+  `a → track → b` over tracks of the set, less `a → b` when b is one of a's two
+  cheapest legal successors (or a one of b's two cheapest predecessors), which doesn't
+  depend on the order; (3) the ID. With no fixed tracks it starts from the middle of
+  the tightest group of candidates. Every cost is `transitionCost`; the arc is ignored
+  on purpose. The solver is not changed. It costs one solver run plus a scan: about
+  40 ms for 20 fixed tracks and 65 candidates, 0.1 s for 45 and 100, 0.4 s for 100 and
+  315 with 10 picks, so it belongs in the worker next to the solve.
 - `model/solver.worker.ts` exposes `solve(request)` via Comlink; `model/solver-client.ts`
   starts one worker per run (cancel = terminate). `model/useMixer` wraps it and cancels
   the run in flight when inputs change or the component unmounts.
