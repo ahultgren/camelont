@@ -129,3 +129,42 @@ and all views use the BPM saved for the track (fetched, or the override), and th
 `|a − b| / max(a, b)`. The override dialog's Half/Double buttons are the fix for a
 double-time track. Reverses 22 and the half/double tolerance of 10. **Consequence:** a
 double-time track is scored and plotted as the fastest in the set until it is overridden.
+
+### 24. The set is the unit of work; several playlists per set (2026-10-08)
+**Context:** one playlist per mix made the owner prepare a playlist in Spotify before
+every mix, and gave nowhere to keep choices. **Decision (owner):** the first page lists
+*sets*. A set has a name, one or more playlists, per-playlist track choices (BPM range,
+must-include/exclude marks, a limit with a pick method), mix settings and a chosen mix,
+all stored in the browser. Spotify is written to only by "Save to Spotify". The
+playlist page goes away; a set with one playlist and no choices is the old behaviour.
+Reverses the "whole playlist" part of 11 and "picking a subset from a large pool" in
+the old out-of-scope list. Exclusion moves from the mix constraints (8) to the set's
+track choices.
+
+### 25. A set works from a stored copy of its playlists, with a change notice (2026-10-08)
+**Decision (owner):** adding a playlist stores its tracks in the set. On open the set
+checks Spotify and reports "3 new, 1 removed"; nothing changes until the user presses
+Update. **Rejected:** always following Spotify (a finished set could change by itself,
+and marks would vanish silently); a manual Refresh with no notice (easy to mix a stale
+list without knowing).
+
+### 26. Per-playlist limits only; no set-wide size target (2026-10-08)
+**Decision (owner):** the set is the sum of what each playlist contributes.
+**Not built:** a set-wide track count or duration target. It can be added later as one
+more step before the solver.
+
+### 27. Picks are settled before ordering and shown to the user (2026-10-08)
+**Context:** a limited playlist needs N tracks chosen, "randomly or best fit".
+**Decision (owner):** the picks are made once, before the solver runs, so every
+alternative mix has the same tracks. Best fit means fitting the rest of the set (chart
+moves and tempo). A pick is visible and can be locked (must-include) or rejected
+(exclude). Random picks are a stable draw with a Reshuffle. **Rejected:** letting the
+solver choose while ordering (each alternative would have different tracks, which makes
+them hard to compare, and the solver would have to stop visiting every track: a large
+change to its pruning). **Consequence:** best-fit picks can change when another
+playlist's choices change; the app says which.
+
+### 28. The workspace is designed for a laptop (2026-10-08)
+**Decision (owner):** sets are built on a laptop or desktop. The "mix stays in view, no
+page scroll" promise holds from 1280 × 720 up. Phone width keeps every tool reachable
+as tabs under a compact chart, without that promise.

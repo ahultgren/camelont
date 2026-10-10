@@ -133,3 +133,88 @@ in the override dialog stay as the manual fix.
 playlist Price Tag (175) and We Are Young (184.1) now count as the fastest tracks until
 they are halved with an override. Not run against real Spotify.
 
+
+## Change — sets and a workspace (started 2026-10-08)
+
+Owner's request: (1) work in *sets* built from several playlists, with per-playlist
+track choices, stored locally and saved to Spotify only on demand; (2) a workspace where
+the effect of every choice is visible at once. Spec: §3 (U2, U11–U16), §8, §9.
+Decisions 24–28.
+
+### Step 0 — spec and requirements
+- [x] Read the current spec, architecture, decisions and page code
+- [x] Owner's answers: per-playlist limits only; stored copy + change notice; picks
+  settled before ordering and visible; laptop first
+- [x] Rewrite `docs/spec.md` (§1, §3, §4, §5.4, §5.5, §6, new §8 Sets, new §9 Workspace)
+- [x] Decisions 24–28
+- [x] Owner confirmed the assumptions below (2026-10-10)
+- [x] Commit the spec on the `sets-and-workspace` branch
+
+### Assumptions (confirmed by the owner 2026-10-10)
+Proposed by the agent and written into the spec; the owner approved them as a whole.
+
+| # | Assumption | Spec | Why |
+|---|---|---|---|
+| A1 | A track is in a set at most once; it belongs to the first playlist that has it, and doesn't count toward the others' limits | §8.2 | A set shouldn't play a song twice. Replaces today's "duplicates are separate entries". |
+| A2 | Tracks without key/BPM are left out and flagged; they no longer block the mix. Only a must-include track without data blocks | §4, §8.3 | With ~15% missing and several playlists, "fix or exclude each one first" would mean dozens of clicks before the first mix. **Changes today's behaviour.** |
+| A3 | A track named as opener, closer or in a follow pair counts as must-include | §5.4 | Otherwise narrowing a BPM range or a re-pick silently breaks a rule. |
+| A4 | Must-include tracks count toward the limit; if they exceed it they're all in and nothing more is picked | §8.4 | Matches the owner's example (limit 3, one must-include → that one plus two). |
+| A5 | BPM range is per playlist only; no set-wide range | §8.3 | As described by the owner. A set-wide default is easy to add if repeating it gets tedious. |
+| A6 | Random picks are a stable draw with a Reshuffle button | §8.4 | Picks that change on every recalculation would make the mix jump on unrelated edits. |
+| A7 | Saving again creates another new playlist; the set remembers the last link and whether it changed since | §8.5 | Keeps "never modify a playlist" absolute. |
+| A8 | No export/import of sets yet (sets live in one browser) | §8.6, §10 | Not asked for. Overrides keep their export. |
+| A9 | The chosen alternative is remembered; when inputs change the best new mix is shown | §8.5 | Alternatives have no identity across recalculations. |
+| A10 | Best fit ranks against the tracks that are in the set anyway; playlists pick in the order they were added, each seeing the earlier picks | §8.4 | Deterministic and explainable. The exact score is settled in Step 3 on real data. |
+
+### Step 1 — workspace layout prototypes (parallel; no repo changes)
+- [x] Three layout directions for §9 on a Design canvas, same realistic state in each
+  (several playlists, a range, marks, a limited playlist with picks, five alternatives),
+  plus the sets list and a phone variant
+- [ ] Owner picks one; record the layout in spec §9 and the component split in
+  `architecture.md`
+
+### Step 2 — sets domain and storage (parallel with 1 and 3; new files only)
+New feature `features/sets`. Proposed edges: `sets → playlists, track-features, mixing`
+(record in architecture.md and `FEATURE_EDGES` when built).
+- [ ] `domain/types.ts`: set, playlist copy, track choices, marks, mix settings, chosen
+  mix, last save
+- [ ] `domain/select.ts` (test first): the §8.3 rule table as one pure function →
+  per-track status + reason, per-playlist counts; the pick method is injected
+- [ ] `domain/random-pick.ts`: stable seeded rank per track (a change in the pool moves
+  only the picks it must)
+- [ ] `domain/playlist-diff.ts`: stored copy vs Spotify → added, removed, and which
+  marks and rules a removal drops
+- [ ] `api/`: sets repository on `KeyValueStore` (`camelont-sets`, `{ v: 1, data }`,
+  zod; an unreadable set is reported, not dropped)
+- [ ] `model/`: sets store (list, create, rename, duplicate, delete, save-as-you-go)
+
+### Step 3 — best-fit ranking (parallel with 1 and 2; `mixing/domain`, new file)
+- [ ] `mixing/domain/fit.ts` (test first): rank candidate tracks against the tracks
+  already in the set, using `moveBetween`, `transitionCost` and `tempoGap` (no second
+  scoring implementation). Start from cheapest legal insertion into the best order of
+  the fixed tracks; compare with a plain "legal neighbours + tempo distance" score
+- [ ] Fixtures: the WCS set plus a real multi-playlist pool from the owner (lesson of
+  2026-09-28); a stability test (small edits don't reshuffle every pick); edge cases
+  (no fixed tracks at all, every playlist limited, nothing insertable)
+- [ ] Adversarial review of the heuristic before it is wired in
+
+### Step 4 — wire sets into mixing
+- [ ] The planner takes its tracks, rules and arc from the set; left-out tracks go in as
+  `excluded` so diagnostics can name ones that would unblock a mix (U7)
+- [ ] Keep the previous result while a new one is worked out (W3); change summary (W4)
+- [ ] Playlist change check on open (`snapshot_id`), notice, Update (U16)
+- [ ] Remember the chosen alternative (A9)
+
+### Step 5 — workspace UI (after the layout is picked)
+- [ ] Home = sets list + New set; routes `/sets/:id`; remove `PlaylistPage` and the
+  `/playlists/:id` route
+- [ ] The chosen layout: playlists panel with track choices and the BPM range control
+  (W8), one track list (W7), mix rules, arc, alternatives, mix views, cross-highlight (W6)
+- [ ] Phone variant (W10)
+
+### Step 6 — save and ship
+- [ ] Save to Spotify from the set (name = set name); link, time, "changed since" (§8.5)
+- [ ] E2E: create a set from two playlists, range + marks + limit, mix, reopen, save;
+  playlist-changed notice; infeasible path. All mocked
+- [ ] Docs: `architecture.md`, `CLAUDE.md` intro, `setup.md`; `pnpm check` green
+- [ ] Owner verifies against real Spotify (agent can't log in)
