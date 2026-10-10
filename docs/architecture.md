@@ -266,6 +266,11 @@ no other feature; pages map playlists, track features and mix results to and fro
   `duplicate` with the owning playlist), counts per playlist and reason, the tracks in
   the set in pool order, and the blockers (must-include tracks without key or BPM).
   `statusLabel` puts a status in the spec's words.
+- `domain/random-pick.ts`: the random pick method. `randomRank(seed, trackId)` is a
+  hash of both (`shared/lib` `hashString` seeding the PRNG), and `randomPick` takes the
+  lowest ranks. A rank doesn't depend on the other candidates, so the same seed gives the
+  same picks and a track joining or leaving the candidates changes at most one pick.
+  Reshuffle is a new seed.
 
 ## Auth (`features/auth`)
 

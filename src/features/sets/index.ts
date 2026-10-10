@@ -22,6 +22,7 @@ export {
   type PlaylistCopy,
   type SaveState,
 } from './domain/set'
+export { randomPick, randomRank } from './domain/random-pick'
 export {
   selectTracks,
   statusLabel,

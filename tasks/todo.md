@@ -180,7 +180,7 @@ New feature `features/sets`. Proposed edges: `sets → playlists, track-features
   mix, last save
 - [x] `domain/select.ts` (test first): the §8.3 rule table as one pure function →
   per-track status + reason, per-playlist counts; the pick method is injected
-- [ ] `domain/random-pick.ts`: stable seeded rank per track (a change in the pool moves
+- [x] `domain/random-pick.ts`: stable seeded rank per track (a change in the pool moves
   only the picks it must)
 - [ ] `domain/playlist-diff.ts`: stored copy vs Spotify → added, removed, and which
   marks and rules a removal drops
