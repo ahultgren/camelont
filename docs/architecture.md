@@ -254,15 +254,16 @@ no other feature; pages map playlists, track features and mix results to and fro
 - `domain/select.ts`: `selectTracks(input) → Selection`, the rule table of spec §8.3 and
   **the only place that decides which tracks are in a set**. Input: the playlists with
   their choices, the marks, the rule track IDs (they count as must-include), key and BPM
-  per track, and a `PickFn`. Two passes: the first gives each track to the first playlist
-  that has it and settles every status a pick doesn't decide; the second lets limited
-  playlists pick in the order they were added. Each `PickRequest` carries the playlist's
-  method and seed, how many to pick, the candidates (rules 1–5 passed), and the tracks
-  already in the set: everything settled in the first pass, in any playlist, plus
-  earlier picks. The answer is held to its contract (candidates only, never more than
-  asked). When no more tracks are available than the limit leaves room for, they are all
-  in and no pick is made. Output: a row per playlist track (`TrackStatus`: `in |
-  mustInclude | picked`, or `excluded | outsideRange | notPicked | needsData`, or
+  per track, and a `PickFn`. Two passes: the first gives each track to the first
+  playlist that has it and settles every status that needs no pick; the second lets the
+  limited playlists that have more candidates than places pick, in the order they were
+  added. Each `PickRequest` carries the playlist's method and seed, how many to pick,
+  the candidates (rules 1–5 passed), and the tracks already in the set: everything
+  settled in the first pass, in any playlist, plus earlier picks. The answer is held to
+  its contract (candidates only, never more than asked). When no more tracks are
+  available than the limit leaves room for, they are all in, no pick is made, and
+  earlier picks see them as in the set. Output: a row per playlist track (`TrackStatus`:
+  `in | mustInclude | picked`, or `excluded | outsideRange | notPicked | needsData`, or
   `duplicate` with the owning playlist), counts per playlist and reason, the tracks in
   the set in pool order, and the blockers (must-include tracks without key or BPM).
   `statusLabel` puts a status in the spec's words.

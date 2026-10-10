@@ -373,6 +373,22 @@ describe('selectTracks: limits and picks (§8.4)', () => {
     expect(selection.inSet).toEqual(['o3', 'w1', 'w2', 'm3', 'locked'])
   })
 
+  it('shows a pick the tracks of a later limited playlist that are in anyway', () => {
+    const pick = vi.fn(firstFew)
+    select({
+      playlists: [
+        playlist('odd', ['o1', 'o2'], { limit: 1 }),
+        playlist('roomy', ['r1', 'r2'], { limit: 5 }),
+        playlist('full', ['f1', 'f2', 'locked'], { limit: 1 }),
+      ],
+      trackData: known('o1', 'o2', 'r1', 'r2', 'f1', 'f2', 'locked'),
+      marks: marks({ locked: 'mustInclude' }),
+      pick,
+    })
+    expect(pick).toHaveBeenCalledTimes(1)
+    expect(pick.mock.calls[0]?.[0].inSet.map((t) => t.trackId)).toEqual(['r1', 'r2', 'locked'])
+  })
+
   it('leaves a must-include track without key or BPM out of what a pick sees', () => {
     const pick = vi.fn(firstFew)
     select({

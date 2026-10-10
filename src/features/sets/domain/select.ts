@@ -121,7 +121,7 @@ export function selectTracks(input: SelectInput): Selection {
     return choices.limit === null ? IN : null
   }
 
-  // First pass: who owns each track (rule 1), and every status a pick doesn't decide.
+  // First pass: who owns each track (rule 1), and every status that needs no pick.
   const owner = new Map<string, number>()
   const statusByTrack = new Map<string, TrackStatus>()
   const poolOrder: string[] = []
@@ -138,35 +138,34 @@ export function selectTracks(input: SelectInput): Selection {
       else statusByTrack.set(trackId, status)
       if (status === MUST_INCLUDE) mustInclude++
     }
-    return { playlist, trackIds, candidates, mustInclude }
+    // Must-include tracks count toward the limit (§8.4). With room for every candidate
+    // they are all in, and with room for none they are all out: no pick either way.
+    const places = (playlist.choices.limit ?? Infinity) - mustInclude
+    const needsPick = places > 0 && candidates.length > places
+    if (!needsPick) {
+      for (const trackId of candidates) statusByTrack.set(trackId, places > 0 ? IN : NOT_PICKED)
+    }
+    return { playlist, trackIds, mustInclude, places, toPick: needsPick ? candidates : [] }
   })
 
-  // Second pass: limited playlists pick in the order they were added (rule 6, §8.4).
-  for (const { playlist, candidates, mustInclude } of drafts) {
-    const places = (playlist.choices.limit ?? Infinity) - mustInclude
-    let picked: ReadonlySet<string>
-    if (places <= 0) picked = new Set()
-    else if (candidates.length <= places) {
-      // Fewer available than the limit: all of them are in, and nothing is picked.
-      for (const trackId of candidates) statusByTrack.set(trackId, IN)
-      continue
-    } else {
-      picked = sanitise(
-        input.pick({
-          playlistId: playlist.playlistId,
-          method: playlist.choices.pick,
-          seed: playlist.choices.seed,
-          count: places,
-          candidates: candidates.flatMap((trackId) => mixable(trackId) ?? []),
-          inSet: poolOrder.flatMap((trackId) =>
-            statusByTrack.get(trackId)?.inSet ? (mixable(trackId) ?? []) : [],
-          ),
-        }),
-        candidates,
-        places,
-      )
-    }
-    for (const trackId of candidates) {
+  // Second pass: the other limited playlists pick, in the order they were added (rule 6).
+  for (const { playlist, places, toPick } of drafts) {
+    if (toPick.length === 0) continue
+    const picked = sanitise(
+      input.pick({
+        playlistId: playlist.playlistId,
+        method: playlist.choices.pick,
+        seed: playlist.choices.seed,
+        count: places,
+        candidates: toPick.flatMap((trackId) => mixable(trackId) ?? []),
+        inSet: poolOrder.flatMap((trackId) =>
+          statusByTrack.get(trackId)?.inSet ? (mixable(trackId) ?? []) : [],
+        ),
+      }),
+      toPick,
+      places,
+    )
+    for (const trackId of toPick) {
       statusByTrack.set(trackId, picked.has(trackId) ? PICKED : NOT_PICKED)
     }
   }
