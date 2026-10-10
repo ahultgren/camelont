@@ -281,6 +281,154 @@ describe('pickBestFit: keeping the set mixable (spec §8.4)', () => {
   })
 })
 
+describe('pickBestFit: cases from the adversarial review', () => {
+  it('charges a track at an end of the mix for one transition, not two', () => {
+    // 9A has a perfect move to 8B and none to the others: it goes on the end, for free.
+    const fixed = [track('f8', '8B'), track('f10', '10B'), track('f11', '11B')]
+    const result = fit(fixed, [track('end', '9A', 100), track('mid', '10B', 120)], 1)
+    expect(ids(result.picked)).toEqual(['end'])
+    expect(scoreOf(result, 'end')).toMatchObject({ clashes: 0, cost: 0 })
+    expect([scoreOf(result, 'end').after, scoreOf(result, 'end').before]).toContain(null)
+  })
+
+  it('prefers the one good neighbour at an end over two poor ones in the middle', () => {
+    const fixed = [
+      track('f0', '8A', 97),
+      track('f1', '10B', 118),
+      track('f2', '10B', 105),
+      track('f3', '10A', 118),
+    ]
+    const candidates = [
+      track('p1', '7B', 100),
+      track('p2', '7B', 103),
+      track('q1', '10A', 89),
+      track('q2', '7A', 125),
+    ]
+    const result = fit(fixed, candidates, 2)
+    expect(ids(result.picked)).toEqual(['p1', 'p2'])
+    expect(solvedCost([...fixed, ...result.picked])).toBeLessThan(
+      solvedCost([...fixed, ...candidates.slice(2)]),
+    )
+  })
+
+  it('does not price a clash for a track that has a place', () => {
+    const fixed = [
+      track('a', '11B', 117),
+      track('b', '2B', 112),
+      track('c', '1B', 106),
+      track('d', '2B', 117),
+      track('e', '2B', 104),
+    ]
+    const candidates = [
+      track('perfect', '12A', 118),
+      track('far', '11A', 102),
+      track('farther', '11A', 135),
+    ]
+    const result = fit(fixed, candidates, 1)
+    expect(ids(result.picked)).toEqual(['perfect'])
+    expect(scoreOf(result, 'perfect').after?.move ?? 'perfect').not.toBe('clash')
+    expect(scoreOf(result, 'perfect').before?.move ?? 'perfect').not.toBe('clash')
+  })
+
+  it('asks the solver before a track with no slot in the order loses to a dearer one', () => {
+    // 9A fits only beside 8B, which sits in the middle of the first order found.
+    const fixed = [track('a7', '7B'), track('x8', '8B'), track('c10', '10B')]
+    const result = fit(fixed, [track('t9', '9A', 100), track('u', '8B', 200)], 1)
+    expect(ids(result.picked)).toEqual(['t9'])
+    expect(scoreOf(result, 't9').clashes).toBe(0)
+    expect(ids(result.order).sort()).toEqual(['a7', 'c10', 't9', 'x8'])
+    expect(evaluateMix(result.order, profile).clashCount).toBe(0)
+  })
+
+  it('asks the solver only so many times', () => {
+    const chain = [
+      track('p', '12B'),
+      track('a', '1A'),
+      track('b', '2A'),
+      track('c', '5A'),
+      track('q', '8B'),
+    ]
+    const noPlace = Array.from({ length: 8 }, (_, i) => track(`noPlace${i}`, '6A', 100))
+    const result = fit(chain, [...noPlace, track('hasPlace', '2A', 120)], 1)
+    expect(ids(result.picked)).toEqual(['hasPlace'])
+    expect(result.ranking.filter((s) => s.clashes > 0)).toHaveLength(8)
+  })
+
+  it('ignores an order that has a clash in it or breaks the rules', () => {
+    const a = track('a7', '7B')
+    const x = track('x8', '8B')
+    const c = track('c10', '10B')
+    const t = track('t9', '9A')
+    const candidates = [track('good', '7B', 100), track('junk', '12B', 140)]
+    const fixed = [a, x, c, t]
+    const clashing = [c, t, x, a]
+    expect(evaluateMix(clashing, profile).clashCount).toBe(1)
+    const base = fit(fixed, candidates, 1)
+    expect(ids(base.picked)).toEqual(['good'])
+    expect(pickBestFit({ fixed, candidates, count: 1, profile, order: clashing })).toEqual(base)
+
+    const constraints = { ...NO_CONSTRAINTS, start: 'x8' }
+    const ruled = pickBestFit({ fixed, candidates, count: 1, profile, constraints })
+    const breaksTheRule = pickBestFit({
+      fixed,
+      candidates,
+      count: 1,
+      profile,
+      constraints,
+      order: base.order.filter((track) => fixed.includes(track)),
+    })
+    expect(breaksTheRule).toEqual(ruled)
+  })
+
+  it('keeps the order clash-free when it picks a track the first order had no slot for', () => {
+    const fixed = [track('a7', '7B'), track('x8', '8B'), track('c10', '10B')]
+    const first = fit(fixed, [track('t9', '9A')], 1)
+    expect(evaluateMix(first.order, profile).clashCount).toBe(0)
+    const second = pickBestFit({
+      fixed: [...fixed, ...first.picked],
+      candidates: [track('good', '7B', 100), track('junk', '12B', 140)],
+      count: 1,
+      profile,
+      order: first.order,
+    })
+    expect(ids(second.picked)).toEqual(['good'])
+  })
+
+  it.each([
+    { name: 'an opener that is not in the set', rules: { start: 'gone' } },
+    { name: 'a follow pair that is a clash', rules: { follows: [['a', 'd']] as const } },
+    { name: 'an opener that is a candidate', rules: { start: 'good' } },
+  ])('ignores mix rules that cannot hold: $name', ({ rules }) => {
+    const fixed = [
+      track('a', '12B'),
+      track('b', '1A'),
+      track('e', '2A'),
+      track('d', '5A'),
+      track('c', '8B'),
+    ]
+    const candidates = [track('good', '2A', 100), track('junk', '5A', 150)]
+    expect(fit(fixed, candidates, 1, rules)).toEqual(fit(fixed, candidates, 1))
+    expect(ids(fit(fixed, candidates, 1, rules).picked)).toEqual(['good'])
+  })
+
+  it('compares costs on a grid, so a near-tie gives one answer in any input order', () => {
+    const fixed = [track('a', '8B', 100), track('b', '8B', 100)]
+    const x = track('x', '8B', 100.000000003)
+    const y = track('y', '8B', 100.0000000015)
+    const z = track('z', '8B', 100)
+    const orders = [
+      [x, y, z],
+      [x, z, y],
+      [y, x, z],
+      [y, z, x],
+      [z, x, y],
+      [z, y, x],
+    ]
+    const picks = orders.map((candidates) => ids(fit(fixed, candidates, 1).picked)[0])
+    expect(new Set(picks).size).toBe(1)
+  })
+})
+
 describe('pickBestFit: several playlists picking in turn (assumption A10)', () => {
   it('continues from the order of the previous call', () => {
     const first = fit(WCS, ODD, 2)

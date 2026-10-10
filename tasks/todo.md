@@ -198,7 +198,8 @@ New feature `features/sets`. Proposed edges: `sets → playlists, track-features
   2026-09-28); a stability test (small edits don't reshuffle every pick); edge cases
   (no fixed tracks at all, every playlist limited, nothing insertable)
   → the pool is synthetic (`fit.pool.fixture.json`); **a real pool is still owed**
-- [ ] Adversarial review of the heuristic before it is wired in
+- [x] Adversarial review of the heuristic before it is wired in
+  → five fixes and six known limits, recorded in decision 29
 
 ### Step 4 — wire sets into mixing
 - [ ] The planner takes its tracks, rules and arc from the set; left-out tracks go in as

@@ -1,4 +1,4 @@
-import { NO_CONSTRAINTS, type MixConstraints } from './constraints'
+import { NO_CONSTRAINTS, validateConstraints, type MixConstraints } from './constraints'
 import { transitionCost, type Transition } from './evaluate'
 import { withArc, type MixProfile } from './profile'
 import { solveMix } from './solver/solve'
@@ -9,12 +9,15 @@ import type { MixTrack } from './types'
  * The picks are made before the solver orders anything and one at a time, so each pick
  * sees the earlier ones. A candidate is ranked by
  *
- * 1. whether it has a place: the clashes its best slot adds to one clash-free order of
- *    the set (the solver's, or `order` from an earlier call). A track with a place keeps
- *    the set mixable; one without is picked only when nothing else is left;
+ * 1. whether it has a place: the clashes its best slot adds to one order of the set
+ *    (the solver's, or `order` from an earlier call). While that order is clash-free, a
+ *    track with a place keeps the set mixable; one without is picked only when nothing
+ *    else is left. A track that would win on cost but has no slot in this one order
+ *    gets a second opinion from the solver, up to `SECOND_OPINIONS` times;
  * 2. its added cost: the cheapest `a → track → b` over tracks of the set, less `a → b`
- *    when that is a transition a good mix would use anyway (see `NEAR`). This doesn't
- *    depend on the order, so an unrelated edit to the set can't reshuffle the picks;
+ *    when that is a transition a good mix would use anyway (see `NEAR`), or one legal
+ *    move at an end of the order. Apart from the ends this doesn't depend on the
+ *    order, so an unrelated edit to the set rarely moves a pick;
  * 3. its ID.
  *
  * All costs are `transitionCost`. The arc is ignored: it is a mix setting, and picks
@@ -28,12 +31,15 @@ export interface FitRequest {
   /** How many to pick; all of them when there are fewer. */
   count: number
   profile: MixProfile
-  /** The set's mix rules. They name fixed tracks only (spec §5.4). */
+  /**
+   * The set's mix rules. They name fixed tracks only (spec §5.4). Rules that
+   * `validateConstraints` rejects are ignored here; the planner reports them.
+   */
   constraints?: MixConstraints
   /**
    * A clash-free order of `fixed`, when the caller has one: the `order` of the previous
    * call when several playlists pick in turn. Saves the solver run. Ignored unless it
-   * holds exactly the fixed tracks.
+   * holds exactly the fixed tracks, without a clash and within the rules.
    */
   order?: readonly MixTrack[]
 }
@@ -42,8 +48,10 @@ export interface FitScore {
   id: string
   picked: boolean
   /**
-   * Clashes its best slot in the order adds: 0 = it has a place, negative = it mends a
-   * clash of a set that can't be mixed without it, positive = no place was found.
+   * Clashes its best slot in the order adds. 0 = it has a place. Positive = no place
+   * was found in this order (another order may have one; the solver is only asked when
+   * that would change a pick). Negative = it mends a clash of a set that has no
+   * clash-free order.
    */
   clashes: number
   /** Added cost of its cheapest slot, at the time it was picked (or after all picks). */
@@ -69,7 +77,10 @@ export interface FitResult {
  * WCS hold-outs (1, 2, 3 and "any legal pair" were tried; decision 29).
  */
 const NEAR = 2
-const EPSILON = 1e-9
+/** Solver runs spent per call on tracks that have no slot in the order but would win on cost. */
+const SECOND_OPINIONS = 4
+/** Costs are compared on this grid, so that rounding noise can't decide (or cycle). */
+const onGrid = (cost: number) => Math.round(cost * 1e9)
 
 /** Transition costs between tracks by index, worked out on first use. */
 interface CostTable {
@@ -102,14 +113,16 @@ function costTable(tracks: readonly MixTrack[], profile: MixProfile): CostTable 
   }
 }
 
-/** Where a slot may not be: before the opener, after the closer, inside a follow pair. */
-interface Rules {
-  start: string | null
-  end: string | null
-  follows: ReadonlySet<string>
+/** A position between two tracks of the order (or at an end of it). */
+interface Gap {
+  prev: number | undefined
+  next: number | undefined
+  /** False where the mix rules allow nothing: before the opener, after the closer, inside a follow pair. */
+  open: boolean
+  /** The transition a track put here replaces. */
+  clash: number
+  cost: number
 }
-
-const pairKey = (from: string, to: string) => `${from}\n${to}`
 
 interface Place {
   /** Insert before this position of the order. */
@@ -124,16 +137,21 @@ interface Fit {
   before: number | null
 }
 
+interface Scored extends Fit {
+  track: number
+  place: Place
+}
+
 /** Orders by cost, then by ID, so that equal costs never fall back on input order. */
 function byCostThenId<T>(cost: (item: T) => number, id: (item: T) => string) {
   return (a: T, b: T): number => {
-    const diff = cost(a) - cost(b)
-    if (Math.abs(diff) > EPSILON) return diff
+    const diff = onGrid(cost(a)) - onGrid(cost(b))
+    if (diff !== 0 && !Number.isNaN(diff)) return diff
     return id(a) < id(b) ? -1 : id(a) > id(b) ? 1 : 0
   }
 }
 
-/** The `k` cheapest of `items`, cheapest first, in one pass (k is small here). */
+/** The `k` cheapest of `items`, cheapest first, in one pass (k is 2 here). */
 function cheapest(
   items: readonly number[],
   k: number,
@@ -141,7 +159,6 @@ function cheapest(
   id: (item: number) => string,
   skip: (item: number) => boolean = () => false,
 ): number[] {
-  if (k <= 0) return []
   const compare = byCostThenId(cost, id)
   const best: number[] = []
   for (const item of items) {
@@ -158,12 +175,9 @@ function cheapest(
 export function pickBestFit(request: FitRequest): FitResult {
   const { fixed, candidates } = request
   const profile = withArc(request.profile, null)
-  const constraints = { ...(request.constraints ?? NO_CONSTRAINTS), excluded: [] }
-  const rules: Rules = {
-    start: constraints.start,
-    end: constraints.end,
-    follows: new Set(constraints.follows.map(([from, to]) => pairKey(from, to))),
-  }
+  const rules = { ...(request.constraints ?? NO_CONSTRAINTS), excluded: [] }
+  const constraints = validateConstraints(fixed, rules).length === 0 ? rules : NO_CONSTRAINTS
+  const follows = new Set(constraints.follows.map(([from, to]) => `${from}\n${to}`))
 
   const tracks = [...fixed, ...candidates]
   const table = costTable(tracks, profile)
@@ -172,6 +186,49 @@ export function pickBestFit(request: FitRequest): FitResult {
     const track = tracks[index]
     if (!track) throw new Error(`Track index ${index} out of range`)
     return track
+  }
+
+  const gapsOf = (order: readonly number[]): Gap[] =>
+    Array.from({ length: order.length + 1 }, (_, index) => {
+      const prev = order[index - 1]
+      const next = order[index]
+      if (prev === undefined || next === undefined) {
+        const beforeOpener = next !== undefined && constraints.start === idOf(next)
+        const afterCloser = prev !== undefined && constraints.end === idOf(prev)
+        return { prev, next, open: !beforeOpener && !afterCloser, clash: 0, cost: 0 }
+      }
+      return {
+        prev,
+        next,
+        open: follows.size === 0 || !follows.has(`${idOf(prev)}\n${idOf(next)}`),
+        clash: Number(table.clash(prev, next)),
+        cost: table.cost(prev, next),
+      }
+    })
+
+  /** The gap that takes `track` for the fewest added clashes, then the least cost. */
+  const placeIn = (gaps: readonly Gap[], track: number): Place => {
+    let best: Place | null = null
+    for (const [index, { prev, next, open, clash, cost: replaced }] of gaps.entries()) {
+      if (!open) continue
+      let clashes = -clash
+      let cost = -replaced
+      if (prev !== undefined) {
+        clashes += Number(table.clash(prev, track))
+        cost += table.cost(prev, track)
+      }
+      if (next !== undefined) {
+        clashes += Number(table.clash(track, next))
+        cost += table.cost(track, next)
+      }
+      const better =
+        !best ||
+        clashes < best.clashes ||
+        (clashes === best.clashes && onGrid(cost) < onGrid(best.cost))
+      if (better) best = { index, clashes, cost }
+    }
+    // The mix rules leave no gap open: no place.
+    return best ?? { index: gaps.length - 1, clashes: 1, cost: 0 }
   }
 
   /** The slots that earn a detour credit, as [a, b] pairs of members. */
@@ -198,120 +255,144 @@ export function pickBestFit(request: FitRequest): FitResult {
     return [...slots.values()]
   }
 
-  /** Added cost of the cheapest slot for `track` among `members`. */
-  const fitAmong = (
+  /** Added cost of the cheapest slot for `track` in the set. */
+  const fitOf = (
     track: number,
-    members: readonly number[],
+    order: readonly number[],
+    gaps: readonly Gap[],
     slots: readonly [number, number][],
   ): Fit => {
-    const ins = cheapest(members, 2, (m) => table.cost(m, track), idOf)
-    const only = ins.length === 1 ? ins[0] : undefined
-    if (ins.length === 0) return { cost: 0, after: null, before: null }
-    if (only !== undefined) {
-      const after = table.cost(only, track)
-      const before = table.cost(track, only)
-      return after <= before
-        ? { cost: after, after: only, before: null }
-        : { cost: before, after: null, before: only }
-    }
-    // Without credit: the cheapest way in and the cheapest way out, by different tracks.
-    const outs = cheapest(members, 2, (m) => table.cost(track, m), idOf)
+    const first = order[0]
+    const last = order[order.length - 1]
+    if (first === undefined || last === undefined) return { cost: 0, after: null, before: null }
     let best: Fit = { cost: Infinity, after: null, before: null }
-    const offer = (after: number, before: number, credit: number) => {
-      const cost = table.cost(after, track) + table.cost(track, before) - credit
-      if (cost < best.cost - EPSILON) best = { cost, after, before }
+    const offer = (after: number | null, before: number | null, credit: number) => {
+      const cost =
+        (after === null ? 0 : table.cost(after, track)) +
+        (before === null ? 0 : table.cost(track, before)) -
+        credit
+      if (onGrid(cost) < onGrid(best.cost)) best = { cost, after, before }
     }
-    for (const after of ins) {
-      for (const before of outs) if (after !== before) offer(after, before, 0)
+    if (order.length > 1) {
+      // Between two tracks. Without credit: the cheapest way in and the cheapest way
+      // out, by different tracks. With credit: the slots a good mix would use.
+      const ins = cheapest(order, 2, (m) => table.cost(m, track), idOf)
+      const outs = cheapest(order, 2, (m) => table.cost(track, m), idOf)
+      for (const after of ins) {
+        for (const before of outs) if (after !== before) offer(after, before, 0)
+      }
+      for (const [after, before] of slots) offer(after, before, table.cost(after, before))
     }
-    for (const [after, before] of slots) offer(after, before, table.cost(after, before))
+    // At an end of the order it adds one transition, not two.
+    if (gaps[0]?.open && !table.clash(track, first)) offer(null, first, 0)
+    if (gaps[order.length]?.open && !table.clash(last, track)) offer(last, null, 0)
+    // A single track that clashes with it, or whose ends the rules close.
+    if (best.cost === Infinity) offer(last, null, 0)
     return best
   }
 
-  /** The slot of `order` that adds the fewest clashes, then the least cost. */
-  const placeIn = (order: readonly number[], track: number): Place => {
-    const n = order.length
-    let best: Place | null = null
-    for (let index = 0; index <= n; index++) {
-      const prev = order[index - 1]
-      const next = order[index]
-      if (prev === undefined && next !== undefined && rules.start === idOf(next)) continue
-      if (prev !== undefined && next === undefined && rules.end === idOf(prev)) continue
-      if (prev !== undefined && next !== undefined) {
-        if (rules.follows.has(pairKey(idOf(prev), idOf(next)))) continue
-      }
-      let clashes = 0
-      let cost = 0
-      if (prev !== undefined) {
-        clashes += Number(table.clash(prev, track))
-        cost += table.cost(prev, track)
-      }
-      if (next !== undefined) {
-        clashes += Number(table.clash(track, next))
-        cost += table.cost(track, next)
-      }
-      if (prev !== undefined && next !== undefined) {
-        clashes -= Number(table.clash(prev, next))
-        cost -= table.cost(prev, next)
-      }
-      if (
-        !best ||
-        clashes < best.clashes ||
-        (clashes === best.clashes && cost < best.cost - EPSILON)
-      ) {
-        best = { index, clashes, cost }
-      }
-    }
-    // The mix rules leave no slot at all: no place.
-    return best ?? { index: n, clashes: 1, cost: 0 }
+  /** The solver's best order of `members`, or null when there is no clash-free one. */
+  const solve = (members: readonly number[]): number[] | null => {
+    const outcome = solveMix({ tracks: members.map(trackAt), constraints, profile, k: 1 })
+    const best = outcome.kind === 'solved' ? outcome.candidates[0] : undefined
+    if (!best) return null
+    const index = new Map(members.map((m) => [idOf(m), m]))
+    const order = best.order.map((t) => index.get(t.id)).filter((m) => m !== undefined)
+    return new Set(order).size === members.length ? order : null
   }
 
-  const order = startingOrder(request, constraints, profile) ?? []
-  if (order.length === 0) {
-    // No clash-free order exists (or the rules are invalid): fewest clashes, greedily,
-    // in ID order so that the result doesn't depend on the input order.
+  /** The caller's order, if it is a mix of exactly the fixed tracks. */
+  const givenOrder = (): number[] | null => {
+    const given = request.order
+    if (given?.length !== fixed.length) return null
+    const index = new Map(fixed.map((t, i) => [t.id, i]))
+    const order = given.map((t) => index.get(t.id)).filter((i) => i !== undefined)
+    if (new Set(order).size !== fixed.length) return null
+    const gaps = gapsOf(order)
+    const obeys =
+      gaps.every((gap) => gap.clash === 0) &&
+      (constraints.start === null || constraints.start === idOf(order[0] ?? -1)) &&
+      (constraints.end === null || constraints.end === idOf(order[order.length - 1] ?? -1)) &&
+      gaps.filter((gap) => !gap.open && gap.prev !== undefined && gap.next !== undefined).length ===
+        follows.size
+    return obeys ? order : null
+  }
+
+  /** No clash-free order exists: fewest clashes, greedily, in ID order (not input order). */
+  const greedyOrder = (): number[] => {
+    const order: number[] = []
     const byId = fixed.map((_, i) => i).sort((a, b) => (idOf(a) < idOf(b) ? -1 : 1))
-    for (const track of byId) order.splice(placeIn(order, track).index, 0, track)
+    for (const track of byId) order.splice(placeIn(gapsOf(order), track).index, 0, track)
+    return order
   }
 
-  interface Scored extends Fit {
-    track: number
-    place: Place
-  }
+  let order =
+    fixed.length === 0 ? [] : (givenOrder() ?? solve(fixed.map((_, i) => i)) ?? greedyOrder())
+  let orderClashes = gapsOf(order).reduce((sum, gap) => sum + gap.clash, 0)
+
   const remaining = new Set(candidates.map((_, i) => fixed.length + i))
+  const compareScores = byCostThenId<Scored>(
+    (s) => s.cost,
+    (s) => idOf(s.track),
+  )
   const scoreAll = (): Scored[] => {
+    const gaps = gapsOf(order)
     const slots = nearSlots(order)
     return [...remaining]
-      .map((track) => ({ track, place: placeIn(order, track), ...fitAmong(track, order, slots) }))
-      .sort(
-        (a, b) =>
-          a.place.clashes - b.place.clashes ||
-          byCostThenId<Scored>(
-            (s) => s.cost,
-            (s) => idOf(s.track),
-          )(a, b),
-      )
+      .map((track) => ({
+        track,
+        place: placeIn(gaps, track),
+        ...fitOf(track, order, gaps, slots),
+      }))
+      .sort((a, b) => a.place.clashes - b.place.clashes || compareScores(a, b))
   }
+
   /**
    * With nothing to fit yet, start from the middle of the tightest group: the candidate
    * whose `size − 1` nearest candidates (in either direction) are nearest.
    */
   const seed = (size: number): number | undefined => {
     const pool = [...remaining]
-    const near = (track: number) => (o: number) =>
-      Math.min(table.cost(track, o), table.cost(o, track))
-    const spread = (track: number): number =>
-      cheapest(pool, size - 1, near(track), idOf, (o) => o === track).reduce(
-        (sum, o) => sum + near(track)(o),
-        0,
-      )
-    return [...pool].sort(byCostThenId(spread, idOf))[0]
+    const spread = new Map(
+      pool.map((track) => {
+        const distances = Float64Array.from(
+          pool.filter((o) => o !== track),
+          (o) => Math.min(table.cost(track, o), table.cost(o, track)),
+        ).sort()
+        return [track, distances.subarray(0, Math.max(0, size - 1)).reduce((a, b) => a + b, 0)]
+      }),
+    )
+    return pool.sort(byCostThenId((track) => spread.get(track) ?? 0, idOf))[0]
   }
 
-  const toScore = (s: Scored, picked: boolean): FitScore => ({
+  let opinions = SECOND_OPINIONS
+  const refuted = new Set<number>()
+  /**
+   * The order has one slot per neighbouring pair, so a track can have a place in
+   * another clash-free order and none in this one. Before such a track loses to a
+   * dearer one (or is picked as having no place), the solver is asked. A yes brings a
+   * new order with the track in it.
+   */
+  const secondOpinion = (scores: readonly Scored[], best: Scored) => {
+    if (orderClashes > 0) return null
+    const doubted = scores
+      .filter((s) => s.place.clashes > 0 && !refuted.has(s.track))
+      .filter((s) => best.place.clashes > 0 || onGrid(s.cost) < onGrid(best.cost))
+      .sort(compareScores)
+    for (const scored of doubted) {
+      if (opinions === 0) break
+      opinions--
+      const solved = solve([...order, scored.track])
+      if (solved) return { scored, solved }
+      refuted.add(scored.track)
+    }
+    return null
+  }
+
+  const toScore = (s: Scored, picked: boolean, clashes = s.place.clashes): FitScore => ({
     id: idOf(s.track),
     picked,
-    clashes: s.place.clashes,
+    clashes,
     cost: s.cost,
     after: s.after === null ? null : transitionCost(trackAt(s.after), trackAt(s.track), profile),
     before: s.before === null ? null : transitionCost(trackAt(s.track), trackAt(s.before), profile),
@@ -325,31 +406,19 @@ export function pickBestFit(request: FitRequest): FitResult {
     const first = order.length === 0 ? seed(count) : undefined
     const best = scores.find((s) => s.track === first) ?? scores[0]
     if (!best) break
-    remaining.delete(best.track)
-    picked.push(trackAt(best.track))
-    ranking.push(toScore(best, true))
-    order.splice(best.place.index, 0, best.track)
+    const placed = secondOpinion(scores, best)
+    const pick = placed?.scored ?? best
+    remaining.delete(pick.track)
+    picked.push(trackAt(pick.track))
+    if (placed) {
+      ranking.push(toScore(pick, true, 0))
+      order = placed.solved
+    } else {
+      ranking.push(toScore(pick, true))
+      order.splice(pick.place.index, 0, pick.track)
+      orderClashes += pick.place.clashes
+    }
   }
   ranking.push(...scoreAll().map((s) => toScore(s, false)))
   return { picked, ranking, order: order.map(trackAt) }
-}
-
-/** The caller's order if it holds exactly the fixed tracks, else the solver's best. */
-function startingOrder(
-  request: FitRequest,
-  constraints: MixConstraints,
-  profile: MixProfile,
-): number[] | null {
-  const { fixed } = request
-  const index = new Map(fixed.map((t, i) => [t.id, i]))
-  const toIndices = (order: readonly MixTrack[]): number[] | null => {
-    const indices = order.map((t) => index.get(t.id)).filter((i) => i !== undefined)
-    const complete = order.length === fixed.length && new Set(indices).size === fixed.length
-    return complete ? indices : null
-  }
-  const given = request.order ? toIndices(request.order) : null
-  if (given) return given
-  const outcome = solveMix({ tracks: fixed, constraints, profile, k: 1 })
-  const best = outcome.kind === 'solved' ? outcome.candidates[0] : undefined
-  return best ? toIndices(best.order) : null
 }
