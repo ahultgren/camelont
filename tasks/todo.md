@@ -176,9 +176,9 @@ Proposed by the agent and written into the spec; the owner approved them as a wh
 ### Step 2 — sets domain and storage (parallel with 1 and 3; new files only)
 New feature `features/sets`. Proposed edges: `sets → playlists, track-features, mixing`
 (record in architecture.md and `FEATURE_EDGES` when built).
-- [ ] `domain/types.ts`: set, playlist copy, track choices, marks, mix settings, chosen
+- [x] `domain/types.ts`: set, playlist copy, track choices, marks, mix settings, chosen
   mix, last save
-- [ ] `domain/select.ts` (test first): the §8.3 rule table as one pure function →
+- [x] `domain/select.ts` (test first): the §8.3 rule table as one pure function →
   per-track status + reason, per-playlist counts; the pick method is injected
 - [ ] `domain/random-pick.ts`: stable seeded rank per track (a change in the pool moves
   only the picks it must)

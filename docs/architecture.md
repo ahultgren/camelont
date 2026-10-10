@@ -37,6 +37,7 @@ src/
     track-features/    ReccoBeats provider, overrides repo, merge → TrackFeatures, edit dialog, import/export
     mixing/            chart, profiles, evaluator, constraints, arc, solver (+ worker), diagnostics; constraint + candidate UI
     mix-view/          tempo-arc chart, key wheel, running order, hover card
+    sets/              the set (playlist copies, track choices, marks, mix settings), which tracks are in it
   shared/
     music/             Camelot kernel: CamelotKey type, parse/format, fromPitchClass, keyName, keyHue
     api/               fetch wrapper (base URL, auth header injection, 429 Retry-After, zod parse, typed errors), paginate()
@@ -74,8 +75,9 @@ app → pages → features → shared
 - `shared/*` imports nothing from `features`, `pages` or `app`.
 - A feature imports `shared/*` and **other features only via their `index.ts`**. No
   circular feature dependencies. Allowed edges today: `playlists → auth`,
-  `mixing → track-features`, `mix-view → mixing, track-features`. Adding an edge is a
-  design decision: record it here.
+  `mixing → track-features`, `mix-view → mixing, track-features`. `sets` has none yet
+  (planned: `playlists`, `track-features`, `mixing`, each added with the code that
+  needs it). Adding an edge is a design decision: record it here.
 - Inside a feature: `ui → (model, domain)`, `model → (api, domain)`, `api → domain`;
   `domain` imports only `shared/music` and `shared/lib`. `ui` may use domain types and
   pure helpers (e.g. move metadata), never `api`.
@@ -232,6 +234,38 @@ chart equals the JSON for all 576 pairs.
   characters); `playlists/ui/SavePlaylistButton` creates the private playlist and adds
   the URIs in batches of 100, then links to it. The page is the glue: it maps the
   chosen mix's entry IDs to URIs.
+
+## Sets (`features/sets`)
+
+The set is the unit of work (spec §8). The feature defines its own shapes and imports
+no other feature; pages map playlists, track features and mix results to and from them.
+
+- `domain/types.ts`: `MixSet { id, name, createdAt, editedAt, playlists, marks, mix,
+  chosenMix, lastSave }`. A `SetPlaylist` is the stored copy of a Spotify playlist (its
+  tracks as read, `snapshotId`, `readAt`) plus its `TrackChoices { bpmMin, bpmMax, limit,
+  pick: 'random' | 'bestFit', seed }`. `marks` (`mustInclude | exclude`) are keyed by
+  track ID on the set, since a track is in a set at most once. `MixSettings` holds
+  opener, closer, follow pairs and the arc choice; `ChosenMix` the track order;
+  `LastSave` the link, the time, and the name and order that were written.
+- `domain/set.ts`: `newSet`, `addPlaylist` (a playlist is in a set once), `duplicateSet`
+  (a deep copy that hasn't been saved to Spotify), `ruleTrackIds` (the tracks named in a
+  mix rule) and `saveState` → `never | saved | changed`: a set has changed since its
+  save when saving now would write another name or track order.
+- `domain/select.ts`: `selectTracks(input) → Selection`, the rule table of spec §8.3 and
+  **the only place that decides which tracks are in a set**. Input: the playlists with
+  their choices, the marks, the rule track IDs (they count as must-include), key and BPM
+  per track, and a `PickFn`. Two passes: the first gives each track to the first playlist
+  that has it and settles every status a pick doesn't decide; the second lets limited
+  playlists pick in the order they were added. Each `PickRequest` carries the playlist's
+  method and seed, how many to pick, the candidates (rules 1–5 passed), and the tracks
+  already in the set: everything settled in the first pass, in any playlist, plus
+  earlier picks. The answer is held to its contract (candidates only, never more than
+  asked). When no more tracks are available than the limit leaves room for, they are all
+  in and no pick is made. Output: a row per playlist track (`TrackStatus`: `in |
+  mustInclude | picked`, or `excluded | outsideRange | notPicked | needsData`, or
+  `duplicate` with the owning playlist), counts per playlist and reason, the tracks in
+  the set in pool order, and the blockers (must-include tracks without key or BPM).
+  `statusLabel` puts a status in the spec's words.
 
 ## Auth (`features/auth`)
 
