@@ -287,6 +287,18 @@ no other feature; pages map playlists, track features and mix results to and fro
   `UnreadableSet { id, name, problem }` and left in storage untouched, never dropped or
   half-loaded (spec §6). `put` validates before writing, so nothing is stored that
   couldn't be read back.
+- `model/`: `installSets(app, options)` wires storage and the injectable clock, ID and
+  seed sources (it is not yet called from `app/plugins.ts`; the workspace step adds
+  that). `useSetsStore` (Pinia) holds the sets as immutable values: `list` (newest edit
+  first), `get`, `unreadable`, `create({ name, playlists })`, `rename`, `duplicate`,
+  `remove`, `addPlaylist`, `reshuffle`, and `update(id, change)` for everything else,
+  where `change` is a pure function such as `removePlaylist`. There is no save step
+  (spec §8.6): `update` stamps the edit time and the set is written about 400 ms later,
+  together with any other waiting changes; create, duplicate and delete are written at
+  once. Writes run one at a time and store the set as it is when the write runs, so
+  quick successive edits can't overtake each other. Waiting changes are flushed when
+  the page is hidden or left. A failed write shows in `saveError` and is tried again
+  with the next change; a failed load shows in `loadError`.
 
 ## Auth (`features/auth`)
 

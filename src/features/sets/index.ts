@@ -47,3 +47,6 @@ export {
   type TrackData,
   type TrackStatus,
 } from './domain/select'
+export type { UnreadableSet } from './api/repository'
+export { installSets, type SetsOptions } from './model/deps'
+export { useSetsStore } from './model/sets-store'

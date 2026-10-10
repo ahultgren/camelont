@@ -186,7 +186,7 @@ New feature `features/sets`. Proposed edges: `sets → playlists, track-features
   marks and rules a removal drops
 - [x] `api/`: sets repository on `KeyValueStore` (`camelont-sets`, `{ v: 1, data }`,
   zod; an unreadable set is reported, not dropped)
-- [ ] `model/`: sets store (list, create, rename, duplicate, delete, save-as-you-go)
+- [x] `model/`: sets store (list, create, rename, duplicate, delete, save-as-you-go)
 
 ### Step 3 — best-fit ranking (parallel with 1 and 2; `mixing/domain`, new file)
 - [ ] `mixing/domain/fit.ts` (test first): rank candidate tracks against the tracks
