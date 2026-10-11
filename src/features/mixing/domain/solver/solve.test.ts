@@ -151,23 +151,28 @@ describe('solveMix at 100 tracks', () => {
     energy: null,
   }))
 
-  it('finds several clash-free mixes quickly', () => {
-    const started = performance.now()
+  // Speed is checked as work done, not wall-clock time: the count is the same on every
+  // run, while the clock depends on what else the machine is doing (this test took 1 s
+  // alone and over 5 s beside the other solver-heavy test files). 80,152 expansions
+  // took about 1 s on a laptop when this was written; the spec target is ~2 s.
+  const EXPANSION_BUDGET = 120_000
+
+  it('finds several clash-free mixes within its work budget', { timeout: 30_000 }, () => {
     const outcome = solved(
       solveMix({
         tracks: big,
         constraints: NO_CONSTRAINTS,
         profile: withArc(DEFAULT_PROFILE, { preset: 'twoWaves', signal: 'bpm', weight: 8 }),
+        // Keep the safety net out of the way, so a busy machine can't change the result.
+        timeLimitMs: 30_000,
       }),
     )
-    const elapsed = performance.now() - started
     expect(outcome.candidates.length).toBeGreaterThanOrEqual(3)
     for (const mix of outcome.candidates) {
       expect(mix.clashCount).toBe(0)
       expect(mix.order).toHaveLength(100)
     }
     expect(outcome.stats.timedOut).toBe(false)
-    // The spec target is ~2 s on a laptop; allow slack for CI runners.
-    expect(elapsed).toBeLessThan(6000)
+    expect(outcome.stats.expansions).toBeLessThan(EXPANSION_BUDGET)
   })
 })
