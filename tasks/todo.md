@@ -338,8 +338,8 @@ Left open:
 
 ## Fixes after the owner's first real session (2026-10-11)
 
-- [ ] Key and BPM on a track row look clickable (pointer, hover, focus)
-- [ ] Entering or clearing a limit moves no other control in the playlist header
+- [x] Key and BPM on a track row look clickable (pointer, hover, focus)
+- [x] Entering or clearing a limit moves no other control in the playlist header
 - [ ] Save to Spotify asks for the playlist's name, warns about an existing playlist
   with that name, and offers replace-or-create when the set saved before (spec §8.5,
   decision 41)

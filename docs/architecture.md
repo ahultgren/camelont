@@ -579,12 +579,21 @@ WorkspaceScreen          useSetWorkspace + provideWorkspaceUi; top bar (back, na
   range, not picked, picked, needs key/BPM, in ‹playlist›; "looking up" while a new
   track has no status); the pairs it is in ("after …", "then …"; pointing at one
   highlights the partner, a click shows it); key (`KeyChip`) and BPM as buttons into
-  the edit dialog, with a pencil only on a value set by hand; one group of four toggles
+  the edit dialog (a pointer, a frame on hover, "Edit key and BPM" in the tooltip and
+  the accessible name), with a pencil only on a value set by hand; one group of four toggles
   (`setRole`, at most one on); and the link button. Every row carries its status in
   the spec's words (`statusLabel`) for assistive tech; left-out rows are dimmed, their
   controls are not. Rows use `content-visibility: auto`, so a pool of 1,000 costs
   layout only for what is on screen; a row re-renders only when something it reads
   changed.
+- **`PlaylistHeader` keeps its controls in place.** Right of the name every control has
+  a fixed width: the count, the range, the limit, a place kept for the pick method and
+  Reshuffle (empty without a limit) and the menu. Only the name gives way, so entering
+  or clearing a limit, or switching the method, moves nothing. What shows only now and
+  then (the change notice with Update, "can't be checked", "N must-include, limit M")
+  is on a line of its own under the controls. At phone width the controls wrap onto
+  three lines that are always the same (name, count, menu / range / limit, method). An
+  e2e compares the controls' positions to the pixel at 1280, 1440 and 375 px.
 - **`BpmRangeControl` (W8).** The playlist's histogram with a handle per end and a
   field per end. Bars a range leaves out are faded as the handle moves. A handle is a
   `role="slider"`: arrows ±1, Page keys ± one bar, Home/End to its own end of the

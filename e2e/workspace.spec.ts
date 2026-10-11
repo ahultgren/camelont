@@ -20,6 +20,31 @@ const alternatives = (page: Page) =>
 const pairs = (page: Page) => page.getByRole('group', { name: 'Follow pairs' })
 const count = (page: Page, name: string) => playlist(page, name).getByTestId('playlist-count')
 
+/** Where a playlist header's controls are, to the pixel. */
+async function controlPlaces(page: Page, name: string) {
+  const header = playlist(page, name)
+  const controls = {
+    lowest: header.getByRole('textbox', { name: `Lowest BPM of ${name}` }),
+    highest: header.getByRole('textbox', { name: `Highest BPM of ${name}` }),
+    lowestHandle: header.getByRole('slider', { name: `Lowest BPM of ${name}` }),
+    limit: header.getByRole('textbox', { name: `Limit of ${name}` }),
+    menu: header.getByRole('button', { name: `More for ${name}` }),
+    count: header.getByTestId('playlist-count'),
+    bar: header.getByTestId('playlist-controls'),
+  }
+  const places: Record<string, string> = {}
+  for (const [key, control] of Object.entries(controls)) {
+    const box = await control.boundingBox()
+    if (!box) throw new Error(`${key} of ${name} is not on screen`)
+    // The count's text changes with the picks; its right edge is what must stay.
+    places[key] =
+      key === 'count'
+        ? `right ${String(Math.round(box.x + box.width))}, top ${String(Math.round(box.y))}`
+        : [box.x, box.y, box.width, box.height].map(Math.round).join(' ')
+  }
+  return places
+}
+
 async function openNewSet(page: Page, options: { corrections?: boolean } = {}) {
   await logIn(page)
   const log = await mockApis(page)
@@ -38,6 +63,26 @@ test('works on a set from two playlists, finds it as left, and saves it', async 
   await expect(row(page, 'WCS', 'Love Is').getByTestId('reason')).toHaveText('needs key/BPM')
   // Brother and Lemon Tree are in both playlists: the first that takes a track decides it.
   await expect(row(page, 'Slow ones', 'Brother').getByTestId('reason')).toHaveText('in WCS')
+
+  // Key and BPM look like the way in that they are: a pointer, and a frame on hover.
+  const key = row(page, 'WCS', 'Pompeii').getByRole('button', { name: /^Key of Pompeii/ })
+  const bpm = row(page, 'WCS', 'Pompeii').getByRole('button', { name: /^BPM of Pompeii/ })
+  const look = (button: typeof key) =>
+    button.evaluate((el) => {
+      const style = getComputedStyle(el)
+      return { cursor: style.cursor, border: style.borderTopColor }
+    })
+  const rowHeight = async () => (await row(page, 'WCS', 'Pompeii').boundingBox())?.height
+  const height = await rowHeight()
+  for (const button of [key, bpm]) {
+    const resting = await look(button)
+    expect(resting.cursor).toBe('pointer')
+    await button.hover()
+    expect((await look(button)).border).not.toBe(resting.border)
+    await expect(button).toHaveAttribute('title', 'Edit key and BPM')
+  }
+  expect(await rowHeight()).toBe(height)
+  await page.mouse.move(0, 0)
 
   // Fix a missing key from the row: the track joins, and the change is explained.
   await row(page, 'WCS', 'Love Is')
@@ -196,8 +241,12 @@ test('says when a playlist changed in Spotify, and updates on demand', async ({ 
   await expect(row(page, 'WCS', 'Pompeii')).toBeVisible()
   await expect(playlist(page, 'Slow ones').getByRole('status')).toHaveCount(0)
 
+  // The notice has a line of its own: the controls are where they are without it.
+  const withNotice = await controlPlaces(page, 'WCS')
   await playlist(page, 'WCS').getByRole('button', { name: 'Update WCS' }).click()
   await expect(playlist(page, 'WCS').getByText('Updated from Spotify.')).toBeVisible()
+  await expect(playlist(page, 'WCS').getByText('1 new, 1 removed')).toHaveCount(0)
+  expect(await controlPlaces(page, 'WCS')).toEqual(withNotice)
   await expect(playlist(page, 'WCS').getByText('1 track leaves the set: Pompeii.')).toBeVisible()
   await expect(playlist(page, 'WCS').getByText('1 mark: Pompeii (always include).')).toBeVisible()
   await expect(row(page, 'WCS', 'Brand new')).toBeVisible()
@@ -345,6 +394,56 @@ for (const size of [
     const box = await problems.boundingBox()
     expect(box && box.y >= 0 && box.y + box.height <= size.height).toBe(true)
     expect(await pageFits()).toBe(true)
+  })
+}
+
+for (const size of [
+  { width: 1280, height: 720 },
+  { width: 1440, height: 900 },
+  { width: 375, height: 740 },
+]) {
+  test(`a limit moves no other control in the playlist header at ${size.width} px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize(size)
+    await openNewSet(page, { corrections: true })
+    const wcs = playlist(page, 'WCS')
+    const limit = wcs.getByRole('textbox', { name: 'Limit of WCS' })
+    const before = await controlPlaces(page, 'WCS')
+    const below = await controlPlaces(page, 'Slow ones')
+
+    // A limit: the pick method and Reshuffle appear in the place kept for them.
+    await limit.fill('5')
+    await limit.press('Enter')
+    await expect(wcs.getByRole('radiogroup', { name: 'How WCS picks' })).toBeVisible()
+    await expect(wcs.getByRole('button', { name: /Reshuffle/ })).toBeVisible()
+    expect(await controlPlaces(page, 'WCS')).toEqual(before)
+    // The method is inside its place, and its place inside the window.
+    const method = await wcs.getByRole('radiogroup', { name: 'How WCS picks' }).boundingBox()
+    const slot = await wcs.getByTestId('pick-slot').boundingBox()
+    const shuffle = await wcs.getByRole('button', { name: /Reshuffle/ }).boundingBox()
+    expect(method && slot && shuffle).toBeTruthy()
+    if (method && slot && shuffle) {
+      expect(method.x).toBeGreaterThanOrEqual(slot.x)
+      expect(shuffle.x + shuffle.width).toBeLessThanOrEqual(slot.x + slot.width + 0.5)
+      expect(slot.x + slot.width).toBeLessThanOrEqual(size.width)
+    }
+
+    // Best fit: Reshuffle goes, nothing else moves. And back.
+    await wcs.getByRole('radio', { name: 'Best fit' }).click()
+    await expect(wcs.getByRole('button', { name: /Reshuffle/ })).toHaveCount(0)
+    expect(await controlPlaces(page, 'WCS')).toEqual(before)
+    await wcs.getByRole('radio', { name: 'Random' }).click()
+    await expect(wcs.getByRole('button', { name: /Reshuffle/ })).toBeVisible()
+    expect(await controlPlaces(page, 'WCS')).toEqual(before)
+
+    // No limit again.
+    await limit.fill('')
+    await limit.press('Enter')
+    await expect(wcs.getByRole('radiogroup', { name: 'How WCS picks' })).toHaveCount(0)
+    expect(await controlPlaces(page, 'WCS')).toEqual(before)
+    // The next playlist's header didn't move either: the bar kept its height.
+    expect(await controlPlaces(page, 'Slow ones')).toEqual(below)
   })
 }
 
