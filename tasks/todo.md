@@ -391,3 +391,38 @@ no scoring, arc or solver change.
 - Screenshots retaken (the phone ones didn't change). `pnpm check` green.
 - Not done: energy in the running order (its titles are already cut short), editing
   energy, any use of it in scoring.
+
+## Experiment — shaping a mix by energy (2026-10-11)
+
+The owner found ReccoBeats energy matches his ear, and wants to try ways of using it
+quickly, by listening, before settling on one. Three switches next to the arc, each one
+term in the cost, so they can be combined and compared (research.md §4):
+
+- [x] Domain, test first: the arc can follow energy; an energy-step cost (climb in small
+  steps, a fall may be sudden); a key-lift factor (a boost with a rise in energy and a
+  drop with a fall are cheaper, the opposite dearer). Default profile unchanged
+- [x] `MixShaping` (arc, what it follows, steps, lift) → profile; the set stores it; old
+  sets load with the switches off
+- [x] Controls next to the arc; the chart draws energy, and the arc's target on the
+  signal it follows
+- [x] Remove "What a change does to the mix shows here."
+- [x] Sanity-run the WCS set under each switch; docs (spec §5.3, architecture, decision
+  45); `pnpm check` green
+
+### Review (2026-10-11)
+- Built as three terms, not three algorithms: the arc follows BPM or energy, **Energy
+  steps**, **Key lift**. The owner's three are Two waves by Energy; that plus Energy
+  steps; that plus Key lift. Any other combination works too. With everything off the
+  cost is exactly what it was (tested).
+- On the WCS set each gives a different best order (printed while building, not kept).
+  With the arc by energy, Brother (78 BPM, energy 0.93) tends to close the set and tempo
+  jumps get bigger: the tempo term still counts, but it now competes with the arc.
+- Weights are first guesses: arc 8 (as for BPM), a 0.3 climb in energy = one `+++`, a
+  fall a quarter of that, key lift in full from a 0.2 change.
+- The chart draws energy as a thin line on its own scale, and the arc's target on the
+  scale it follows.
+- "What a change does to the mix shows here." is gone; before the first change the
+  summary line takes no room.
+- Not done: sliders for the weights; a rule for runs of fast or slow tracks; any
+  listening. `pnpm check` green; one earlier run timed out in two tests while the
+  machine was under load (load average 57) and passed unchanged on the next run.

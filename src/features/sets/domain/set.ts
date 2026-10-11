@@ -1,6 +1,14 @@
 import type { ChosenMix, MixSet, MixSettings, SetPlaylist, TrackChoices } from './types'
 
-export const NO_MIX_SETTINGS: MixSettings = { opener: null, closer: null, follows: [], arc: 'none' }
+export const NO_MIX_SETTINGS: MixSettings = {
+  opener: null,
+  closer: null,
+  follows: [],
+  arc: 'none',
+  arcSignal: 'bpm',
+  energySteps: false,
+  keyLift: false,
+}
 
 export const UNTITLED_SET = 'Untitled set'
 
@@ -54,8 +62,11 @@ export function duplicateSet(set: MixSet, init: { id: string; now: number }): Mi
   }
 }
 
-/** The mix rules of a set: its mix settings without the arc. */
+/** The mix rules of a set: its mix settings without the shaping. */
 export type MixRules = Pick<MixSettings, 'opener' | 'closer' | 'follows'>
+
+/** How a set's mix is shaped: the arc, what it follows, and the energy switches. */
+export type MixShape = Pick<MixSettings, 'arc' | 'arcSignal' | 'energySteps' | 'keyLift'>
 
 /** The tracks named in a mix rule. They count as must-include (spec §5.4). */
 export function ruleTrackIds(mix: MixRules): string[] {

@@ -2,7 +2,7 @@
 import { ARC_PRESETS } from '../domain/arc'
 import type { ArcChoice } from '../domain/arc'
 
-/** The energy arc the mix is shaped to (by BPM): none, or one of the presets. */
+/** The arc the mix is shaped to: none, or one of the presets. */
 const model = defineModel<ArcChoice>({ required: true })
 
 const options: { value: ArcChoice; name: string; description: string }[] = [
@@ -17,7 +17,7 @@ const options: { value: ArcChoice; name: string; description: string }[] = [
 
 <template>
   <fieldset class="flex min-w-0 items-center gap-2">
-    <legend class="sr-only">Energy arc (by BPM)</legend>
+    <legend class="sr-only">Arc</legend>
     <span class="text-xs text-muted" aria-hidden="true">Arc</span>
     <div class="flex overflow-hidden rounded-md border border-rule text-xs">
       <label

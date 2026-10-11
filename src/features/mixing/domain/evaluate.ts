@@ -9,6 +9,7 @@ import {
   type SignalRange,
 } from './arc'
 import { MOVE_META, moveBetween, type MoveOrClash } from './chart'
+import { energyRise, energyStepCost, keyLiftFactor } from './energy'
 import type { MixProfile } from './profile'
 import { tempoGap } from './tempo'
 import type { MixTrack } from './types'
@@ -17,10 +18,13 @@ export interface Transition {
   from: string
   to: string
   move: MoveOrClash
+  /** The profile's cost of the move, times the key-lift factor when the profile has one. */
   moveCost: number
   tempoGap: number
   tempoCost: number
-  /** moveCost + tempoCost */
+  /** What the step in energy costs (0 unless the profile scores energy steps). */
+  energyCost: number
+  /** moveCost + tempoCost + energyCost */
   cost: number
 }
 
@@ -60,9 +64,13 @@ export interface EvaluatedMix {
 /** Cost of one transition. The solver uses this same function. */
 export function transitionCost(from: MixTrack, to: MixTrack, profile: MixProfile): Transition {
   const move = moveBetween(from.camelot, to.camelot) ?? 'clash'
-  const moveCost = move === 'clash' ? profile.clashCost : profile.moveCost[move]
+  const rise = energyRise(from, to)
+  const moveCost =
+    (move === 'clash' ? profile.clashCost : profile.moveCost[move]) *
+    keyLiftFactor(MOVE_META[move].tone, rise, profile.keyLift)
   const gap = tempoGap(from.bpm, to.bpm)
   const tempoCost = profile.tempoWeight * gap
+  const energyCost = energyStepCost(rise, profile.energyStep)
   return {
     from: from.id,
     to: to.id,
@@ -70,7 +78,8 @@ export function transitionCost(from: MixTrack, to: MixTrack, profile: MixProfile
     moveCost,
     tempoGap: gap,
     tempoCost,
-    cost: moveCost + tempoCost,
+    energyCost,
+    cost: moveCost + tempoCost + energyCost,
   }
 }
 

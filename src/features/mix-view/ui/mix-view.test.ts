@@ -35,6 +35,11 @@ const doubledInfo = new Map<string, EntryInfo>(
   doubled.order.map((t) => [t.id, { title: t.label, artists: ['X'], durationMs: 200_000 }]),
 )
 
+const pointsOf = (line: Element) =>
+  (line.getAttribute('points') ?? '')
+    .split(' ')
+    .map((pair) => pair.split(',').map(Number) as [number, number])
+
 describe('TempoArcChart', () => {
   it('plots the saved BPM, never halved or doubled', async () => {
     render(TempoArcChart, { props: { mix: doubled, info: doubledInfo } })
@@ -80,6 +85,37 @@ describe('TempoArcChart', () => {
     expect(badges).toHaveLength(19)
     expect(badges.filter((b) => b === '=')).toHaveLength(9)
     expect(container.querySelector('polyline[stroke-dasharray]')).not.toBeNull()
+  })
+
+  it('draws the energy of the tracks that have one, on a scale of its own', () => {
+    render(TempoArcChart, { props: { mix, info } })
+    const known = order.filter((t) => t.energy !== null)
+    const points = pointsOf(screen.getByTestId('energy-line'))
+    expect(points).toHaveLength(known.length)
+    // The set's lowest energy sits at the bottom of the plot and its highest at the top.
+    const ys = points.map(([, py]) => py)
+    expect(Math.min(...ys)).toBeCloseTo(28)
+    expect(Math.max(...ys)).toBeCloseTo(190 - 22)
+  })
+
+  it('draws no energy line when fewer than two tracks have an energy', () => {
+    render(TempoArcChart, { props: { mix: doubled, info: doubledInfo } })
+    expect(screen.queryByTestId('energy-line')).toBeNull()
+  })
+
+  it('draws the target of an arc that follows energy on the energy scale', () => {
+    const byEnergy = evaluateMix(
+      order,
+      withArc(DEFAULT_PROFILE, { preset: 'twoWaves', signal: 'energy', weight: 8 }),
+    )
+    const { container } = render(TempoArcChart, { props: { mix: byEnergy, info } })
+    const target = container.querySelector('polyline[stroke-dasharray]')
+    if (!target) throw new Error('no target')
+    expect(target).toHaveAttribute('stroke', 'var(--warn)')
+    for (const [, py] of pointsOf(target)) {
+      expect(py).toBeGreaterThanOrEqual(28)
+      expect(py).toBeLessThanOrEqual(190 - 22)
+    }
   })
 
   it('says which track is pointed at or focused, and when it no longer is', async () => {

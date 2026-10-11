@@ -344,3 +344,19 @@ Research (research.md §4) suggests energy as a second signal next to BPM. **Dec
 (owner):** show each track's energy, out of 100, on the track row and the chart's hover
 card, so its accuracy can be judged on real sets first. It can't be edited, and scoring,
 the arc and the solver are unchanged. Amends the "unreliable" in decision 9.
+
+### 45. Energy shapes a mix through three switches, as experiments (2026-10-11)
+**Context:** the owner checked ReccoBeats energy by ear and it matches; it says more
+about how a set feels than BPM, while BPM still decides what is danceable next to what.
+The chart's `+`/`−` are the key's direction, a property of the transition, not of the
+tracks (research.md §4). Which of these belongs in the cost, and how strongly, can only
+be judged by listening. **Decision (owner):** build the candidates as separate terms the
+user switches on next to the arc, to compare by ear before settling: the arc follows BPM
+or energy; **energy steps** (a climb between neighbours costs, a fall much less); **key
+lift** (a key move that goes with the change in energy is cheaper, one against it
+dearer). Each is one term in `evaluate`, the tempo term stays in every combination, and
+with all of them off the cost is what it was. The weights are first guesses.
+**Rejected for now:** separate named algorithms (three terms give eight combinations
+and show which term does what); phases in place of a curve and a budget for big moves
+(larger builds, to be judged after these); sliders for the weights (next, once it is
+known which terms matter). **Open:** whether any of this becomes the default.

@@ -8,7 +8,7 @@ import {
   updatePlaylist,
   type Dropped,
 } from './playlist-diff'
-import { addPlaylist, newSet, ruleTrackIds, type PlaylistCopy } from './set'
+import { addPlaylist, newSet, NO_MIX_SETTINGS, ruleTrackIds, type PlaylistCopy } from './set'
 import type { MixSet, MixSettings, SetTrack, TrackMark } from './types'
 
 const track = (trackId: string): SetTrack => ({
@@ -154,7 +154,7 @@ describe('updatePlaylist', () => {
   const set = setOf(
     { a: ['t1', 't2', 't3'], b: ['t3', 'u1'] },
     { t2: 'mustInclude', t3: 'exclude', u1: 'mustInclude' },
-    { opener: 't2', closer: 'u1', follows: [['t1', 't2']], arc: 'twoWaves' },
+    { ...NO_MIX_SETTINGS, opener: 't2', closer: 'u1', follows: [['t1', 't2']], arc: 'twoWaves' },
   )
   const fresh = copy('a', ['t1', 'n1'], { name: 'Renamed', snapshotId: 'snap-a-2', readAt: 99 })
 
@@ -182,7 +182,7 @@ describe('updatePlaylist', () => {
 
     const updated = updatePlaylist(set, fresh)
     expect(updated.marks).toEqual({ t3: 'exclude', u1: 'mustInclude' })
-    expect(updated.mix).toEqual({ opener: null, closer: 'u1', follows: [], arc: 'twoWaves' })
+    expect(updated.mix).toEqual({ ...NO_MIX_SETTINGS, closer: 'u1', arc: 'twoWaves' })
     expectNoStrays(updated)
     expect(diffPlaylist(updated, 'a', fresh.tracks)).toEqual({
       added: [],
@@ -232,10 +232,9 @@ describe('removing a playlist from a set (§8.2)', () => {
     expect(removed.playlists.map((p) => p.playlistId)).toEqual(['a'])
     expect(removed.marks).toEqual({ a1: 'exclude', shared: 'mustInclude' })
     expect(removed.mix).toEqual({
-      opener: null,
+      ...NO_MIX_SETTINGS,
       closer: 'a2',
       follows: [['a1', 'shared']],
-      arc: 'none',
     })
     expectNoStrays(removed)
     expect(set.playlists).toHaveLength(2)

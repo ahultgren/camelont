@@ -7,7 +7,8 @@ import { chartWidth, linearX, linearY, niceRange, type EntryInfo } from '../doma
 
 /**
  * The primary view: BPM per position, dots coloured by key, the chart move on each
- * segment, the arc target when one is set, and a card on hover, tap or focus. It is
+ * segment, the tracks' energy as a thin line on a scale of its own, the arc target when
+ * one is set, and a card on hover, tap or focus. It is
  * drawn at its real size, as wide as its box, and scrolls sideways once the tracks
  * no longer fit.
  */
@@ -75,13 +76,37 @@ const badges = computed(() =>
   }),
 )
 
+/**
+ * Energy has no axis of its own to read: the set's lowest energy is drawn at the bottom
+ * of the plot and its highest at the top, so the line shows the shape, not the values.
+ */
+const energy = computed(() => {
+  const known = mix.order.flatMap((track, i) =>
+    track.energy === null ? [] : [{ i, value: track.energy }],
+  )
+  if (known.length < 2) return null
+  const values = known.map((point) => point.value)
+  const scale = linearY(frame.value, Math.min(...values), Math.max(...values))
+  return {
+    scale,
+    line: known.map((p) => `${String(x.value(p.i))},${String(scale(p.value))}`).join(' '),
+  }
+})
+
+/** The arc's target, on the scale of the signal it follows. */
 const arcLine = computed(() => {
   const arc = mix.arc
   if (!arc) return null
+  const byEnergy = arc.config.signal === 'energy'
+  const scale = byEnergy ? energy.value?.scale : y.value
+  if (!scale) return null
   const { min, max } = arc.range
-  return arc.target
-    .map((t, i) => `${String(x.value(i))},${String(y.value(min + t * (max - min)))}`)
-    .join(' ')
+  return {
+    byEnergy,
+    points: arc.target
+      .map((t, i) => `${String(x.value(i))},${String(scale(min + t * (max - min)))}`)
+      .join(' '),
+  }
 })
 
 const active = ref<number | null>(null)
@@ -181,13 +206,35 @@ const cardStyle = computed(() => {
           />
           <polyline
             v-if="arcLine"
-            :points="arcLine"
+            :points="arcLine.points"
             fill="none"
-            stroke="var(--accent)"
+            :stroke="arcLine.byEnergy ? 'var(--warn)' : 'var(--accent)'"
             stroke-width="1.5"
             stroke-dasharray="4 4"
             opacity="0.7"
           />
+          <template v-if="energy">
+            <polyline
+              :points="energy.line"
+              fill="none"
+              stroke="var(--warn)"
+              stroke-width="1"
+              stroke-linejoin="round"
+              opacity="0.7"
+              data-testid="energy-line"
+            />
+            <line
+              :x1="frame.left"
+              :x2="frame.left + 12"
+              y1="7"
+              y2="7"
+              stroke="var(--warn)"
+              opacity="0.7"
+            />
+            <text :x="frame.left + 16" y="10" class="num" font-size="10" fill="var(--warn)">
+              energy
+            </text>
+          </template>
           <polyline
             fill="none"
             stroke="var(--muted)"

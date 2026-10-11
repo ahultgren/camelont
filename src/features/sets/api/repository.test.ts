@@ -26,7 +26,15 @@ const fullSet = (id: string, name = 'Friday social'): MixSet => ({
     42,
   ),
   marks: { t1: 'mustInclude', t3: 'exclude' },
-  mix: { opener: 't1', closer: null, follows: [['t1', 't2']], arc: 'twoWaves' },
+  mix: {
+    opener: 't1',
+    closer: null,
+    follows: [['t1', 't2']],
+    arc: 'twoWaves',
+    arcSignal: 'energy',
+    energySteps: true,
+    keyLift: true,
+  },
   chosenMix: { order: ['t1', 't2'] },
   lastSave: {
     playlistId: 'abc',
@@ -81,6 +89,21 @@ describe('sets repository', () => {
     expect(sets.find((set) => set.id === 'odd')?.lastSave).toEqual({
       ...linkless,
       playlistId: null,
+    })
+  })
+
+  it('reads a set stored before the energy switches, with them off', async () => {
+    const before = fullSet('old')
+    const { opener, closer, follows, arc } = before.mix
+    const oldMix = { opener, closer, follows, arc }
+    const repo = createSetsRepo(createMemoryStore({ old: stored({ ...before, mix: oldMix }) }))
+    const { sets, unreadable } = await repo.all()
+    expect(unreadable).toEqual([])
+    expect(sets[0]?.mix).toEqual({
+      ...oldMix,
+      arcSignal: 'bpm',
+      energySteps: false,
+      keyLift: false,
     })
   })
 

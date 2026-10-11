@@ -37,6 +37,17 @@ describe('signals', () => {
     expect(signalRange([], 'bpm')).toBeNull()
   })
 
+  it('can follow energy, and lets a track of unknown energy be anywhere', () => {
+    const withEnergy = (energy: number | null): MixTrack => ({ ...track(100), energy })
+    const tracks = [withEnergy(0.4), withEnergy(null), withEnergy(0.9)]
+    expect(signalRange(tracks, 'energy')).toEqual({ min: 0.4, max: 0.9 })
+    const arc = { preset: 'steadyBuild', signal: 'energy', weight: 10 } as const
+    const range = { min: 0.4, max: 0.9 }
+    // last position: target 1; energy 0.4 is the lowest in the set
+    expect(arcTermCost(withEnergy(0.4), 4, 5, arc, range)).toBeCloseTo(10)
+    expect(arcTermCost(withEnergy(null), 4, 5, arc, range)).toBe(0)
+  })
+
   it('positions tracks evenly', () => {
     expect(arcPosition(0, 1)).toBe(0)
     expect(arcPosition(2, 5)).toBe(0.5)

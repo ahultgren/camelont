@@ -54,14 +54,21 @@ export interface SetPlaylist {
 export type TrackMark = 'mustInclude' | 'exclude'
 
 export type SetArc = 'none' | 'twoWaves' | 'steadyBuild'
+export type SetArcSignal = 'bpm' | 'energy'
 
-/** Mix rules and the arc choice (spec §5.3–5.4). Tracks are named by track ID. */
+/** Mix rules and how the mix is shaped (spec §5.3–5.4). Tracks are named by track ID. */
 export interface MixSettings {
   opener: string | null
   closer: string | null
   /** "A must be followed by B" pairs. */
   follows: [from: string, to: string][]
   arc: SetArc
+  /** What the arc follows. */
+  arcSignal: SetArcSignal
+  /** Climb in small steps of energy. */
+  energySteps: boolean
+  /** Key boosts go with rises in energy, key drops with falls. */
+  keyLift: boolean
 }
 
 /** The alternative the user chose: its track IDs in mix order. */

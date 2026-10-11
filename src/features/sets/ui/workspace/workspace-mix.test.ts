@@ -144,10 +144,38 @@ describe('the mix column', () => {
     expect(points()).toHaveLength(7)
   })
 
+  it('shapes the mix by energy: the arc follows it, and the switches are kept', async () => {
+    const { stored, container } = await openWorkspace(core())
+    await settled()
+    expect(screen.getByRole('radio', { name: 'Energy' })).toBeDisabled()
+    await userEvent.click(screen.getByRole('radio', { name: 'Two waves' }))
+    await userEvent.click(screen.getByRole('radio', { name: 'Energy' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Energy steps' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Key lift' }))
+    await waitFor(async () => {
+      expect((await stored())?.mix).toMatchObject({
+        arc: 'twoWaves',
+        arcSignal: 'energy',
+        energySteps: true,
+        keyLift: true,
+      })
+    })
+    await settled()
+    // The target is drawn on the energy scale, in the energy line's colour.
+    await waitFor(() => {
+      expect(container.querySelector('polyline[stroke-dasharray]')).toHaveAttribute(
+        'stroke',
+        'var(--warn)',
+      )
+    })
+  })
+
   it('says what a change did: tracks out, cost before and after', async () => {
     await openWorkspace(core())
     await settled()
-    expect(change()).toHaveTextContent('What a change does to the mix shows here.')
+    // Before the first change the line says nothing and takes no room.
+    expect(change()).toHaveTextContent('')
+    expect(change()).toHaveClass('sr-only')
     await userEvent.click(inRow('WCS', 'Try').getByRole('button', { name: 'Exclude' }))
     await settled()
     await waitFor(() => {

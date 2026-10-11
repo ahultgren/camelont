@@ -1,12 +1,12 @@
 import type { MixTrack } from './types'
 
 /**
- * The optional energy arc: a target curve over set position, a signal it applies to,
- * and a weight. Presets are data; signals are functions. Removing arcs means deleting
- * this file and the one term in evaluate.ts.
+ * The optional arc: a target curve over set position, the signal it applies to (BPM or
+ * energy), and a weight. Presets are data; signals are functions. Removing arcs means
+ * deleting this file and the one term in evaluate.ts.
  */
 export type ArcPresetId = 'twoWaves' | 'steadyBuild'
-export type ArcSignalId = 'bpm'
+export type ArcSignalId = 'bpm' | 'energy'
 /** What the user picks: one of the presets, or no arc at all. */
 export type ArcChoice = ArcPresetId | 'none'
 
@@ -76,6 +76,7 @@ export function arcTarget(preset: ArcPreset, position: number): number {
 /** Raw signal value of a track (null when unknown). */
 export const ARC_SIGNALS: Record<ArcSignalId, (track: MixTrack) => number | null> = {
   bpm: (track) => track.bpm,
+  energy: (track) => track.energy,
 }
 
 export interface SignalRange {

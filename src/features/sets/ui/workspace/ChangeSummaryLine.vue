@@ -3,7 +3,10 @@ import { computed } from 'vue'
 import { describeSummary } from '../../domain/change-summary'
 import { useWorkspaceUi } from './context'
 
-/** What the last change did (spec W4): tracks in and out, picks, cost before and after. */
+/**
+ * What the last change did (spec W4): tracks in and out, picks, cost before and after.
+ * Before the first change it takes no room.
+ */
 const ui = useWorkspaceUi()
 const { ws } = ui
 
@@ -21,17 +24,14 @@ const TONE = {
 
 <template>
   <p
-    class="flex min-h-[18px] flex-wrap items-baseline gap-x-2.5 gap-y-0.5 text-xs leading-[18px]"
+    class="flex flex-wrap items-baseline gap-x-2.5 gap-y-0.5 text-xs leading-[18px]"
+    :class="ws.summary.value ? 'min-h-[18px]' : 'sr-only'"
     role="status"
     aria-label="Last change"
     data-testid="change-summary"
   >
-    <span v-if="parts.length === 0" class="text-muted">
-      {{
-        ws.summary.value
-          ? 'The last change left the mix as it was.'
-          : 'What a change does to the mix shows here.'
-      }}
+    <span v-if="ws.summary.value && parts.length === 0" class="text-muted">
+      The last change left the mix as it was.
     </span>
     <span
       v-for="part in parts"

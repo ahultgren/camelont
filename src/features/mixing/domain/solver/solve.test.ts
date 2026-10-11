@@ -5,7 +5,7 @@ import { WCS_TRACKS, wcsId, wcsOrder } from '@/test/wcs'
 import { DEFAULT_ARC_WEIGHT } from '../arc'
 import { NO_CONSTRAINTS, type MixConstraints } from '../constraints'
 import { evaluateMix, mixTracks } from '../evaluate'
-import { DEFAULT_PROFILE, withArc } from '../profile'
+import { DEFAULT_PROFILE, profileFor, withArc } from '../profile'
 import type { MixTrack } from '../types'
 import { adjacencyDifference } from './diversity'
 import { MIN_ADJACENCY_DIFFERENCE, solveMix, type SolveOutcome } from './solve'
@@ -78,6 +78,29 @@ describe('solveMix on the WCS set', () => {
     const outcome = solved(solveMix({ tracks, constraints: NO_CONSTRAINTS, profile }))
     expect(outcome.candidates[0]?.totalCost).toBeLessThanOrEqual(handTuned.totalCost + 1e-9)
     expect(outcome.candidates[0]?.arc).not.toBeNull()
+  })
+
+  it('scores as evaluateMix does when energy shapes the mix, and stays clash-free', () => {
+    const profile = profileFor({
+      arc: 'twoWaves',
+      arcSignal: 'energy',
+      energySteps: true,
+      keyLift: true,
+    })
+    const outcome = solved(solveMix({ tracks, constraints: NO_CONSTRAINTS, profile }))
+    expect(outcome.candidates.length).toBeGreaterThan(0)
+    for (const mix of outcome.candidates) {
+      expect(mix.clashCount).toBe(0)
+      expect(mix.order).toHaveLength(tracks.length)
+      expect(mix.totalCost).toBeCloseTo(evaluateMix(mix.order, profile).totalCost)
+    }
+    // The energy terms change which order is best.
+    const plain = solved(
+      solveMix({ tracks, constraints: NO_CONSTRAINTS, profile: DEFAULT_PROFILE }),
+    )
+    expect(outcome.candidates[0]?.order.map((t) => t.id)).not.toEqual(
+      plain.candidates[0]?.order.map((t) => t.id),
+    )
   })
 
   it('respects start and end', () => {

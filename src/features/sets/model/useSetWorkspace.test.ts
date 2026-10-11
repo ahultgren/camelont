@@ -16,7 +16,7 @@ import { server } from '@/test/msw'
 import { createSetApp, type SetAppOptions } from '@/test/set-app'
 import { SPOTIFY } from '@/test/spotify-mocks'
 import { WCS_TRACKS, wcsId } from '@/test/wcs'
-import type { PlaylistCopy } from '../domain/set'
+import { NO_MIX_SETTINGS, type PlaylistCopy } from '../domain/set'
 import type { MixSet, SetTrack } from '../domain/types'
 import { useSetsStore } from './sets-store'
 import { useSetWorkspace, type SetWorkspace, type WorkspaceView } from './useSetWorkspace'
@@ -274,7 +274,13 @@ describe('edits', () => {
       { bpmMin: null, bpmMax: null, limit: 2, pick: 'bestFit', seed: 2 },
     ])
     expect(stored()?.marks).toEqual({ [wcsId('Pompeii')]: 'mustInclude' })
-    expect(stored()?.mix).toEqual({ opener: a, closer: b, follows: [[c, b]], arc: 'twoWaves' })
+    expect(stored()?.mix).toEqual({
+      ...NO_MIX_SETTINGS,
+      opener: a,
+      closer: b,
+      follows: [[c, b]],
+      arc: 'twoWaves',
+    })
     expect(workspace.set.value).toBe(stored())
 
     // No save step: a page load later, the set is as it was left.
@@ -545,6 +551,7 @@ describe('the mix', () => {
       prepare: (set) => ({
         ...set,
         mix: {
+          ...set.mix,
           opener: opener ?? null,
           closer: closer ?? null,
           follows: [[from ?? '', to ?? '']],

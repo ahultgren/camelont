@@ -38,7 +38,7 @@ Sets are specified in §8 and the workspace in §9.
 | U7 | understand why no mix is possible | If no clash-free order exists, the app names the blocking tracks or rules in plain language (e.g. "Bloodstream (2A) can only follow 12A and precede 1B; none are in the set"), and names left-out tracks that would unblock it. The user fixes it by changing which tracks are in the set or changing the rules. |
 | U8 | choose between different possible mixes | Several distinct valid mixes of the same tracks, side by side, each with a tempo sparkline and stats: move distribution, peaks, opener and closer, BPM range, total cost. |
 | U9 | explore a mix | Tempo-arc chart with a move badge between points and a hover/tap card per track; a key wheel; a running order with transition connectors (§7). |
-| U10 | choose a mixing profile, optionally with an energy arc | Default profile = the reference weights (§5.3). Arc presets: none, two waves, steady build. |
+| U10 | choose how the mix is shaped | Default profile = the reference weights (§5.3). Arc presets: none, two waves, steady build; the arc follows BPM or energy. Two switches use the tracks' energy, alone or together: energy steps and key lift. The energy options are experiments (decision 45). |
 | U11 | save a set's mix as a playlist in my account | Only when I press the button, and after I confirm the playlist's name: creates a **new private** playlist with the tracks in mix order and links to it. I'm warned when I already have a playlist with that name. Saving again, I choose between replacing the playlist this set saved before and creating another (§8.5). No source playlist is ever modified. |
 | U12 | manage my sets | Rename, duplicate, delete (with confirmation). Everything about a set is saved on this device as I change it; reopening a set shows it as I left it, including the chosen mix. Deleting a set touches nothing in Spotify. |
 | U13 | change a set's playlists | Add or remove playlists at any time. Removing one says what goes with it (its tracks, their marks, rules that name them) before it happens. |
@@ -104,14 +104,22 @@ the chart, so the scoring can change without touching the rules. A profile conta
 - a cost per move. The default reproduces the reference script: perfect 0; `+`/`−` 1;
   `+++`/`−−−` 2; `++`/`−−` 3; `(+++)`/`(−−−)`/mood 4;
 - a tempo weight (default 20, so a 10% gap ≈ one `+++`);
-- an optional **energy arc**: a target curve over set position (presets: two waves,
-  steady build), a signal it applies to (BPM at first; energy can be added later), and
-  a weight.
+- an optional **arc**: a target curve over set position (presets: two waves, steady
+  build), the signal it applies to (BPM or energy), and a weight;
+- an optional **energy step** cost: a climb in energy between neighbours beyond a small
+  free step costs in proportion (default: a 0.3 climb ≈ one `+++`), and a fall a quarter
+  of the same climb, so a build is gradual and a reset may be sudden;
+- a **key lift** (−1..1, default 0): at 1 a boost into a rise in energy, or a drop into a
+  fall, costs less (nothing from a 0.2 change) and the opposite up to double. Below 0 it
+  is the reverse. Perfect and mood moves have no direction.
 
-Mix cost = Σ transitions (move cost + tempo weight × gap) + arc weight × Σ deviation of
-the signal from the target curve. Only the default profile ships at first. The design
-must allow more profiles later (e.g. "favour +++") without changing the chart or the
-solver.
+A track whose energy is unknown takes no part in the energy terms.
+
+Mix cost = Σ transitions (move cost × key-lift factor + tempo weight × gap + energy step
+cost) + arc weight × Σ deviation of the signal from the target curve. The user doesn't
+pick a profile: they set the arc, what it follows, and the two energy switches, which
+together shape the default profile. The design must allow more profiles later (e.g.
+"favour +++") without changing the chart or the solver.
 
 ### 5.4 Mix rules
 
@@ -167,8 +175,10 @@ user already approved:
   `~` mood (warn). A `✗` clash exists only when evaluating an imported or legacy order.
 - **Every key is shown in both notations** wherever it appears: `11B · A major`.
 - **Tempo-arc chart** (the primary view): x = set position, y = BPM (auto-ranged), a line
-  through the points coloured by key, a move badge above each segment, optional arc
-  target curve, hover/tap/focus card (position, title, artist, Camelot + key name, BPM,
+  through the points coloured by key, a move badge above each segment, the tracks'
+  energy as a thin line on a scale of its own (the set's lowest at the bottom, its
+  highest at the top), optional arc target curve on the scale of the signal it follows,
+  hover/tap/focus card (position, title, artist, Camelot + key name, BPM,
   the move into this track and where it came from).
 - **Key wheel:** two rings (outer major, inner minor); used keys filled with their
   colour and a count (`7B×5`).
@@ -186,7 +196,8 @@ A set is the unit of work. It holds:
   added;
 - per playlist, the **track choices** (§8.3): BPM range, limit and pick method;
 - per track, an optional **mark**: must-include or exclude;
-- the **mix settings**: opening track, closing track, follow pairs, arc (§5.3–5.4);
+- the **mix settings**: opening track, closing track, follow pairs, and the shaping:
+  arc, what it follows, energy steps, key lift (§5.3–5.4);
 - the **chosen mix**, and where and when the set was last saved to Spotify.
 
 The *pool* is every track in the set's playlists. The tracks *in the set* are the ones
@@ -316,7 +327,7 @@ without scrolling the page.
 | W1 | **The mix stays in view.** The chosen mix's tempo chart and headline numbers (tracks, BPM range, moves, cost) are visible while the user edits any input: playlists, track choices, marks, mix rules, arc. |
 | W2 | **No page scroll.** Long content (the track list, the running order) scrolls inside its own area. The result never leaves the screen. |
 | W3 | **Changes land in place.** A change updates the mix where it is, within about a second for 100 tracks. While it is being worked out, the previous mix stays on screen marked as updating; the screen doesn't empty or jump. |
-| W4 | **Changes are explained.** After each update, a short summary says what moved: tracks in and out of the set, picks that changed, cost before and after. |
+| W4 | **Changes are explained.** After each update, a short summary says what moved: tracks in and out of the set, picks that changed, cost before and after. Before the first change the summary takes no room. |
 | W5 | **One step between tools.** Playlists and their track choices, the track list, mix rules, arc, the alternatives and the mix views (chart, key wheel, running order) are each one click or key press away. Switching keeps each tool's state (scroll position, filter, selection). |
 | W6 | **One track, everywhere.** Pointing at or selecting a track in any view highlights it in all the others. |
 | W7 | **One track list for the set.** All playlists' tracks in one list, grouped or filtered by playlist and by status (in the set, left out and why, needs data), sortable by BPM and key. Marks, and key/BPM fixes, are made from the row. |
@@ -361,7 +372,8 @@ Two columns at laptop width, under a top bar with the set's name and **Save to S
   in the running order. The link button is separate from the row's toggle group: an
   opener can also have a follower.
 - **Mix (right, about 40%).** Always in view: the change summary (W4), the tempo chart,
-  the headline numbers, the alternatives, the arc, the follow pairs, and the key wheel
+  the headline numbers, the alternatives, the shaping (arc, what it follows, the energy
+  switches), the follow pairs, and the key wheel
   and running order. The running order scrolls in its own area.
 
 The prototype this came from settles the layout only. The look follows §7.
@@ -378,7 +390,7 @@ automatic BPM halving; a second data provider or in-browser audio analysis; publ
 ## 11. Likely future directions
 
 These shape the design without being built: more profiles ("lots of +++", stricter
-tempo), energy as an arc signal, user-drawn arcs, chart tweaks, second-opinion key data
+tempo), sliders for the shaping's weights, user-drawn arcs, chart tweaks, second-opinion key data
 with relative-key-swap warnings, a set-wide length target, export/import of sets, more
 pick methods (e.g. "fill gaps in the arc"). Keep the seams (chart as data, profile as
 data, arc as a separate scoring term, provider behind an interface, track choice as a

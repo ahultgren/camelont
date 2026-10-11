@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { ArcPicker, CandidateList } from '@/features/mixing'
+import { CandidateList, NO_SHAPING, ShapePicker, type MixShaping } from '@/features/mixing'
 import { useWorkspaceUi } from './context'
 import WsIcon from './WsIcon.vue'
 
-/** What shapes the order: which alternative is shown, the arc, and the follow pairs. */
+/** What shapes the order: which alternative is shown, the shaping, and the follow pairs. */
 const ui = useWorkspaceUi()
 const { ws } = ui
 
@@ -15,10 +15,20 @@ const shownIndex = computed({
     ws.chooseAlternative(index)
   },
 })
-const arc = computed({
-  get: () => ws.set.value?.mix.arc ?? 'none',
-  set: (choice) => {
-    ws.setArc(choice)
+const shape = computed<MixShaping>({
+  get: () => {
+    const mix = ws.set.value?.mix
+    return mix
+      ? {
+          arc: mix.arc,
+          arcSignal: mix.arcSignal,
+          energySteps: mix.energySteps,
+          keyLift: mix.keyLift,
+        }
+      : NO_SHAPING
+  },
+  set: (shaping) => {
+    ws.setShape(shaping)
   },
 })
 const pairs = computed(() => ws.set.value?.mix.follows ?? [])
@@ -35,8 +45,8 @@ const point = (trackId: string | null) => {
       :candidates="view.alternatives"
     />
 
-    <div class="flex flex-wrap items-center gap-x-3 gap-y-1.5">
-      <ArcPicker v-model="arc" />
+    <div class="flex flex-wrap items-center gap-x-2 gap-y-1.5">
+      <ShapePicker v-model="shape" />
       <div
         class="flex min-w-0 flex-1 basis-40 flex-wrap items-center gap-1"
         aria-label="Follow pairs"

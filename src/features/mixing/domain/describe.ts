@@ -1,6 +1,5 @@
-import { ARC_PRESETS, type ArcPresetId } from './arc'
 import type { EvaluatedMix } from './evaluate'
-import type { MixProfile } from './profile'
+import { describeShaping, type MixProfile, type MixShaping } from './profile'
 
 /** Spotify's playlist description limit. */
 const DESCRIPTION_MAX = 300
@@ -9,7 +8,7 @@ const DESCRIPTION_MAX = 300
 export function mixDescription(
   mix: EvaluatedMix,
   profile: MixProfile,
-  arc: ArcPresetId | null,
+  shaping: MixShaping,
   source: string,
 ): string {
   const t = mix.stats.toneCounts
@@ -22,6 +21,6 @@ export function mixDescription(
   const range = mix.stats.bpmRange
     ? `, ${String(mix.stats.bpmRange.min)}–${String(mix.stats.bpmRange.max)} BPM`
     : ''
-  const text = `Harmonic mix of “${source}” made with Camelont: ${moves}${range}. Profile: ${profile.name}; arc: ${arc ? ARC_PRESETS[arc].name : 'none'}.`
+  const text = `Harmonic mix of “${source}” made with Camelont: ${moves}${range}. Profile: ${profile.name}; arc: ${describeShaping(shaping)}.`
   return text.length <= DESCRIPTION_MAX ? text : `${text.slice(0, DESCRIPTION_MAX - 1)}…`
 }

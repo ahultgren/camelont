@@ -14,6 +14,7 @@ import {
   withIncompleteSave,
   withRole,
   withSave,
+  withShape,
 } from './edits'
 import { saveState } from './set'
 import { addPlaylist, newSet, type PlaylistCopy } from './set'
@@ -132,6 +133,14 @@ describe('mix rules', () => {
     expect(arced.mix.arc).toBe('twoWaves')
     expect(arced.mix.follows).toBe(set.mix.follows)
     expect(withArc(arced, 'twoWaves')).toBe(arced)
+  })
+
+  it('changes what shapes the mix, a part at a time', () => {
+    const byEnergy = withShape(base, { arc: 'twoWaves', arcSignal: 'energy' })
+    expect(byEnergy.mix).toMatchObject({ arc: 'twoWaves', arcSignal: 'energy', keyLift: false })
+    const lifted = withShape(byEnergy, { keyLift: true })
+    expect(lifted.mix).toMatchObject({ arc: 'twoWaves', arcSignal: 'energy', keyLift: true })
+    expect(withShape(lifted, { keyLift: true, arcSignal: 'energy' })).toBe(lifted)
   })
 })
 

@@ -5,6 +5,7 @@ export {
   type ArcChoice,
   type ArcConfig,
   type ArcPresetId,
+  type ArcSignalId,
 } from './domain/arc'
 export { MOVE_META, moveBetween, type Move, type MoveMeta, type MoveOrClash } from './domain/chart'
 export {
@@ -30,11 +31,14 @@ export {
 export { pickBestFit, type FitRequest, type FitResult, type FitScore } from './domain/fit'
 export {
   DEFAULT_PROFILE,
+  describeShaping,
+  NO_SHAPING,
   profileById,
-  profileForArc,
+  profileFor,
   PROFILES,
   withArc,
   type MixProfile,
+  type MixShaping,
 } from './domain/profile'
 export { DEFAULT_K, type SolveOutcome } from './domain/solver/solve'
 export { tempoGap } from './domain/tempo'
@@ -44,6 +48,7 @@ export { useMixer, type MixerStatus } from './model/useMixer'
 export { toMixInput, type MixInput, type MixEntry } from './model/mix-input'
 export { default as ArcPicker } from './ui/ArcPicker.vue'
 export { default as CandidateList } from './ui/CandidateList.vue'
+export { default as ShapePicker } from './ui/ShapePicker.vue'
 export { mixDescription } from './domain/describe'
 export {
   inlineFitClient,
