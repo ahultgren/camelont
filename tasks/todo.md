@@ -288,8 +288,9 @@ keys it by set ID. The app shell gives the route the full window.
 - [x] Screenshots in `docs/reference/workspace/`; docs; `pnpm check`
 
 #### Review of 5b + 6 (2026-10-11)
-`VITE_SPOTIFY_CLIENT_ID=ci-placeholder-client-id pnpm check` exits 0 (numbers in the
-last commit of the step). Nothing was run against real Spotify.
+`VITE_SPOTIFY_CLIENT_ID=ci-placeholder-client-id pnpm check` exits 0: 56 test files /
+633 unit tests, domain line coverage 99.02%, build ok, 12 e2e (the 7 screenshot tests
+are skipped unless `SHOTS=1`). Nothing was run against real Spotify.
 
 What was built is described in `docs/architecture.md` ("The workspace page"); the
 screenshots are in `docs/reference/workspace/`.
