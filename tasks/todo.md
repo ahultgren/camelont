@@ -227,7 +227,7 @@ Three sessions, the first two in parallel:
 - [ ] Remember the chosen alternative (A9)
 
 ### Step 5 — workspace UI (after the layout is picked)
-- [ ] Home = sets list + New set; route `/sets/:id` (5a)
+- [x] Home = sets list + New set; route `/sets/:id` (5a)
   - [x] `installSets` in `app/plugins.ts` and `src/test/render.ts`; route `/sets/:id`
     with a stub `SetPage` (name, playlists, pool sizes, not found / unreadable)
   - [x] `PlaylistPicker` selection mode (link mode kept for the old page)
@@ -236,11 +236,31 @@ Three sessions, the first two in parallel:
   - [x] `sets/ui/NewSetDialog`: name + playlists, reads the tracks, progress, retry,
     skipped items; edge `sets → playlists`
   - [x] E2E for the sets flow; the old mixer's e2e opens `/playlists/wcs` directly
-  - [ ] Docs: `architecture.md`, `README.md`
+  - [x] Docs: `architecture.md`, `README.md`
 - [ ] Remove `PlaylistPage` and the `/playlists/:id` route (5b)
 - [ ] The chosen layout: playlists panel with track choices and the BPM range control
   (W8), one track list (W7), mix rules, arc, alternatives, mix views, cross-highlight (W6)
 - [ ] Phone variant (W10)
+
+#### Review of 5a (2026-10-11)
+`VITE_SPOTIFY_CLIENT_ID=ci-placeholder-client-id pnpm check` exits 0: 41 test files /
+415 unit tests, 8 e2e. Nothing was run against real Spotify.
+
+For 5b to pick up:
+- `sets/ui/useCreateSet.ts` (reading playlists, then creating the set) and
+  `sets/ui/set-summary.ts` (`poolSize`, `trackCountLabel`) sit in `ui/` only because
+  `sets/model` and `sets/domain` belonged to the parallel session. Move them down.
+- The stored copy is made with `snapshotId: null` (the items route gives none) and
+  `readAt` from `Date.now()` (the store's clock isn't exposed). The change check needs
+  the snapshot ID from somewhere.
+- A set has no field for the items skipped when a playlist was read, so the count is
+  shown once, in the New set dialog, and is gone afterwards.
+- The store sets `loaded` a tick after the sets appear; show the sets before testing
+  `loaded` (as `SetsList` and the stub `SetPage` do).
+- After a delete, keyboard focus falls back to the page: `AppDialog` has no hook for
+  where focus goes on close.
+- The logged-out intro and `PlaylistPage`'s "← Your playlists" link still describe the
+  single-playlist app.
 
 ### Step 6 — save and ship
 - [ ] Save to Spotify from the set (name = set name); link, time, "changed since" (§8.5)
