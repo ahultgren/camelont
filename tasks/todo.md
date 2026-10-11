@@ -421,7 +421,7 @@ Energy (decision 44):
 - [x] Running order: energy on every track line; hover card keeps it
 - [x] Spec, architecture, README; tests; screenshots looked at in light and dark,
   laptop and phone (contrast)
-- [ ] `pnpm check` green; merged into `main`
+- [x] `pnpm check` green; merged into `main`
 
 ### Review (2026-10-11)
 - **Keys.** `KeyChip` is the one place: the Camelot code, the key name as tooltip and
@@ -449,6 +449,10 @@ Energy (decision 44):
   caught it).
 
 Not verified: nothing here was run against real Spotify or ReccoBeats.
+
+Merged into `main` from this worktree. The owner's folder was on `mix-experiments` by
+then and stays there (his choice); that branch still has to take `main` in, with
+conflicts in the docs and the screenshots to resolve.
 
 Choices made, for the owner:
 - Whole numbers, no decimal. The WCS set's known energies land on 4, 6, 7, 8 and 9.
