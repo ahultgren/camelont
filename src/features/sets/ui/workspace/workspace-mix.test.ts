@@ -201,7 +201,9 @@ describe('problems where the mix would be (W9)', () => {
     await userEvent.click(
       problems.getByRole('button', { name: 'Set key and BPM of Lemon Tree (feat. Will Jay)' }),
     )
-    const dialog = within(await screen.findByRole('dialog', { name: /Key and BPM: Lemon Tree/ }))
+    const dialog = within(
+      await screen.findByRole('dialog', { name: /Key, BPM and energy: Lemon Tree/ }),
+    )
     await userEvent.selectOptions(dialog.getByRole('combobox', { name: 'Key' }), '11B')
     await userEvent.type(dialog.getByRole('spinbutton', { name: 'BPM' }), '95')
     await userEvent.click(dialog.getByRole('button', { name: 'Save' }))

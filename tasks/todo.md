@@ -406,19 +406,55 @@ Keys (decision 43):
 - [x] CLAUDE.md, spec (U3, §7, §9.1), architecture; tests; screenshots
 
 Energy (decision 44):
-- [ ] `shared/music/energy.ts`: the one conversion between stored 0..1 and the shown
+- [x] `shared/music/energy.ts`: the one conversion between stored 0..1 and the shown
   level 0–10, the words for it, and the hue of a level
-- [ ] `Override.energy` (0..1): `mergeFeatures`, `overridden`, import merge, the store's
+- [x] `Override.energy` (0..1): `mergeFeatures`, `overridden`, import merge, the store's
   "nothing left to store" rule
-- [ ] zod: stored overrides and export files without `energy` still load (old-shape tests)
-- [ ] A test that tracks differing only in energy give the same mixes and costs
-- [ ] `EnergyChip` replaces `EnergyMeter`: no bar, a chip whose hue runs with the level,
+- [x] zod: stored overrides and export files without `energy` still load (old-shape tests)
+- [x] A test that tracks differing only in energy give the same mixes and costs
+- [x] `EnergyChip` replaces `EnergyMeter`: no bar, a chip whose hue runs with the level,
   the number always shown; unknown shown as such
-- [ ] Edit dialog: energy field with source and what ReccoBeats said; wording "Key, BPM
+- [x] Edit dialog: energy field with source and what ReccoBeats said; wording "Key, BPM
   and energy" everywhere the dialog is named
-- [ ] Track row: energy is a way into the dialog like key and BPM, with the pencil when
+- [x] Track row: energy is a way into the dialog like key and BPM, with the pencil when
   set by hand; shown at phone width too
-- [ ] Running order: energy on every track line; hover card keeps it
-- [ ] Spec, architecture, README; tests; screenshots looked at in light and dark,
+- [x] Running order: energy on every track line; hover card keeps it
+- [x] Spec, architecture, README; tests; screenshots looked at in light and dark,
   laptop and phone (contrast)
 - [ ] `pnpm check` green; merged into `main`
+
+### Review (2026-10-11)
+- **Keys.** `KeyChip` is the one place: the Camelot code, the key name as tooltip and
+  sr-only text. Track rows, the running order (its connectors got a tooltip with both
+  names), the hover card and "ReccoBeats says" in the dialog follow from it; messages
+  say "Bloodstream (2A)". The key's options in the dialog keep both notations. The key
+  wheel already showed codes with the name in a tooltip and its label.
+- **Energy.** 0..1 in the code and in storage, a level 0–10 on screen and in the
+  dialog, with `shared/music/energy.ts` as the only conversion. `EnergyChip` replaces
+  `EnergyMeter`: a pill with the number, hue 220 − 22 × level. Contrast of the ink on
+  the chip, computed for every level: 5.1–12.0 light, 4.8–11.3 dark.
+- **Editing.** `Override.energy`, merged field by field; the pencil on the row, the
+  source badge and "ReccoBeats says … energy 7" in the dialog. A record or a file
+  without the field reads as `energy: null` at the zod boundary (tested with old-shape
+  records in the repo, the import and a workspace test), so no version was bumped.
+- **No mix changed.** `solve.test.ts` runs the WCS set with its fetched energies, with
+  none and with two other spreads, with and without an arc: same orders, same costs.
+  A workspace test sets an energy and finds the mix as it was.
+- **Looked at:** the retaken screenshots at 1280 × 720 and 1440 × 900 in light and dark,
+  the edit dialog in both (new: `edit-dialog-*.png`), and the phone's track list and
+  running order in both (the dark phone views and the hover card only in passing, not
+  kept). Energy fits a phone row.
+- A snag on the way: an sr-only span inside a scrolling list stretched the page until
+  the chip that holds it became `position: relative` (the "page never scrolls" e2e
+  caught it).
+
+Not verified: nothing here was run against real Spotify or ReccoBeats.
+
+Choices made, for the owner:
+- Whole numbers, no decimal. The WCS set's known energies land on 4, 6, 7, 8 and 9.
+- A filled chip, not a coloured number, and a pill so it isn't taken for a key.
+- The dialog and everything naming it say "Key, BPM and energy"; "needs key/BPM" and
+  "Set key and BPM of …" stay, since a mix needs only those two.
+- The hover card writes "· energy" before the chip, since a bare number says little
+  there; the card's key name can't be a tooltip (the pointer can't enter the card).
+- An energy saved at the level ReccoBeats' value already shows is not stored.

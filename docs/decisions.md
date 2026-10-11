@@ -356,3 +356,28 @@ and messages name a track as "Bloodstream (2A)". **Not reachable by tooltip:** t
 chart's hover card, which the pointer can't enter; its point's label, the track row and
 the running order carry the name. Reverses the "both notations" rule of the first spec
 and of CLAUDE.md.
+
+### 44. Energy is a level from 0 to 10, coloured, editable, and in the running order (2026-10-11)
+**Context:** decision 42 showed energy out of 100 with a small bar, read-only, on the
+track row and the hover card. The owner finds that ReccoBeats energy matches how the
+songs feel, and wants to read it at a glance and correct it. **Decision (owner):**
+- Energy is shown as a whole number from 0 to 10 (ReccoBeats' 0–1, rounded). It stays
+  0–1 in storage and in the code; `shared/music/energy.ts` is the one conversion.
+- No bar. The number sits on a chip whose hue runs with the level: blue at 0, through
+  green and yellow, to red at 10 (`hue = 220 − 22 × level`), at the saturation and
+  lightness of a major key's chip. The chip's ink has a contrast of 4.8 or more on
+  every level in both themes. The number is always shown, so colour is never the only
+  carrier.
+- Energy can be set by hand, in the same dialog as key and BPM ("Key, BPM and energy"),
+  with the same pencil mark, source badge and "ReccoBeats says". It is part of an
+  override, stored and exported as 0–1; overrides and files from before have no energy
+  and read as "not set by hand".
+- It is on every track line of the running order, in the hover card, and on the track
+  row at phone width too (the key name made room, decision 43).
+
+Scoring, the arc and the solver are unchanged: no mix uses energy, and a test holds
+that. An edited energy is part of a mix request's cache key, so it asks the solver
+again and gets the same mixes. **Chosen by the agent, for the owner to confirm:** whole
+numbers (no decimal); a level is a pill and a key a rounded rectangle, to tell the two
+coloured chips apart; an energy saved at the level ReccoBeats' value already shows is
+not stored as an override. Amends 42.

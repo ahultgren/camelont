@@ -30,6 +30,8 @@ export interface Override {
   trackId: string
   camelot: CamelotKey | null
   bpm: number | null
+  /** 0..1, as the provider reports it; entered as a level (`energyFromLevel`). */
+  energy: number | null
   note: string | null
   /** Human-readable track name, for exports. */
   label: string | null
@@ -71,12 +73,16 @@ export function mergeFeatures(
     trackId,
     camelot: pick(override?.camelot, found?.camelot),
     bpm: pick(override?.bpm, found?.bpm),
-    energy: pick(null, found?.energy),
+    energy: pick(override?.energy, found?.energy),
     note: override?.note ?? null,
     fetched: fetched ?? null,
-    overridden: override !== undefined && (override.camelot !== null || override.bpm !== null),
+    overridden: override !== undefined && overridesValue(override),
   }
 }
+
+/** Does the override set a value (a note alone sets none)? */
+export const overridesValue = (override: Pick<Override, 'camelot' | 'bpm' | 'energy'>): boolean =>
+  override.camelot !== null || override.bpm !== null || override.energy !== null
 
 /** Not-found answers are retried after a week (ReccoBeats coverage grows). */
 export const NOT_FOUND_TTL_MS = 7 * 24 * 3600_000
@@ -89,3 +95,6 @@ export const MAX_BPM = 300
 
 export const isValidBpm = (bpm: number): boolean =>
   Number.isFinite(bpm) && bpm >= MIN_BPM && bpm <= MAX_BPM
+
+export const isValidEnergy = (energy: number): boolean =>
+  Number.isFinite(energy) && energy >= 0 && energy <= 1

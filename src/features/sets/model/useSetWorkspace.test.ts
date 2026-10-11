@@ -363,7 +363,14 @@ describe('which tracks are in the set', () => {
     expect(statusOf(workspace, lemon)).toBe('needsData')
 
     const overrides = app.run(() => useOverridesStore())
-    await overrides.save({ trackId: lemon, camelot: '6B', bpm: 88, note: null, label: null })
+    await overrides.save({
+      trackId: lemon,
+      camelot: '6B',
+      bpm: 88,
+      energy: null,
+      note: null,
+      label: null,
+    })
     await settled(workspace)
     expect(statusOf(workspace, lemon)).toBe('in')
     expect(workspace.features.value.get(lemon)?.bpm).toEqual({ value: 88, source: 'manual' })
@@ -687,7 +694,14 @@ describe('problems, in place of the mix', () => {
     expect(solver.runs()).toBe(0)
 
     const overrides = app.run(() => useOverridesStore())
-    await overrides.save({ trackId: lemon, camelot: '6B', bpm: 88, note: null, label: null })
+    await overrides.save({
+      trackId: lemon,
+      camelot: '6B',
+      bpm: 88,
+      energy: null,
+      note: null,
+      label: null,
+    })
     await vi.waitFor(() => {
       expect(solver.runs()).toBe(1)
     }, SLOW)
@@ -850,7 +864,14 @@ describe('the chosen alternative', () => {
     const elsewhere = createSetApp({ overridesStore, provider: provider() })
     await elsewhere
       .run(() => useOverridesStore())
-      .save({ trackId: wcsId('Brother'), camelot: '5A', bpm: 78, note: null, label: null })
+      .save({
+        trackId: wcsId('Brother'),
+        camelot: '5A',
+        bpm: 78,
+        energy: null,
+        note: null,
+        label: null,
+      })
 
     const again = await open({ setsStore, overridesStore, setId: first.setId })
     const view = mixOf(await settled(again.workspace))

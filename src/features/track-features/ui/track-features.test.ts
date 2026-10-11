@@ -37,6 +37,7 @@ const Harness = defineComponent({
             h('b', row.title),
             h('span', { 'data-testid': 'key' }, value(known?.camelot)),
             h('span', { 'data-testid': 'bpm' }, value(known?.bpm)),
+            h('span', { 'data-testid': 'energy' }, value(known?.energy)),
             h('span', { 'data-testid': 'note' }, known?.note ?? ''),
             h('button', { onClick: () => (editing.value = row) }, `Edit ${row.title}`),
           ])
@@ -99,6 +100,7 @@ const rowOf = (title: string) => {
 
 const keyOf = (title: string) => rowOf(title).getByTestId('key').textContent
 const bpmOf = (title: string) => rowOf(title).getByTestId('bpm').textContent
+const energyOf = (title: string) => rowOf(title).getByTestId('energy').textContent
 const loaded = () =>
   waitFor(() => {
     expect(keyOf('Pompeii')).toBe('11B (reccobeats)')
@@ -110,8 +112,10 @@ describe('track features', () => {
     await render()
     await loaded()
     expect(bpmOf('Pompeii')).toBe('127.4 (reccobeats)')
+    expect(energyOf('Pompeii')).toBe('0.7 (reccobeats)')
     expect(keyOf('Lemon Tree')).toBe('unknown')
     expect(bpmOf('Lemon Tree')).toBe('unknown')
+    expect(energyOf('Lemon Tree')).toBe('unknown')
   })
 
   it('saves a correction that wins over fetched data', async () => {
@@ -122,7 +126,7 @@ describe('track features', () => {
     await userEvent.click(rowOf('Price Tag').getByRole('button', { name: /Edit/ }))
     const dialog = await screen.findByRole('dialog')
     const said = within(dialog).getByText(/ReccoBeats says/)
-    expect(said).toHaveTextContent('7B · F major, 175 BPM')
+    expect(said).toHaveTextContent('7B · F major, 175 BPM, energy 8.')
     // The Camelot code is shown; the name is its tooltip, and in the key's options.
     expect(within(said).getByTestId('key')).toHaveAttribute('title', 'F major')
     expect(within(said).getByText('· F major')).toHaveClass('sr-only')
@@ -137,9 +141,66 @@ describe('track features', () => {
     expect(keyOf('Price Tag')).toBe('7B (reccobeats)')
     expect(rowOf('Price Tag').getByTestId('note')).toHaveTextContent('half-time')
     const stored = await overridesStore.get(id(2))
+    // Only what was changed is stored: the key and the energy stay ReccoBeats' own.
     expect(stored).toMatchObject({
-      data: { bpm: 87.5, camelot: null, note: 'half-time', label: 'Price Tag' },
+      data: { bpm: 87.5, camelot: null, energy: null, note: 'half-time', label: 'Price Tag' },
     })
+    expect(energyOf('Price Tag')).toBe('0.8 (reccobeats)')
+  })
+
+  it('saves an energy set by hand, entered as a level from 0 to 10', async () => {
+    reccobeats()
+    const overridesStore = createMemoryStore()
+    await render({ cacheStore: createMemoryStore(), overridesStore })
+    await loaded()
+    await userEvent.click(rowOf('Pompeii').getByRole('button', { name: /Edit/ }))
+    let dialog = await screen.findByRole('dialog', { name: 'Key, BPM and energy: Pompeii' })
+    const field = () => within(dialog).getByRole('spinbutton', { name: 'Energy' })
+    // ReccoBeats says 0.7: level 7.
+    expect(field()).toHaveValue(7)
+    expect(field()).toHaveAccessibleDescription(/^From 0 \(calm\) to 10 \(intense\)/)
+
+    // Off the scale, or between two levels: said, and not saved.
+    for (const wrong of ['11', '7.5', '-1']) {
+      await userEvent.clear(field())
+      await userEvent.type(field(), wrong)
+      expect(field()).toHaveAccessibleDescription('Energy must be a whole number from 0 to 10.')
+      expect(field()).toHaveAttribute('aria-invalid', 'true')
+      expect(within(dialog).getByRole('button', { name: 'Save' })).toBeDisabled()
+    }
+
+    await userEvent.clear(field())
+    await userEvent.type(field(), '3')
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Save' }))
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).toBeNull()
+    })
+    expect(energyOf('Pompeii')).toBe('0.3 (manual)')
+    expect(keyOf('Pompeii')).toBe('11B (reccobeats)')
+    expect(bpmOf('Pompeii')).toBe('127.4 (reccobeats)')
+    expect(await overridesStore.get(id(1))).toMatchObject({
+      data: { camelot: null, bpm: null, energy: 0.3 },
+    })
+
+    // The dialog says whose value it is, and still what ReccoBeats said.
+    await userEvent.click(rowOf('Pompeii').getByRole('button', { name: /Edit/ }))
+    dialog = await screen.findByRole('dialog')
+    expect(field()).toHaveValue(3)
+    expect(within(dialog).getByText(/ReccoBeats says/)).toHaveTextContent('energy 7.')
+    expect(
+      within(dialog)
+        .getAllByText(/^Source:/)
+        .map((badge) => badge.parentElement?.textContent),
+    ).toEqual(['Source: ReccoBeats', 'Source: ReccoBeats', 'Source: Set by hand'])
+
+    // Back at ReccoBeats' level, nothing is left to store.
+    await userEvent.clear(field())
+    await userEvent.type(field(), '7')
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Save' }))
+    await waitFor(() => {
+      expect(energyOf('Pompeii')).toBe('0.7 (reccobeats)')
+    })
+    expect(await overridesStore.get(id(1))).toBeUndefined()
   })
 
   it('shows in the dialog where each value in use came from', async () => {
@@ -153,7 +214,11 @@ describe('track features', () => {
 
     await userEvent.click(rowOf('Price Tag').getByRole('button', { name: /Edit/ }))
     let dialog = await screen.findByRole('dialog')
-    expect(sources(dialog)).toEqual(['Source: ReccoBeats', 'Source: ReccoBeats'])
+    expect(sources(dialog)).toEqual([
+      'Source: ReccoBeats',
+      'Source: ReccoBeats',
+      'Source: ReccoBeats',
+    ])
     await userEvent.click(within(dialog).getByRole('button', { name: 'Half' }))
     await userEvent.type(within(dialog).getByRole('textbox'), 'checked by ear')
     await userEvent.click(within(dialog).getByRole('button', { name: 'Save' }))
@@ -161,17 +226,21 @@ describe('track features', () => {
       expect(screen.queryByRole('dialog')).toBeNull()
     })
 
-    // The key is still ReccoBeats' own; the BPM is the user's, with their note.
+    // Key and energy are still ReccoBeats' own; the BPM is the user's, with their note.
     await userEvent.click(rowOf('Price Tag').getByRole('button', { name: /Edit/ }))
     dialog = await screen.findByRole('dialog')
-    expect(sources(dialog)).toEqual(['Source: ReccoBeats', 'Source: Set by hand'])
+    expect(sources(dialog)).toEqual([
+      'Source: ReccoBeats',
+      'Source: Set by hand',
+      'Source: ReccoBeats',
+    ])
     expect(within(dialog).getByRole('textbox')).toHaveValue('checked by ear')
     await userEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }))
 
     await userEvent.click(rowOf('Lemon Tree').getByRole('button', { name: /Edit/ }))
     dialog = await screen.findByRole('dialog')
     expect(within(dialog).getByText('ReccoBeats has no data for this track.')).toBeInTheDocument()
-    expect(within(dialog).getAllByText('no value yet')).toHaveLength(2)
+    expect(within(dialog).getAllByText('no value yet')).toHaveLength(3)
   })
 
   it('fills in a track ReccoBeats does not know', async () => {
@@ -181,12 +250,14 @@ describe('track features', () => {
     await userEvent.click(rowOf('Lemon Tree').getByRole('button', { name: /Edit/ }))
     const dialog = await screen.findByRole('dialog')
     await userEvent.selectOptions(within(dialog).getByRole('combobox'), '6B')
-    await userEvent.type(within(dialog).getByRole('spinbutton'), '88')
+    await userEvent.type(within(dialog).getByRole('spinbutton', { name: 'BPM' }), '88')
+    await userEvent.type(within(dialog).getByRole('spinbutton', { name: 'Energy' }), '4')
     await userEvent.click(within(dialog).getByRole('button', { name: 'Save' }))
     await waitFor(() => {
       expect(keyOf('Lemon Tree')).toBe('6B (manual)')
     })
     expect(bpmOf('Lemon Tree')).toBe('88 (manual)')
+    expect(energyOf('Lemon Tree')).toBe('0.4 (manual)')
   })
 
   it('uses the cache instead of refetching', async () => {
@@ -207,7 +278,7 @@ describe('track features', () => {
     expect(keyOf('Pompeii')).toBe('unknown')
   })
 
-  it('imports corrections and reports what changed', async () => {
+  it('imports corrections exported before energy could be set, and reports what changed', async () => {
     reccobeats()
     await render()
     await loaded()
@@ -236,6 +307,43 @@ describe('track features', () => {
     await userEvent.upload(screen.getByLabelText('Import corrections file'), file)
     expect(await screen.findByText('Imported: 1 new, 0 updated, 0 unchanged.')).toBeInTheDocument()
     expect(keyOf('Lemon Tree')).toBe('6B (manual)')
-    expect(useOverridesStore().exportText()).toContain('"trackId": "track00000000000000003"')
+    expect(energyOf('Lemon Tree')).toBe('unknown')
+    const exported = useOverridesStore().exportText()
+    expect(exported).toContain('"trackId": "track00000000000000003"')
+    // What is exported now says that the energy is not set by hand.
+    expect(exported).toContain('"energy": null')
+  })
+
+  it('imports an energy set by hand on another device', async () => {
+    reccobeats()
+    await render()
+    await loaded()
+    const file = new File(
+      [
+        JSON.stringify({
+          app: 'camelont',
+          kind: 'track-overrides',
+          version: 1,
+          exportedAt: '2026-10-11T00:00:00Z',
+          overrides: [
+            {
+              trackId: id(1),
+              camelot: null,
+              bpm: null,
+              energy: 0.9,
+              note: null,
+              label: 'Pompeii',
+              updatedAt: 1,
+            },
+          ],
+        }),
+      ],
+      'overrides.json',
+      { type: 'application/json' },
+    )
+    await userEvent.upload(screen.getByLabelText('Import corrections file'), file)
+    expect(await screen.findByText('Imported: 1 new, 0 updated, 0 unchanged.')).toBeInTheDocument()
+    expect(energyOf('Pompeii')).toBe('0.9 (manual)')
+    expect(keyOf('Pompeii')).toBe('11B (reccobeats)')
   })
 })

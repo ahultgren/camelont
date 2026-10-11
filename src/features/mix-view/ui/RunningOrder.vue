@@ -2,12 +2,12 @@
 import { computed, nextTick, useTemplateRef, watch } from 'vue'
 import { MOVE_META, type EvaluatedMix } from '@/features/mixing'
 import { keyName } from '@/shared/music'
-import { KeyChip, TONE_TEXT } from '@/shared/ui'
+import { EnergyChip, KeyChip, TONE_TEXT } from '@/shared/ui'
 import { formatBpmDelta, type EntryInfo } from '../domain/layout'
 
 /**
- * The mix as a list: a line per track and a connector between each pair (keys, move,
- * BPM change). A connector can be pinned: "keep these two together". Keys are Camelot
+ * The mix as a list: a line per track (key, BPM, energy) and a connector between each
+ * pair (keys, move, BPM change). A connector can be pinned: "keep these two together". Keys are Camelot
  * codes, with the key names in the tooltip.
  */
 const {
@@ -108,7 +108,7 @@ function point(trackId: string | null) {
         </button>
       </li>
       <li
-        class="grid cursor-default grid-cols-[20px_minmax(0,1fr)_auto_auto] items-center gap-x-2 rounded-md px-1 py-[3px] text-[13px] outline-none focus-visible:ring-2 focus-visible:ring-accent"
+        class="grid cursor-default grid-cols-[20px_minmax(0,1fr)_auto_auto_auto] items-center gap-x-2 rounded-md px-1 py-[3px] text-[13px] outline-none focus-visible:ring-2 focus-visible:ring-accent"
         :class="step.track.id === highlighted ? 'bg-band' : ''"
         :data-highlighted="step.track.id === highlighted ? '' : undefined"
         tabindex="0"
@@ -126,6 +126,7 @@ function point(trackId: string | null) {
         </span>
         <KeyChip :camelot="step.track.camelot" size="sm" />
         <span class="num min-w-[38px] text-right text-xs">{{ step.track.bpm }}</span>
+        <EnergyChip :energy="step.track.energy" />
       </li>
     </template>
   </ol>

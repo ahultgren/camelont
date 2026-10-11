@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/vue'
 import { describe, expect, it } from 'vitest'
-import EnergyMeter from './EnergyMeter.vue'
+import { energyColor } from './energy-color'
+import EnergyChip from './EnergyChip.vue'
 import { keyColor } from './key-color'
 import KeyChip from './KeyChip.vue'
 import MoveBadge from './MoveBadge.vue'
@@ -23,20 +24,34 @@ describe('KeyChip', () => {
   })
 })
 
-describe('EnergyMeter', () => {
-  it('shows energy as a number out of 100, and says so', () => {
-    render(EnergyMeter, { props: { energy: 0.929 } })
-    const meter = screen.getByTestId('energy')
-    expect(meter).toHaveTextContent(/^93\s*Energy 93 of 100$/)
-    expect(meter).toHaveAttribute('title', 'Energy 93 of 100')
-    expect(screen.getByText('Energy 93 of 100')).toHaveClass('sr-only')
+describe('EnergyChip', () => {
+  it('shows energy as a level out of 10, coloured by the level, and says so', () => {
+    render(EnergyChip, { props: { energy: 0.929 } })
+    const chip = screen.getByTestId('energy')
+    expect(chip).toHaveTextContent(/^9Energy 9 of 10$/)
+    expect(chip).toHaveAttribute('title', 'Energy 9 of 10')
+    expect(screen.getByText('Energy 9 of 10')).toHaveClass('sr-only')
+    // The number is shown, not only the colour.
+    expect(screen.getByText('9')).not.toHaveClass('sr-only')
+    expect(chip.style.background).toBe(energyColor(0.929))
   })
 
-  it('says when the energy is unknown', () => {
-    render(EnergyMeter, { props: { energy: null } })
-    const meter = screen.getByTestId('energy')
-    expect(meter).toHaveTextContent(/^–\s*Energy unknown$/)
-    expect(meter).toHaveAttribute('title', 'Energy unknown')
+  it('says when the energy is unknown, without a colour of the scale', () => {
+    render(EnergyChip, { props: { energy: null } })
+    const chip = screen.getByTestId('energy')
+    expect(chip).toHaveTextContent(/^–Energy unknown$/)
+    expect(chip).toHaveAttribute('title', 'Energy unknown')
+    expect(chip.style.background).toBe('')
+  })
+})
+
+describe('energyColor', () => {
+  it('takes the hue of the level, at the tone of a key chip', () => {
+    expect(energyColor(0)).toBe('hsl(220 var(--chip-s) var(--chip-l))')
+    expect(energyColor(0.715)).toBe('hsl(66 var(--chip-s) var(--chip-l))')
+    expect(energyColor(1)).toBe('hsl(0 var(--chip-s) var(--chip-l))')
+    // Two energies shown as the same level have the same colour.
+    expect(energyColor(0.66)).toBe(energyColor(0.74))
   })
 })
 

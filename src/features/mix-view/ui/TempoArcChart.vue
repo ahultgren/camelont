@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, useTemplateRef } from 'vue'
 import { MOVE_META, type EvaluatedMix } from '@/features/mixing'
-import { keyName } from '@/shared/music'
-import { EnergyMeter, KeyChip, keyColor, TONE_COLOR } from '@/shared/ui'
+import { describeEnergy, keyName } from '@/shared/music'
+import { EnergyChip, KeyChip, keyColor, TONE_COLOR } from '@/shared/ui'
 import { chartWidth, linearX, linearY, niceRange, type EntryInfo } from '../domain/layout'
 
 /**
@@ -113,7 +113,8 @@ const pointLabel = (i: number) => {
   const moveText = move
     ? `, ${MOVE_META[move.move].label} from ${mix.order[i - 1]?.camelot ?? ''}`
     : ''
-  return `${String(i + 1)}. ${t.label}, ${t.camelot}, ${keyName(t.camelot)}, ${String(t.bpm)} BPM${moveText}`
+  const energyText = t.energy === null ? '' : `, ${describeEnergy(t.energy).toLowerCase()}`
+  return `${String(i + 1)}. ${t.label}, ${t.camelot}, ${keyName(t.camelot)}, ${String(t.bpm)} BPM${energyText}${moveText}`
 }
 
 /** Every position is numbered while they fit; then every fifth, and the first and last. */
@@ -279,7 +280,8 @@ const cardStyle = computed(() => {
         <div class="flex flex-wrap items-center gap-1.5">
           <KeyChip :camelot="activePoint.track.camelot" size="sm" />
           <span class="num">· {{ activePoint.track.bpm }} BPM</span>
-          <EnergyMeter :energy="activePoint.track.energy" />
+          <span class="num" aria-hidden="true">· energy</span>
+          <EnergyChip :energy="activePoint.track.energy" />
         </div>
         <div v-if="into" class="num text-xs" :style="{ color: TONE_COLOR[into.meta.tone] }">
           {{ into.meta.symbol }} {{ into.meta.label }} from {{ into.from.camelot }}

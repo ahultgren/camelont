@@ -18,7 +18,7 @@ playlist or create another. Playlists Camelont didn't create are never touched, 
 are kept in this browser.
 
 - Vue 3 + TypeScript + Vite, no backend (Spotify PKCE login)
-- Key and BPM from [ReccoBeats](https://reccobeats.com), with manual corrections stored
+- Key, BPM and energy from [ReccoBeats](https://reccobeats.com), with manual corrections stored
   on your device
 
 **Status:** implemented and tested with mocked Spotify and ReccoBeats; not yet
