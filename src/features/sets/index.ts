@@ -50,3 +50,18 @@ export {
 export type { UnreadableSet } from './api/repository'
 export { installSets, type SetsOptions } from './model/deps'
 export { useSetsStore } from './model/sets-store'
+
+// The set workspace (Step 4). Kept together: other work adds exports above.
+export type { ChangeSummary, PickChange, SettledState } from './domain/change-summary'
+export { roleOf, type TrackRole } from './domain/edits'
+export type { ExcludedInRule, MixRule } from './domain/mix-problems'
+export { describeChange } from './domain/playlist-diff'
+export { chosenIndex, sameOrder } from './domain/set'
+export { toPlaylistCopy, usePlaylistChanges, type PlaylistNotice } from './model/usePlaylistChanges'
+export {
+  useSetWorkspace,
+  type SetWorkspace,
+  type SetWorkspaceOptions,
+  type WorkspaceProblem,
+  type WorkspaceView,
+} from './model/useSetWorkspace'

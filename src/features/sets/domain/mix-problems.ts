@@ -1,5 +1,6 @@
 import type { DroppedRule } from './playlist-diff'
-import type { MixSettings, TrackMark } from './types'
+import type { MixRules } from './set'
+import type { TrackMark } from './types'
 
 /**
  * What stops a set from being mixed before the solver is asked, in the set's own words
@@ -14,7 +15,7 @@ type Marks = Readonly<Record<string, TrackMark>>
 type Namer = (trackId: string) => string
 
 /** Every mix rule with the tracks it names. */
-function rulesOf(mix: MixSettings): { rule: MixRule; trackIds: string[] }[] {
+function rulesOf(mix: MixRules): { rule: MixRule; trackIds: string[] }[] {
   return [
     ...(mix.opener === null
       ? []
@@ -39,7 +40,7 @@ export interface ExcludedInRule {
  * and an exclusion takes one out; nothing overrides an exclusion (§8.3), so the rule
  * can't hold and the user has to drop one of the two.
  */
-export function excludedInRules(marks: Marks, mix: MixSettings): ExcludedInRule[] {
+export function excludedInRules(marks: Marks, mix: MixRules): ExcludedInRule[] {
   return rulesOf(mix).flatMap(({ rule, trackIds }) =>
     [...new Set(trackIds)]
       .filter((trackId) => marks[trackId] === 'exclude')
@@ -63,12 +64,7 @@ export function describeExcludedInRule({ trackId, rule }: ExcludedInRule, name: 
  * A track that must be in the set but can't be mixed (spec §8.3): what keeps it in, and
  * the way out.
  */
-export function describeBlocker(
-  trackId: string,
-  marks: Marks,
-  mix: MixSettings,
-  name: Namer,
-): string {
+export function describeBlocker(trackId: string, marks: Marks, mix: MixRules, name: Namer): string {
   const noData = 'but has no key or BPM. Fill them in, or'
   if (marks[trackId] === 'mustInclude') {
     return `${name(trackId)} is marked must-include ${noData} remove the mark.`

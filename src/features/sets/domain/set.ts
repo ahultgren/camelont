@@ -54,8 +54,11 @@ export function duplicateSet(set: MixSet, init: { id: string; now: number }): Mi
   }
 }
 
+/** The mix rules of a set: its mix settings without the arc. */
+export type MixRules = Pick<MixSettings, 'opener' | 'closer' | 'follows'>
+
 /** The tracks named in a mix rule. They count as must-include (spec §5.4). */
-export function ruleTrackIds(mix: MixSettings): string[] {
+export function ruleTrackIds(mix: MixRules): string[] {
   const named = [mix.opener, mix.closer, ...mix.follows.flat()]
   return [...new Set(named.filter((id) => id !== null))]
 }

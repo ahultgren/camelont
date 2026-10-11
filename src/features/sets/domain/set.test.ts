@@ -119,7 +119,6 @@ describe('ruleTrackIds', () => {
           ['a', 'c'],
           ['c', 'd'],
         ],
-        arc: 'none',
       }),
     ).toEqual(['a', 'b', 'c', 'd'])
     expect(ruleTrackIds(NO_MIX_SETTINGS)).toEqual([])
