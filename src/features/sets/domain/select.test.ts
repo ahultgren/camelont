@@ -71,7 +71,7 @@ describe('selectTracks: one playlist', () => {
     expect(selection.pool).toBe(3)
   })
 
-  it('leaves out a track without a key or a BPM, without blocking the rest (rule 4)', () => {
+  it('leaves out a track without a key or a BPM, without blocking the rest', () => {
     const trackData = new Map<string, TrackData>([
       ['a', { camelot: '8A', bpm: 100 }],
       ['noBpm', { camelot: '8A', bpm: null }],
@@ -91,7 +91,7 @@ describe('selectTracks: one playlist', () => {
     expect(selection.blockers).toEqual([])
   })
 
-  it('applies the BPM range inclusively, with either end open (rule 5)', () => {
+  it('applies the BPM range inclusively, with either end open', () => {
     const trackData = bpms({ slow: 84.9, low: 85, mid: 100, high: 110, fast: 110.1 })
     const ids = ['slow', 'low', 'mid', 'high', 'fast']
     const both = select({ playlists: [playlist('p', ids, { bpmMin: 85, bpmMax: 110 })], trackData })
@@ -117,7 +117,7 @@ describe('selectTracks: one playlist', () => {
 })
 
 describe('selectTracks: marks and mix rules', () => {
-  it('excludes a marked track, and nothing overrides that (rule 2)', () => {
+  it('excludes a marked track, and nothing overrides that', () => {
     const selection = select({
       playlists: [playlist('p', ['a', 'b'])],
       trackData: known('a', 'b'),
@@ -128,7 +128,7 @@ describe('selectTracks: marks and mix rules', () => {
     expect(selection.inSet).toEqual(['b'])
   })
 
-  it('keeps a must-include track whatever its BPM (rule 3)', () => {
+  it('keeps a must-include track whatever its BPM', () => {
     const selection = select({
       playlists: [playlist('p', ['a', 'b'], { bpmMin: 85, bpmMax: 110 })],
       trackData: bpms({ a: 140, b: 140 }),
@@ -170,8 +170,8 @@ describe('selectTracks: marks and mix rules', () => {
   })
 })
 
-describe('selectTracks: a track is in a set at most once (§8.2)', () => {
-  it('gives a shared track to the first playlist that has it', () => {
+describe('selectTracks: a track in several playlists (§8.2)', () => {
+  it('is in the set once, in the first playlist that lets it in', () => {
     const selection = select({
       playlists: [playlist('first', ['a', 'shared']), playlist('second', ['shared', 'b'])],
       trackData: known('a', 'b', 'shared'),
@@ -183,17 +183,67 @@ describe('selectTracks: a track is in a set at most once (§8.2)', () => {
     expect(selection.statusByTrack.get('shared')).toEqual({ inSet: true, reason: 'in' })
   })
 
-  it('keeps the first playlist as owner even when it leaves the track out', () => {
+  it('is in the set through a later playlist when an earlier one’s range leaves it out', () => {
     const selection = select({
-      playlists: [playlist('first', ['shared'], { bpmMax: 90 }), playlist('second', ['shared'])],
-      trackData: bpms({ shared: 120 }),
+      playlists: [
+        playlist('ranged', ['slow', 'shared'], { bpmMin: 85, bpmMax: 110 }),
+        playlist('open', ['b', 'shared']),
+      ],
+      trackData: bpms({ slow: 100, shared: 120, b: 100 }),
     })
-    expect(statuses(selection, 'first')).toEqual({ shared: 'outsideRange' })
-    expect(statuses(selection, 'second')).toEqual({ shared: 'duplicate of first' })
-    expect(selection.inSet).toEqual([])
+    expect(statuses(selection, 'ranged')).toEqual({ slow: 'in', shared: 'outsideRange' })
+    expect(statuses(selection, 'open')).toEqual({ b: 'in', shared: 'in' })
+    expect(selection.statusByTrack.get('shared')).toEqual({ inSet: true, reason: 'in' })
+    // It sits where the playlist that decides it has it.
+    expect(selection.inSet).toEqual(['slow', 'b', 'shared'])
+    expect(selection.pool).toBe(3)
+    expect(selection.playlists[0]?.counts).toMatchObject({ tracks: 2, inSet: 1 })
+    expect(selection.playlists[0]?.counts.byReason.outsideRange).toBe(1)
   })
 
-  it('does not count a shared track toward the later playlist’s limit', () => {
+  it('shows "already in" in every other playlist that would take it', () => {
+    const selection = select({
+      playlists: [
+        playlist('ranged', ['shared'], { bpmMax: 110 }),
+        playlist('decides', ['shared']),
+        playlist('after', ['shared']),
+        playlist('afterRanged', ['shared'], { bpmMax: 100 }),
+      ],
+      trackData: bpms({ shared: 120 }),
+    })
+    expect(statuses(selection, 'ranged')).toEqual({ shared: 'outsideRange' })
+    expect(statuses(selection, 'decides')).toEqual({ shared: 'in' })
+    expect(statuses(selection, 'after')).toEqual({ shared: 'duplicate of decides' })
+    expect(statuses(selection, 'afterRanged')).toEqual({ shared: 'outsideRange' })
+    expect(selection.inSet).toEqual(['shared'])
+  })
+
+  it('prefers a playlist without a limit to an earlier one with a limit', () => {
+    const pick = vi.fn(firstFew)
+    const selection = select({
+      playlists: [
+        playlist('limited', ['shared', 'a', 'b', 'c'], { limit: 2 }),
+        playlist('whole', ['x', 'shared']),
+      ],
+      trackData: known('shared', 'a', 'b', 'c', 'x'),
+      pick,
+    })
+    expect(statuses(selection, 'limited')).toEqual({
+      shared: 'duplicate of whole',
+      a: 'picked',
+      b: 'picked',
+      c: 'notPicked',
+    })
+    expect(statuses(selection, 'whole')).toEqual({ x: 'in', shared: 'in' })
+    // Not a candidate of the limited playlist, and not one of its two places.
+    const request = pick.mock.calls[0]?.[0]
+    expect(request?.candidates.map((t) => t.trackId)).toEqual(['a', 'b', 'c'])
+    expect(request?.count).toBe(2)
+    expect(request?.inSet.map((t) => t.trackId)).toEqual(['x', 'shared'])
+    expect(selection.inSet).toEqual(['a', 'b', 'x', 'shared'])
+  })
+
+  it('does not count a track an earlier playlist took toward a later limit', () => {
     const pick = vi.fn(firstFew)
     const selection = select({
       playlists: [
@@ -212,19 +262,161 @@ describe('selectTracks: a track is in a set at most once (§8.2)', () => {
     expect(pick.mock.calls[0]?.[0].candidates.map((t) => t.trackId)).toEqual(['b', 'c', 'd'])
   })
 
-  it('applies a mark on a shared track where the track belongs', () => {
+  it('lets the first of two limited playlists decide, and does not pass a loser on', () => {
+    const requests: PickRequest[] = []
+    const lastFew: PickFn = (request) => {
+      requests.push(request)
+      return request.candidates.slice(-request.count).map((t) => t.trackId)
+    }
     const selection = select({
-      playlists: [playlist('first', ['shared']), playlist('second', ['shared', 'b'])],
-      trackData: known('shared', 'b'),
+      playlists: [
+        playlist('one', ['shared', 'a', 'b'], { limit: 1 }),
+        playlist('two', ['shared', 'c', 'd', 'e'], { limit: 2 }),
+      ],
+      trackData: known('shared', 'a', 'b', 'c', 'd', 'e'),
+      pick: lastFew,
+    })
+    expect(statuses(selection, 'one')).toEqual({ shared: 'notPicked', a: 'notPicked', b: 'picked' })
+    expect(statuses(selection, 'two')).toEqual({
+      shared: 'duplicate of one',
+      c: 'notPicked',
+      d: 'picked',
+      e: 'picked',
+    })
+    expect(requests.map((r) => r.candidates.map((t) => t.trackId))).toEqual([
+      ['shared', 'a', 'b'],
+      ['c', 'd', 'e'],
+    ])
+    expect(selection.statusByTrack.get('shared')).toEqual({ inSet: false, reason: 'notPicked' })
+    expect(selection.inSet).toEqual(['b', 'd', 'e'])
+  })
+
+  it('falls back to a limited playlist when the unlimited one’s range leaves the track out', () => {
+    const selection = select({
+      playlists: [
+        playlist('limited', ['shared', 'a'], { limit: 1 }),
+        playlist('ranged', ['shared'], { bpmMax: 90 }),
+      ],
+      trackData: bpms({ shared: 120, a: 120 }),
+    })
+    expect(statuses(selection, 'limited')).toEqual({ shared: 'picked', a: 'notPicked' })
+    expect(statuses(selection, 'ranged')).toEqual({ shared: 'outsideRange' })
+  })
+
+  it('excludes a marked track in every playlist that has it', () => {
+    const selection = select({
+      playlists: [
+        playlist('first', ['shared']),
+        playlist('second', ['shared', 'b'], { limit: 1 }),
+        playlist('third', ['shared'], { bpmMax: 90 }),
+      ],
+      trackData: bpms({ shared: 120, b: 100 }),
       marks: marks({ shared: 'exclude' }),
+      ruleTrackIds: ['shared'],
     })
     expect(statuses(selection, 'first')).toEqual({ shared: 'excluded' })
-    expect(statuses(selection, 'second')).toEqual({ shared: 'duplicate of first', b: 'in' })
+    expect(statuses(selection, 'second')).toEqual({ shared: 'excluded', b: 'in' })
+    expect(statuses(selection, 'third')).toEqual({ shared: 'excluded' })
+    expect(selection.statusByTrack.get('shared')).toEqual({ inSet: false, reason: 'excluded' })
+    expect(selection.inSet).toEqual(['b'])
+    expect(selection.pool).toBe(2)
+    expect(selection.playlists.map((p) => p.counts.byReason.excluded)).toEqual([1, 1, 1])
+  })
+
+  it('takes a must-include track through a playlist without a limit, sparing the limited one', () => {
+    const pick = vi.fn(firstFew)
+    const selection = select({
+      playlists: [
+        playlist('limited', ['must', 'a', 'b'], { limit: 1 }),
+        playlist('whole', ['must'], { bpmMax: 90 }),
+      ],
+      trackData: bpms({ must: 120, a: 100, b: 100 }),
+      marks: marks({ must: 'mustInclude' }),
+      pick,
+    })
+    expect(statuses(selection, 'limited')).toEqual({
+      must: 'duplicate of whole',
+      a: 'picked',
+      b: 'notPicked',
+    })
+    expect(statuses(selection, 'whole')).toEqual({ must: 'mustInclude' })
+    expect(pick.mock.calls[0]?.[0].count).toBe(1)
+    expect(selection.playlists[0]?.limitFilled).toBe(false)
+    expect(selection.playlists[0]?.counts.byReason.mustInclude).toBe(0)
+    expect(selection.inSet).toEqual(['a', 'must'])
+  })
+
+  it('counts a must-include track toward the first limit when every playlist has one', () => {
+    const pick = vi.fn(firstFew)
+    const selection = select({
+      playlists: [
+        playlist('one', ['must', 'a', 'b'], { limit: 1 }),
+        playlist('two', ['must', 'c', 'd'], { limit: 1 }),
+      ],
+      trackData: known('must', 'a', 'b', 'c', 'd'),
+      ruleTrackIds: ['must'],
+      pick,
+    })
+    expect(statuses(selection, 'one')).toEqual({
+      must: 'mustInclude',
+      a: 'notPicked',
+      b: 'notPicked',
+    })
+    expect(statuses(selection, 'two')).toEqual({
+      must: 'duplicate of one',
+      c: 'picked',
+      d: 'notPicked',
+    })
+    expect(selection.playlists.map((p) => p.limitFilled)).toEqual([true, false])
+    expect(pick).toHaveBeenCalledTimes(1)
+    expect(pick.mock.calls[0]?.[0]).toMatchObject({ playlistId: 'two', count: 1 })
+  })
+
+  it('says "needs key/BPM" in every playlist for a track without data', () => {
+    const selection = select({
+      playlists: [
+        playlist('first', ['noData', 'a']),
+        playlist('second', ['noData'], { limit: 1, bpmMax: 90 }),
+      ],
+      trackData: bpms({ noData: null, a: 100 }),
+    })
+    expect(statuses(selection, 'first')).toEqual({ noData: 'needsData', a: 'in' })
+    expect(statuses(selection, 'second')).toEqual({ noData: 'needsData' })
+    expect(selection.statusByTrack.get('noData')).toEqual({ inSet: false, reason: 'needsData' })
+    expect(selection.inSet).toEqual(['a'])
+    expect(selection.pool).toBe(2)
+  })
+
+  it('gives each playlist its own reason when none lets the track in', () => {
+    const selection = select({
+      playlists: [
+        playlist('slowOnly', ['fast'], { bpmMax: 90 }),
+        playlist('midOnly', ['fast'], { bpmMin: 95, bpmMax: 110, limit: 1 }),
+      ],
+      trackData: bpms({ fast: 140 }),
+    })
+    expect(statuses(selection, 'slowOnly')).toEqual({ fast: 'outsideRange' })
+    expect(statuses(selection, 'midOnly')).toEqual({ fast: 'outsideRange' })
+    expect(selection.statusByTrack.get('fast')).toEqual({ inSet: false, reason: 'outsideRange' })
+    expect(selection.inSet).toEqual([])
+    expect(selection.pool).toBe(1)
+  })
+
+  it('reports a must-include track without data as a blocker once, where it is decided', () => {
+    const selection = select({
+      playlists: [playlist('limited', ['must'], { limit: 3 }), playlist('whole', ['must', 'a'])],
+      trackData: bpms({ must: null, a: 100 }),
+      marks: marks({ must: 'mustInclude' }),
+    })
+    expect(statuses(selection, 'limited')).toEqual({ must: 'duplicate of whole' })
+    expect(statuses(selection, 'whole')).toEqual({ must: 'mustInclude', a: 'in' })
+    expect(selection.blockers).toEqual(['must'])
+    expect(selection.inSet).toEqual(['must', 'a'])
   })
 })
 
 describe('selectTracks: limits and picks (§8.4)', () => {
-  it('leaves out the tracks that are not picked (rule 6)', () => {
+  it('leaves out the tracks that are not picked', () => {
     const selection = select({
       playlists: [playlist('p', ['a', 'b', 'c'], { limit: 1 })],
       trackData: known('a', 'b', 'c'),
@@ -316,7 +508,7 @@ describe('selectTracks: limits and picks (§8.4)', () => {
     expect(selection.playlists[0]?.limitFilled).toBe(false)
   })
 
-  it('only offers tracks that passed rules 1–5 as candidates', () => {
+  it('only offers the tracks it decides as candidates', () => {
     const pick = vi.fn(firstFew)
     select({
       playlists: [
