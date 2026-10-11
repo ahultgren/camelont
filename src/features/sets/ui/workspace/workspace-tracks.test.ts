@@ -49,7 +49,7 @@ describe('the workspace: opening a set', () => {
     )
   })
 
-  it('shows a track on one line: title, artist, key in both notations and BPM', async () => {
+  it('shows a track on one line: title, artist, key in both notations, BPM and energy', async () => {
     await openWorkspace(setOf([core()]))
     await settled()
     const pompeii = inRow('WCS', 'Pompeii')
@@ -58,6 +58,7 @@ describe('the workspace: opening a set', () => {
       '11B · A major',
     )
     expect(pompeii.getByRole('button', { name: /^BPM of Pompeii:/ })).toHaveTextContent('127.4')
+    expect(pompeii.getByTestId('energy')).toHaveTextContent('Energy 50 of 100')
     // Every row says in words whether it is in the set.
     expect(row('WCS', 'Pompeii')).toHaveTextContent('in the set')
   })
@@ -266,6 +267,9 @@ describe('the workspace: key and BPM from the row', () => {
     expect(tracksInMix()).toBe(8)
     const key = inRow('Odd ones', 'Lemon Tree').getByRole('button', { name: /^Key of Lemon Tree/ })
     expect(key).toHaveTextContent('unknown key')
+    expect(inRow('Odd ones', 'Lemon Tree').getByTestId('energy')).toHaveTextContent(
+      'Energy unknown',
+    )
     await userEvent.click(key)
 
     const dialog = within(await screen.findByRole('dialog', { name: /Key and BPM: Lemon Tree/ }))

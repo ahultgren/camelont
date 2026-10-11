@@ -31,7 +31,7 @@ Sets are specified in §8 and the workspace in §9.
 |---|---|---|
 | U1 | log in with Spotify and stay logged in across reloads; log out | PKCE with `state`; the token refreshes silently; logout clears all tokens. Sets and overrides stay on the device. |
 | U2 | see my sets and create a new one | The first page after login lists my sets (name, playlists, tracks in the set, last edited, saved to Spotify or not) and offers "New set". A new set gets a name and one or more playlists, chosen from a paginated, searchable list (name, image, track count, owner; followed playlists disabled with the reason). |
-| U3 | see every track's key and BPM, with where each value came from | Each track shows its Camelot code **and** key name ("11B · A major"), and its BPM. A value set by hand carries a mark; an unmarked value came from ReccoBeats. The edit dialog shows each value's full source. Tracks with no data are clearly marked. |
+| U3 | see every track's key and BPM, with where each value came from | Each track shows its Camelot code **and** key name ("11B · A major"), and its BPM. A value set by hand carries a mark; an unmarked value came from ReccoBeats. The edit dialog shows each value's full source. Tracks with no data are clearly marked. Each track also shows its energy as ReccoBeats reports it, out of 100, to be judged by eye: it can't be edited and no mix uses it. |
 | U4 | correct or fill in a track's key/BPM | Edit dialog: Camelot key, BPM, optional note or source. The override persists on this device, applies in every set, and always beats fetched data. Export/import all overrides as JSON. |
 | U5 | mix the set using the Camelot system | Generates mixes where **every** transition is a move in the chart (§5). Runs off the main thread, and the UI stays responsive at 100 tracks. |
 | U6 | set mix rules | Opening track, closing track, "track A must be followed by track B" (repeatable, forms chains). A pair can join tracks from different playlists and is made in two clicks (§9.1). |
@@ -334,8 +334,8 @@ Two columns at laptop width, under a top bar with the set's name and **Save to S
   BPM distribution (W8), the limit, the pick method (shown only when there is a limit),
   and the change notice (shown only when Spotify changed). A playlist's tracks can be
   folded away; any number of playlists can be open. The column scrolls by itself.
-- **Track rows.** One line per track: title and artist, key in both notations, BPM, and
-  one group of toggles of which at most one is on: opener, closer, always include,
+- **Track rows.** One line per track: title and artist, key in both notations, BPM,
+  energy (laptop width only), and one group of toggles of which at most one is on: opener, closer, always include,
   exclude. Left-out rows are dimmed. A short tag gives the reason only when the app
   made the call (outside range, not picked, picked, needs key/BPM, already in
   ‹playlist›); an excluded row needs none, its toggle says it. Locking a pick is turning

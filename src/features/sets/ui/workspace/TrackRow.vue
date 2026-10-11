@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { KeyChip, MoveBadge } from '@/shared/ui'
+import { EnergyMeter, KeyChip, MoveBadge } from '@/shared/ui'
 import { roleOf, type TrackRole } from '../../domain/edits'
 import { statusLabel, type TrackStatus } from '../../domain/select'
 import type { TrackChoices } from '../../domain/types'
@@ -9,8 +9,8 @@ import WsIcon, { type IconName } from './WsIcon.vue'
 
 /**
  * One track of a playlist, on one line (spec §9.1): title and artist, why it is in or
- * out when the app decided, its pairs, key and BPM (the way into the edit dialog), the
- * one group of toggles, and "Followed by…".
+ * out when the app decided, its pairs, key and BPM (the way into the edit dialog), its
+ * energy, the one group of toggles, and "Followed by…".
  */
 const { trackId, playlistId, status, choices } = defineProps<{
   trackId: string
@@ -28,6 +28,7 @@ const title = computed(() => track.value?.title ?? trackId)
 const features = computed(() => ws.features.value.get(trackId))
 const camelot = computed(() => features.value?.camelot ?? null)
 const bpm = computed(() => features.value?.bpm ?? null)
+const energy = computed(() => features.value?.energy?.value ?? null)
 
 const role = computed(() => (ws.set.value ? roleOf(ws.set.value, trackId) : null))
 const leftOut = computed(() => status?.inSet === false)
@@ -100,7 +101,7 @@ function onRowClick(event: MouseEvent) {
 
 <template>
   <li
-    class="track-row grid grid-cols-[10px_minmax(0,1fr)_auto_auto_auto] items-center gap-x-2 gap-y-0.5 border-b border-rule/60 py-[3px] pr-2 pl-1.5 text-[13px] sm:grid-cols-[10px_minmax(0,1fr)_auto_auto_auto_auto_auto]"
+    class="track-row grid grid-cols-[10px_minmax(0,1fr)_auto_auto_auto] items-center gap-x-2 gap-y-0.5 border-b border-rule/60 py-[3px] pr-2 pl-1.5 text-[13px] sm:grid-cols-[10px_minmax(0,1fr)_auto_auto_auto_auto_auto_auto]"
     :class="[
       highlighted ? 'bg-band shadow-[inset_2px_0_0_var(--accent)]' : '',
       armedHere ? 'bg-ok-bg' : '',
@@ -220,6 +221,9 @@ function onRowClick(event: MouseEvent) {
       </span>
       <span class="sr-only">. {{ EDIT }}</span>
     </button>
+
+    <!-- Shown to be judged, not used by the mix. A phone row has no room for it. -->
+    <EnergyMeter :energy="energy" class="fade max-sm:hidden" />
 
     <span role="group" :aria-label="`Role of ${title}`" class="toggles flex">
       <button

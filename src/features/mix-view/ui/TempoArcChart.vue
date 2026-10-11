@@ -2,7 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, ref, useTemplateRef } from 'vue'
 import { MOVE_META, type EvaluatedMix } from '@/features/mixing'
 import { keyName } from '@/shared/music'
-import { KeyChip, keyColor, TONE_COLOR } from '@/shared/ui'
+import { EnergyMeter, KeyChip, keyColor, TONE_COLOR } from '@/shared/ui'
 import { chartWidth, linearX, linearY, niceRange, type EntryInfo } from '../domain/layout'
 
 /**
@@ -279,6 +279,7 @@ const cardStyle = computed(() => {
         <div class="flex flex-wrap items-center gap-1.5">
           <KeyChip :camelot="activePoint.track.camelot" size="sm" />
           <span class="num">· {{ activePoint.track.bpm }} BPM</span>
+          <EnergyMeter :energy="activePoint.track.energy" />
         </div>
         <div v-if="into" class="num text-xs" :style="{ color: TONE_COLOR[into.meta.tone] }">
           {{ into.meta.symbol }} {{ into.meta.label }} from {{ into.from.camelot }} ·

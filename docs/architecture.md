@@ -42,7 +42,7 @@ src/
     music/             Camelot kernel: CamelotKey type, parse/format, fromPitchClass, keyName, keyHue
     api/               fetch wrapper (base URL, auth header injection, 429 Retry-After, zod parse, typed errors), paginate()
     storage/           KeyValueStore port + IndexedDB adapter + in-memory adapter (tests)
-    ui/                base components: AppButton, AppCard, KeyChip, MoveBadge, StatTile, EmptyState, …
+    ui/                base components: AppButton, AppCard, KeyChip, EnergyMeter, MoveBadge, StatTile, EmptyState, …
     lib/               seeded PRNG, string hash, assertNever, small pure helpers
 e2e/                   Playwright specs + fixtures + route mocks
 docs/                  spec, architecture, decisions, domain, research, reference
@@ -286,7 +286,7 @@ workspace (below) composes them.
   are in each card's label and tooltip) and `ArcPicker` (a segmented radio group).
 - `mix-view`: `TempoArcChart` (hand-built SVG; key-coloured dots, a move badge per
   segment, the arc target dashed, each point focusable with a full `aria-label`, and a
-  card on hover/tap/focus), `KeyWheel` and `RunningOrder` (a line per track and a
+  card on hover/tap/focus with the track's key, BPM and energy), `KeyWheel` and `RunningOrder` (a line per track and a
   connector per pair: keys, move, BPM change). Pure geometry lives in
   `mix-view/domain/layout.ts`.
   - **One track, everywhere (W6).** Each of the three takes `highlighted` (a track ID)
@@ -586,7 +586,8 @@ WorkspaceScreen          useSetWorkspace + provideWorkspaceUi; top bar (back, na
   track has no status); the pairs it is in ("after …", "then …"; pointing at one
   highlights the partner, a click shows it); key (`KeyChip`) and BPM as buttons into
   the edit dialog (a pointer, a frame on hover, "Edit key and BPM" in the tooltip and
-  the accessible name), with a pencil only on a value set by hand; one group of four toggles
+  the accessible name), with a pencil only on a value set by hand; the energy
+  (`EnergyMeter`, display only, hidden at phone width); one group of four toggles
   (`setRole`, at most one on); and the link button. Every row carries its status in
   the spec's words (`statusLabel`) for assistive tech; left-out rows are dimmed, their
   controls are not. Rows use `content-visibility: auto`, so a pool of 1,000 costs

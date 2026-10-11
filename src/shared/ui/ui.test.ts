@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/vue'
 import { describe, expect, it } from 'vitest'
+import EnergyMeter from './EnergyMeter.vue'
 import { keyColor } from './key-color'
 import KeyChip from './KeyChip.vue'
 import MoveBadge from './MoveBadge.vue'
@@ -13,6 +14,23 @@ describe('KeyChip', () => {
   it('marks a missing key', () => {
     render(KeyChip, { props: { camelot: null } })
     expect(screen.getByText(/unknown key/)).toBeInTheDocument()
+  })
+})
+
+describe('EnergyMeter', () => {
+  it('shows energy as a number out of 100, and says so', () => {
+    render(EnergyMeter, { props: { energy: 0.929 } })
+    const meter = screen.getByTestId('energy')
+    expect(meter).toHaveTextContent(/^93\s*Energy 93 of 100$/)
+    expect(meter).toHaveAttribute('title', 'Energy 93 of 100')
+    expect(screen.getByText('Energy 93 of 100')).toHaveClass('sr-only')
+  })
+
+  it('says when the energy is unknown', () => {
+    render(EnergyMeter, { props: { energy: null } })
+    const meter = screen.getByTestId('energy')
+    expect(meter).toHaveTextContent(/^–\s*Energy unknown$/)
+    expect(meter).toHaveAttribute('title', 'Energy unknown')
   })
 })
 

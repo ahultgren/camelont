@@ -65,6 +65,8 @@ describe('TempoArcChart', () => {
     expect(card).toHaveTextContent('7. Pompeii')
     expect(card).toHaveTextContent('Artist A, B')
     expect(card).toHaveTextContent('11B · A major')
+    expect(card).toHaveTextContent('127.4 BPM')
+    expect(card).toHaveTextContent('Energy 72 of 100')
     expect(card).toHaveTextContent('− energy − from 12B · E major')
     await fireEvent.blur(pompeii)
     expect(screen.queryByTestId('point-card')).toBeNull()

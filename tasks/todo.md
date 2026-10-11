@@ -371,3 +371,23 @@ Choices made, for the owner:
 - After a 404/405 on replacing, that dialog offers only a new playlist; opening the
   dialog again tries afresh.
 
+
+## Change — show each track's energy (2026-10-11)
+
+The owner wants to spot-check ReccoBeats energy before anything uses it. Display only:
+no scoring, arc or solver change.
+
+- [x] `shared/ui/EnergyMeter`: energy 0..1 as a short bar and a number out of 100;
+  unknown shown as such
+- [x] Track row: energy after BPM (laptop width; a phone row has no room)
+- [x] Chart hover card: energy after BPM
+- [x] Tests, spec U3 and §9.1, architecture, decision 42; `pnpm check` green
+
+### Review (2026-10-11)
+- The value was already fetched and stored (`TrackFeatures.energy`), so only the display
+  is new: `EnergyMeter` on the track row and in the chart's hover card.
+- Hidden on a phone's track rows: the second line is full. The hover card shows it at
+  every width.
+- Screenshots retaken (the phone ones didn't change). `pnpm check` green.
+- Not done: energy in the running order (its titles are already cut short), editing
+  energy, any use of it in scoring.

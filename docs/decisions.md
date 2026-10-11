@@ -336,3 +336,11 @@ replacing any playlist with the same name (a collision with a hand-made playlist
 wipe it); never replacing (the duplicates were the complaint). Partly supersedes 17 and
 assumption A7. **Unverified:** that the Feb 2026 API still has the replace-items and
 change-details routes; if not, replacing is not offered.
+
+### 42. Energy is shown on tracks before anything uses it (2026-10-11)
+**Context:** ReccoBeats energy has been fetched since the start and was written off as
+unreliable on one example (Brother, 78 BPM, 0.929), which the owner says is right.
+Research (research.md §4) suggests energy as a second signal next to BPM. **Decision
+(owner):** show each track's energy, out of 100, on the track row and the chart's hover
+card, so its accuracy can be judged on real sets first. It can't be edited, and scoring,
+the arc and the solver are unchanged. Amends the "unreliable" in decision 9.
