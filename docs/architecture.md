@@ -37,12 +37,13 @@ src/
     track-features/    ReccoBeats provider, overrides repo, merge → TrackFeatures, edit dialog, import/export
     mixing/            chart, profiles, evaluator, constraints, arc, solver (+ worker), diagnostics; constraint + candidate UI
     mix-view/          tempo-arc chart, key wheel, running order, hover card
+    sets/              the set (playlist copies, track choices, marks, mix settings), which tracks are in it
   shared/
     music/             Camelot kernel: CamelotKey type, parse/format, fromPitchClass, keyName, keyHue
     api/               fetch wrapper (base URL, auth header injection, 429 Retry-After, zod parse, typed errors), paginate()
     storage/           KeyValueStore port + IndexedDB adapter + in-memory adapter (tests)
     ui/                base components: AppButton, AppCard, KeyChip, MoveBadge, StatTile, EmptyState, …
-    lib/               seeded PRNG, assertNever, small pure helpers
+    lib/               seeded PRNG, string hash, assertNever, small pure helpers
 e2e/                   Playwright specs + fixtures + route mocks
 docs/                  spec, architecture, decisions, domain, research, reference
 ```
@@ -74,8 +75,9 @@ app → pages → features → shared
 - `shared/*` imports nothing from `features`, `pages` or `app`.
 - A feature imports `shared/*` and **other features only via their `index.ts`**. No
   circular feature dependencies. Allowed edges today: `playlists → auth`,
-  `mixing → track-features`, `mix-view → mixing, track-features`. Adding an edge is a
-  design decision: record it here.
+  `mixing → track-features`, `mix-view → mixing, track-features`. `sets` has none yet
+  (planned: `playlists`, `track-features`, `mixing`, each added with the code that
+  needs it). Adding an edge is a design decision: record it here.
 - Inside a feature: `ui → (model, domain)`, `model → (api, domain)`, `api → domain`;
   `domain` imports only `shared/music` and `shared/lib`. `ui` may use domain types and
   pure helpers (e.g. move metadata), never `api`.
@@ -232,6 +234,72 @@ chart equals the JSON for all 576 pairs.
   characters); `playlists/ui/SavePlaylistButton` creates the private playlist and adds
   the URIs in batches of 100, then links to it. The page is the glue: it maps the
   chosen mix's entry IDs to URIs.
+
+## Sets (`features/sets`)
+
+The set is the unit of work (spec §8). The feature defines its own shapes and imports
+no other feature; pages map playlists, track features and mix results to and from them.
+
+- `domain/types.ts`: `MixSet { id, name, createdAt, editedAt, playlists, marks, mix,
+  chosenMix, lastSave }`. A `SetPlaylist` is the stored copy of a Spotify playlist (its
+  tracks as read, `snapshotId`, `readAt`) plus its `TrackChoices { bpmMin, bpmMax, limit,
+  pick: 'random' | 'bestFit', seed }`. `marks` (`mustInclude | exclude`) are keyed by
+  track ID on the set, since a track is in a set at most once. `MixSettings` holds
+  opener, closer, follow pairs and the arc choice; `ChosenMix` the track order;
+  `LastSave` the link, the time, and the name and order that were written.
+- `domain/set.ts`: `newSet`, `addPlaylist` (a playlist is in a set once), `duplicateSet`
+  (a deep copy that hasn't been saved to Spotify), `ruleTrackIds` (the tracks named in a
+  mix rule) and `saveState` → `never | saved | changed`: a set has changed since its
+  save when saving now would write another name or track order.
+- `domain/select.ts`: `selectTracks(input) → Selection`, the rule table of spec §8.3 and
+  **the only place that decides which tracks are in a set**. Input: the playlists with
+  their choices, the marks, the rule track IDs (they count as must-include), key and BPM
+  per track, and a `PickFn`. Two passes: the first gives each track to the first
+  playlist that has it and settles every status that needs no pick; the second lets the
+  limited playlists that have more candidates than places pick, in the order they were
+  added. Each `PickRequest` carries the playlist's method and seed, how many to pick,
+  the candidates (rules 1–5 passed), and the tracks already in the set: everything
+  settled in the first pass, in any playlist, plus earlier picks. The answer is held to
+  its contract (candidates only, never more than asked). When no more tracks are
+  available than the limit leaves room for, they are all in, no pick is made, and
+  earlier picks see them as in the set. Output: a row per playlist track (`TrackStatus`:
+  `in | mustInclude | picked`, or `excluded | outsideRange | notPicked | needsData`, or
+  `duplicate` with the owning playlist), counts per playlist and reason, the tracks in
+  the set in pool order, and the blockers (must-include tracks without key or BPM).
+  `statusLabel` puts a status in the spec's words.
+- `domain/random-pick.ts`: the random pick method. `randomRank(seed, trackId)` is a
+  hash of both (`shared/lib` `hashString` seeding the PRNG), and `randomPick` takes the
+  lowest ranks. A rank doesn't depend on the other candidates, so the same seed gives the
+  same picks and a track joining or leaving the candidates changes at most one pick.
+  Reshuffle is a new seed.
+- `domain/playlist-diff.ts`: `diffPlaylist(set, playlistId, fresh)` → tracks added and
+  removed (by track ID, each once; a new order is no change) and what an update would
+  drop; `playlistRemoval(set, playlistId)` gives the same answer for removing a whole
+  playlist. `Dropped` lists the tracks that leave the pool, their marks, and the mix
+  rules naming them. A track another playlist of the set still has leaves nothing
+  behind. `updatePlaylist` and `removePlaylist` make the change through the same
+  function, so what is announced is what is dropped. The chosen mix is not touched
+  here: it is checked against the current selection when it is read (track data can
+  change outside the set too).
+- `api/repository.ts`: `createSetsRepo(store)` on the `KeyValueStore` port (IndexedDB
+  database `camelont-sets`), one record per set, keyed by set ID and shaped
+  `{ v: 1, data }`. `all()` returns `{ sets, unreadable }`: a record that fails the zod
+  schema, has another version, or sits under the wrong key is reported as an
+  `UnreadableSet { id, name, problem }` and left in storage untouched, never dropped or
+  half-loaded (spec §6). `put` validates before writing, so nothing is stored that
+  couldn't be read back.
+- `model/`: `installSets(app, options)` wires storage and the injectable clock, ID and
+  seed sources (it is not yet called from `app/plugins.ts`; the workspace step adds
+  that). `useSetsStore` (Pinia) holds the sets as immutable values: `list` (newest edit
+  first), `get`, `unreadable`, `create({ name, playlists })`, `rename`, `duplicate`,
+  `remove`, `addPlaylist`, `reshuffle`, and `update(id, change)` for everything else,
+  where `change` is a pure function such as `removePlaylist`. There is no save step
+  (spec §8.6): `update` stamps the edit time and the set is written about 400 ms later,
+  together with any other waiting changes; create, duplicate and delete are written at
+  once. Writes run one at a time and store the set as it is when the write runs, so
+  quick successive edits can't overtake each other. Waiting changes are flushed when
+  the page is hidden or left. A failed write shows in `saveError` and is tried again
+  with the next change; a failed load shows in `loadError`.
 
 ## Auth (`features/auth`)
 

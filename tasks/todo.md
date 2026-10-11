@@ -185,17 +185,17 @@ Proposed by the agent and written into the spec; the owner approved them as a wh
 ### Step 2 — sets domain and storage (parallel with 1 and 3; new files only)
 New feature `features/sets`. Proposed edges: `sets → playlists, track-features, mixing`
 (record in architecture.md and `FEATURE_EDGES` when built).
-- [ ] `domain/types.ts`: set, playlist copy, track choices, marks, mix settings, chosen
+- [x] `domain/types.ts`: set, playlist copy, track choices, marks, mix settings, chosen
   mix, last save
-- [ ] `domain/select.ts` (test first): the §8.3 rule table as one pure function →
+- [x] `domain/select.ts` (test first): the §8.3 rule table as one pure function →
   per-track status + reason, per-playlist counts; the pick method is injected
-- [ ] `domain/random-pick.ts`: stable seeded rank per track (a change in the pool moves
+- [x] `domain/random-pick.ts`: stable seeded rank per track (a change in the pool moves
   only the picks it must)
-- [ ] `domain/playlist-diff.ts`: stored copy vs Spotify → added, removed, and which
+- [x] `domain/playlist-diff.ts`: stored copy vs Spotify → added, removed, and which
   marks and rules a removal drops
-- [ ] `api/`: sets repository on `KeyValueStore` (`camelont-sets`, `{ v: 1, data }`,
+- [x] `api/`: sets repository on `KeyValueStore` (`camelont-sets`, `{ v: 1, data }`,
   zod; an unreadable set is reported, not dropped)
-- [ ] `model/`: sets store (list, create, rename, duplicate, delete, save-as-you-go)
+- [x] `model/`: sets store (list, create, rename, duplicate, delete, save-as-you-go)
 
 ### Step 3 — best-fit ranking (parallel with 1 and 2; `mixing/domain`, new file)
 - [ ] `mixing/domain/fit.ts` (test first): rank candidate tracks against the tracks
