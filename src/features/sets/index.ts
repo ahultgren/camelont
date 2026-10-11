@@ -65,3 +65,7 @@ export {
   type WorkspaceProblem,
   type WorkspaceView,
 } from './model/useSetWorkspace'
+
+// The home page (step 5a).
+export { poolSize } from './ui/set-summary'
+export { default as SetsList } from './ui/SetsList.vue'

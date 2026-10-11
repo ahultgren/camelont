@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test'
 import { logIn, mockApis, wcsCorrectionsFile } from './support/mocks'
 
-test('logs in with PKCE and lists playlists', async ({ page }) => {
+test('logs in with PKCE and shows the sets list', async ({ page }) => {
   await mockApis(page)
   let authorizeUrl: URL | null = null
   await page.route('https://accounts.spotify.com/authorize**', (route) => {
@@ -29,7 +29,7 @@ test('logs in with PKCE and lists playlists', async ({ page }) => {
 
   await page.goto('./')
   await page.getByRole('button', { name: 'Log in with Spotify' }).click()
-  await expect(page.getByRole('link', { name: /WCS/ })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'No sets yet' })).toBeVisible()
 
   expect(authorizeUrl).not.toBeNull()
   const params = Object.fromEntries((authorizeUrl as URL | null)?.searchParams ?? [])
@@ -41,10 +41,9 @@ test('logs in with PKCE and lists playlists', async ({ page }) => {
   })
   expect((tokenForm as URLSearchParams | null)?.get('code')).toBe('the-code')
   expect((tokenForm as URLSearchParams | null)?.get('code_verifier')).toHaveLength(64)
-  await expect(page.getByText(/Followed, can’t be mixed/)).toBeVisible()
 
   await page.reload()
-  await expect(page.getByRole('link', { name: /WCS/ })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Your sets' })).toBeVisible()
   await page.getByRole('button', { name: 'Log out' }).click()
   await expect(page.getByRole('button', { name: 'Log in with Spotify' })).toBeVisible()
 })
@@ -52,8 +51,8 @@ test('logs in with PKCE and lists playlists', async ({ page }) => {
 test('fixes data, compares mixes, explores one and saves it', async ({ page }) => {
   await logIn(page)
   const log = await mockApis(page)
-  await page.goto('./')
-  await page.getByRole('link', { name: /WCS/ }).click()
+  // The old single-playlist mixer is reachable by its address until the workspace replaces it.
+  await page.goto('./playlists/wcs')
 
   // ReccoBeats doesn't know three tracks: mixing waits for them.
   await expect(page.getByText('3 track(s) have no key or BPM')).toBeVisible()

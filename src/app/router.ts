@@ -17,6 +17,13 @@ export function createAppRouter(base: string): Router {
         meta: { requiresAuth: true },
         props: true,
       },
+      {
+        path: '/sets/:id',
+        name: 'set',
+        component: () => import('@/pages/SetPage.vue'),
+        meta: { requiresAuth: true },
+        props: true,
+      },
       { path: '/:pathMatch(.*)*', name: 'not-found', component: NotFoundPage },
     ],
   })

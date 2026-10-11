@@ -12,6 +12,7 @@ export {
   usePlaylistReader,
   usePlaylists,
   useSaveMix,
+  useSpotifyApi,
   type SaveMixInput,
 } from './model/queries'
 export { default as PlaylistPicker } from './ui/PlaylistPicker.vue'
