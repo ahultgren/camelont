@@ -46,6 +46,8 @@ describe('home page (logged out)', () => {
     expect(screen.getByRole('heading', { level: 1, name: 'Camelont' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Log in with Spotify' })).toBeInTheDocument()
     expect(screen.queryByText('Friday')).toBeNull()
+    // It describes sets built from playlists, not the old one-playlist mixer.
+    expect(screen.getByText(/Build a harmonically mixed set from your playlists/)).toBeVisible()
   })
 })
 
@@ -54,6 +56,13 @@ describe('home page (logged in): the sets list', () => {
     await openHome()
     expect(await screen.findByRole('heading', { name: 'No sets yet' })).toBeVisible()
     expect(screen.getByRole('heading', { level: 1, name: 'Your sets' })).toBeInTheDocument()
+  })
+
+  it('offers export and import of the corrections made by hand (U4)', async () => {
+    await openHome()
+    expect(await screen.findByRole('heading', { name: 'Key and BPM corrections' })).toBeVisible()
+    expect(screen.getByRole('button', { name: 'Export corrections' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Import corrections' })).toBeEnabled()
   })
 
   it('lists the sets, most recently edited first, each linking to its page', async () => {

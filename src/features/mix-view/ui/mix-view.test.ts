@@ -5,7 +5,6 @@ import { parseCamelot } from '@/shared/music'
 import { wcsOrder } from '@/test/wcs'
 import type { EntryInfo } from '../domain/layout'
 import KeyWheel from './KeyWheel.vue'
-import MixExplorer from './MixExplorer.vue'
 import RunningOrder from './RunningOrder.vue'
 import TempoArcChart from './TempoArcChart.vue'
 
@@ -79,16 +78,60 @@ describe('TempoArcChart', () => {
     expect(badges).toHaveLength(19)
     expect(badges.filter((b) => b === '=')).toHaveLength(9)
     expect(container.querySelector('polyline[stroke-dasharray]')).not.toBeNull()
-    expect(screen.getByText('- - arc target')).toBeInTheDocument()
+  })
+
+  it('says which track is pointed at or focused, and when it no longer is', async () => {
+    const view = render(TempoArcChart, { props: { mix, info } })
+    const pompeii = screen.getAllByRole('img')[6]
+    if (!pompeii) throw new Error('no point')
+    await fireEvent.focus(pompeii)
+    await fireEvent.blur(pompeii)
+    await fireEvent.pointerEnter(pompeii)
+    expect(view.emitted('point')).toEqual([[order[6]?.id], [null], [order[6]?.id]])
+    await fireEvent.click(pompeii)
+    expect(view.emitted('select')).toEqual([[order[6]?.id]])
+  })
+
+  it('marks the track pointed at in another view', async () => {
+    const view = render(TempoArcChart, { props: { mix, info, highlighted: null } })
+    expect(screen.queryByTestId('chart-guide')).toBeNull()
+    await view.rerender({ highlighted: order[6]?.id })
+    expect(screen.getByTestId('chart-guide')).toBeInTheDocument()
+    const marked = screen.getAllByRole('img').filter((p) => p.hasAttribute('data-highlighted'))
+    expect(marked.map((p) => p.getAttribute('aria-label'))).toEqual([
+      expect.stringMatching(/^7\. Pompeii/),
+    ])
+    // Pointing from elsewhere opens no card here.
+    expect(screen.queryByTestId('point-card')).toBeNull()
   })
 })
 
 describe('KeyWheel', () => {
   it('summarises the keys used with counts', () => {
     render(KeyWheel, { props: { mix } })
-    const wheel = screen.getByRole('img')
+    const wheel = screen.getByRole('group')
     expect(wheel.getAttribute('aria-label')).toContain('7B F major × 4')
     expect(screen.getByText('7B×4')).toBeInTheDocument()
+    expect(screen.getByRole('img', { name: '7B · F major · 4 tracks' })).toHaveAttribute(
+      'tabindex',
+      '0',
+    )
+  })
+
+  it('marks the key of the track pointed at in another view', async () => {
+    const view = render(KeyWheel, { props: { mix, highlighted: null } })
+    const cell = screen.getByRole('img', { name: /^11B · A major/ })
+    expect(cell).not.toHaveAttribute('data-highlighted')
+    await view.rerender({ highlighted: order[6]?.id }) // Pompeii, 11B
+    expect(cell).toHaveAttribute('data-highlighted')
+  })
+
+  it('points at the first track in a key', async () => {
+    const view = render(KeyWheel, { props: { mix } })
+    const first = order.find((track) => track.camelot === '7B')
+    await fireEvent.focus(screen.getByRole('img', { name: /^7B · F major/ }))
+    await fireEvent.blur(screen.getByRole('img', { name: /^7B · F major/ }))
+    expect(view.emitted('point')).toEqual([[first?.id], [null]])
   })
 })
 
@@ -96,7 +139,45 @@ describe('RunningOrder', () => {
   it('connects each pair with keys, move and BPM change', () => {
     render(RunningOrder, { props: { mix, info } })
     expect(screen.getAllByText(/12B → 11B · energy −/)[0]).toHaveTextContent('+10 BPM')
-    expect(screen.getAllByText('3:20')).toHaveLength(20)
+    expect(screen.getByRole('list', { name: 'Running order' })).toBeInTheDocument()
+    // Every key in both notations.
+    expect(screen.getAllByText('· A major').length).toBeGreaterThan(0)
+  })
+
+  it('has a pin on every connector, and says which pairs are kept together', async () => {
+    const [a, b, c] = order
+    if (!a || !b || !c) throw new Error('no tracks')
+    const view = render(RunningOrder, { props: { mix, info, pinned: [[b.id, c.id]] } })
+    const pins = screen.getAllByRole('button', { name: /^Keep .+ together$/ })
+    expect(pins).toHaveLength(19)
+    const first = screen.getByRole('button', { name: `Keep ${a.label} and ${b.label} together` })
+    const second = screen.getByRole('button', { name: `Keep ${b.label} and ${c.label} together` })
+    expect(first).toHaveAttribute('aria-pressed', 'false')
+    expect(second).toHaveAttribute('aria-pressed', 'true')
+
+    await fireEvent.click(first)
+    await fireEvent.click(second)
+    expect(view.emitted('pin')).toEqual([[a.id, b.id]])
+    expect(view.emitted('unpin')).toEqual([[b.id, c.id]])
+  })
+
+  it('marks the pointed track and reports the one pointed at here', async () => {
+    const [a, b] = order
+    if (!a || !b) throw new Error('no tracks')
+    const view = render(RunningOrder, { props: { mix, info } })
+    const rows = screen
+      .getAllByRole('listitem')
+      .filter((item) => item.getAttribute('tabindex') === '0')
+    expect(rows).toHaveLength(20)
+    await view.rerender({ highlighted: b.id })
+    expect(rows.filter((row) => row.hasAttribute('data-highlighted'))).toEqual([rows[1]])
+
+    if (!rows[0]) throw new Error('no row')
+    await fireEvent.focus(rows[0])
+    await fireEvent.blur(rows[0])
+    await fireEvent.click(rows[0])
+    expect(view.emitted('point')).toEqual([[a.id], [null]])
+    expect(view.emitted('select')).toEqual([[a.id]])
   })
 
   it('shows the saved BPM and its change', () => {
@@ -105,13 +186,5 @@ describe('RunningOrder', () => {
     expect(first).toHaveTextContent('+87 BPM')
     expect(second).toHaveTextContent('−85 BPM')
     expect(screen.queryByText(/listed/)).not.toBeInTheDocument()
-  })
-})
-
-describe('MixExplorer', () => {
-  it('shows the headline stats', () => {
-    render(MixExplorer, { props: { mix, info } })
-    expect(screen.getByText('78–127.4')).toBeInTheDocument()
-    expect(screen.getByText('67')).toBeInTheDocument() // 20 × 3:20
   })
 })

@@ -11,7 +11,7 @@ How the app is built. The *what* is in [`spec.md`](spec.md) and the *why* is in
 | Build | Vite |
 | UI | Vue 3 (`<script setup lang="ts">`, Composition API only) |
 | Language | TypeScript 6.0 (typescript-eslint does not support 7 yet), `strict` + `noUncheckedIndexedAccess` + `exactOptionalPropertyTypes`; `vue-tsc` for type checks |
-| Routing | vue-router, history mode, base `/camelont/`; `404.html` copy of `index.html` for GitHub Pages deep links. Routes: `/` (intro and login, or the sets list), `/callback`, `/sets/:id` (a set; a stand-in page until the workspace is built), `/playlists/:id` (the old single-playlist mixer, reachable by address only until the workspace replaces it) |
+| Routing | vue-router, history mode, base `/camelont/`; `404.html` copy of `index.html` for GitHub Pages deep links. Routes: `/` (intro and login, or the sets list), `/callback`, `/sets/:id` (a set's workspace) |
 | Client state | Pinia (setup stores) |
 | Server state | TanStack Vue Query (Spotify + ReccoBeats reads; caching, retries, dedupe) |
 | Validation | zod, at every boundary: Spotify, ReccoBeats, IndexedDB reads, JSON import |

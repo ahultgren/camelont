@@ -11,13 +11,6 @@ export function createAppRouter(base: string): Router {
       { path: '/', name: 'home', component: HomePage },
       { path: '/callback', name: 'callback', component: CallbackPage },
       {
-        path: '/playlists/:id',
-        name: 'playlist',
-        component: () => import('@/pages/PlaylistPage.vue'),
-        meta: { requiresAuth: true },
-        props: true,
-      },
-      {
         path: '/sets/:id',
         name: 'set',
         component: () => import('@/pages/SetPage.vue'),

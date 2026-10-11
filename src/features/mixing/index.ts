@@ -41,13 +41,10 @@ export { tempoGap } from './domain/tempo'
 export type { MixTrack } from './domain/types'
 export { useFitter } from './model/useFitter'
 export { useMixer, type MixerStatus } from './model/useMixer'
-export { toMixInput, type MixInput, type PlannerEntry } from './model/mix-input'
-export { useMixPlanner, type MixPlanner } from './model/useMixPlanner'
+export { toMixInput, type MixInput, type MixEntry } from './model/mix-input'
 export { default as ArcPicker } from './ui/ArcPicker.vue'
 export { default as CandidateList } from './ui/CandidateList.vue'
-export { default as ConstraintsPanel } from './ui/ConstraintsPanel.vue'
-export { default as MixProblems } from './ui/MixProblems.vue'
-export { mixDescription, mixPlaylistName } from './domain/describe'
+export { mixDescription } from './domain/describe'
 export {
   inlineFitClient,
   inlineSolverClient,

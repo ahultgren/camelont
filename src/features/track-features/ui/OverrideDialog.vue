@@ -4,6 +4,7 @@ import { ALL_CAMELOT_KEYS, formatKey, parseCamelot, type CamelotKey } from '@/sh
 import { AppButton, AppDialog } from '@/shared/ui'
 import { isValidBpm, MAX_BPM, MIN_BPM, type TrackFeatures } from '../domain/features'
 import { useOverridesStore } from '../model/overrides-store'
+import SourceBadge from './SourceBadge.vue'
 
 const props = defineProps<{ trackId: string; label: string; features: TrackFeatures | undefined }>()
 const open = defineModel<boolean>('open', { required: true })
@@ -79,16 +80,29 @@ async function reset() {
         <template v-else>ReccoBeats has no data for this track.</template>
       </p>
 
-      <label class="grid gap-1 text-sm font-medium">
-        Key
-        <select v-model="key" class="num rounded-lg border border-rule bg-surface px-3 py-2">
+      <div class="grid gap-1 text-sm font-medium">
+        <!-- Where the value in use now came from (spec U3). -->
+        <div class="flex items-center gap-2">
+          <label for="override-key">Key</label>
+          <SourceBadge v-if="features?.camelot" :source="features.camelot.source" />
+          <span v-else class="text-xs font-normal text-warn">no value yet</span>
+        </div>
+        <select
+          id="override-key"
+          v-model="key"
+          class="num rounded-lg border border-rule bg-surface px-3 py-2"
+        >
           <option value="">No key</option>
           <option v-for="k in ALL_CAMELOT_KEYS" :key="k" :value="k">{{ formatKey(k) }}</option>
         </select>
-      </label>
+      </div>
 
       <div class="grid gap-1 text-sm font-medium">
-        <label for="override-bpm">BPM</label>
+        <div class="flex items-center gap-2">
+          <label for="override-bpm">BPM</label>
+          <SourceBadge v-if="features?.bpm" :source="features.bpm.source" />
+          <span v-else class="text-xs font-normal text-warn">no value yet</span>
+        </div>
         <div class="flex flex-wrap items-center gap-2">
           <input
             id="override-bpm"

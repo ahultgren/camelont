@@ -1,44 +1,126 @@
 <script setup lang="ts">
+import { computed, nextTick, useTemplateRef, watch } from 'vue'
 import { MOVE_META, type EvaluatedMix } from '@/features/mixing'
 import { KeyChip, TONE_TEXT } from '@/shared/ui'
-import { formatDuration } from '@/shared/lib'
 import { formatBpmDelta, type EntryInfo } from '../domain/layout'
 
-/** Track cards with a connector between each pair: keys, move, BPM change. */
-const { mix, info } = defineProps<{ mix: EvaluatedMix; info: ReadonlyMap<string, EntryInfo> }>()
+/**
+ * The mix as a list: a line per track and a connector between each pair (keys, move,
+ * BPM change). A connector can be pinned: "keep these two together".
+ */
+const {
+  mix,
+  info,
+  highlighted = null,
+  pinned = [],
+} = defineProps<{
+  mix: EvaluatedMix
+  info: ReadonlyMap<string, EntryInfo>
+  /** A track pointed at in another view. */
+  highlighted?: string | null
+  /** Pairs that are kept together, as [from, to] track IDs. */
+  pinned?: readonly (readonly [string, string])[]
+}>()
+const emit = defineEmits<{
+  /** The track under the pointer or with focus; null when it leaves. */
+  point: [trackId: string | null]
+  select: [trackId: string]
+  pin: [from: string, to: string]
+  unpin: [from: string, to: string]
+}>()
+
+const pinnedKeys = computed(() => new Set(pinned.map(([from, to]) => `${from}>${to}`)))
+const isPinned = (from: string, to: string) => pinnedKeys.value.has(`${from}>${to}`)
+
+const steps = computed(() =>
+  mix.order.map((track, i) => {
+    const before = i > 0 ? mix.order[i - 1] : undefined
+    const transition = i > 0 ? mix.transitions[i - 1] : undefined
+    return {
+      track,
+      before,
+      meta: transition ? MOVE_META[transition.move] : null,
+      delta: before ? formatBpmDelta(track.bpm - before.bpm) : '',
+      pinned: before ? isPinned(before.id, track.id) : false,
+    }
+  }),
+)
+
+// A track pointed at elsewhere is brought into view here; pointing here moves nothing.
+const list = useTemplateRef<HTMLElement>('list')
+let pointingHere = false
+watch(
+  () => highlighted,
+  async (trackId) => {
+    if (trackId === null || pointingHere) return
+    await nextTick()
+    const row = list.value?.querySelector<HTMLElement>('[data-highlighted]')
+    // Not every test DOM scrolls.
+    if (typeof row?.scrollIntoView === 'function') row.scrollIntoView({ block: 'nearest' })
+  },
+)
+function point(trackId: string | null) {
+  pointingHere = trackId !== null
+  emit('point', trackId)
+}
 </script>
 
 <template>
-  <ol class="grid list-none">
-    <template v-for="(track, i) in mix.order" :key="track.id">
+  <ol ref="list" class="grid list-none" aria-label="Running order">
+    <template v-for="(step, i) in steps" :key="step.track.id">
       <li
-        v-if="i > 0 && mix.transitions[i - 1]"
-        class="num flex items-center gap-2 py-1 pl-[27px] text-xs before:mr-1.5 before:h-[18px] before:w-px before:bg-rule"
-        :class="TONE_TEXT[MOVE_META[mix.transitions[i - 1]?.move ?? 'clash'].tone]"
+        v-if="step.before && step.meta"
+        class="num flex items-center gap-1.5 py-px pl-[9px] text-[11px] leading-4"
+        :class="TONE_TEXT[step.meta.tone]"
       >
-        {{ mix.order[i - 1]?.camelot }} → {{ track.camelot }} ·
-        {{ MOVE_META[mix.transitions[i - 1]?.move ?? 'clash'].label }}
-        <span class="text-muted">{{
-          formatBpmDelta(track.bpm - (mix.order[i - 1]?.bpm ?? track.bpm))
-        }}</span>
+        <span class="h-4 w-px bg-rule" aria-hidden="true" />
+        <span class="ml-3 min-w-0 truncate">
+          {{ step.before.camelot }} → {{ step.track.camelot }} · {{ step.meta.label }}
+          <span class="text-muted">{{ step.delta }}</span>
+        </span>
+        <button
+          type="button"
+          class="ml-auto flex size-5 shrink-0 items-center justify-center rounded"
+          :class="
+            step.pinned ? 'bg-accent text-surface' : 'text-muted hover:bg-band hover:text-ink'
+          "
+          :aria-pressed="step.pinned"
+          :aria-label="`Keep ${step.before.label} and ${step.track.label} together`"
+          :title="
+            step.pinned ? 'Kept together. Click to let them part.' : 'Keep these two together'
+          "
+          @click="
+            step.pinned
+              ? emit('unpin', step.before.id, step.track.id)
+              : emit('pin', step.before.id, step.track.id)
+          "
+        >
+          <svg viewBox="0 0 16 16" class="size-3" fill="currentColor" aria-hidden="true">
+            <path
+              d="M9.8 1.2 14.8 6.2 13.7 7.3 12.9 7 10.6 9.3 10.9 12.2 9.8 13.3 6.9 10.4 3.1 14.2 1.8 14.2 1.8 12.9 5.6 9.1 2.7 6.2 3.8 5.1 6.7 5.4 9 3.1 8.7 2.3Z"
+            />
+          </svg>
+        </button>
       </li>
       <li
-        class="grid grid-cols-[24px_minmax(0,1fr)_auto] items-center gap-x-3.5 gap-y-1 rounded-lg border border-rule bg-surface px-3.5 py-2.5 sm:grid-cols-[28px_minmax(0,1fr)_auto_auto]"
+        class="grid cursor-default grid-cols-[20px_minmax(0,1fr)_auto_auto] items-center gap-x-2 rounded-md px-1 py-[3px] text-[13px] outline-none focus-visible:ring-2 focus-visible:ring-accent"
+        :class="step.track.id === highlighted ? 'bg-band' : ''"
+        :data-highlighted="step.track.id === highlighted ? '' : undefined"
+        tabindex="0"
+        @pointerenter="point(step.track.id)"
+        @pointerleave="point(null)"
+        @focus="point(step.track.id)"
+        @blur="point(null)"
+        @click="emit('select', step.track.id)"
+        @keydown.enter="emit('select', step.track.id)"
       >
-        <span class="num text-[13px] text-muted">{{ i + 1 }}</span>
-        <div class="min-w-0">
-          <div class="truncate font-semibold">{{ track.label }}</div>
-          <div class="truncate text-[13px] text-muted">
-            {{ info.get(track.id)?.artists.join(', ') }}
-            <template v-if="info.get(track.id)">
-              · <span class="num">{{ formatDuration(info.get(track.id)?.durationMs ?? 0) }}</span>
-            </template>
-          </div>
-        </div>
-        <KeyChip :camelot="track.camelot" size="sm" />
-        <span class="num col-start-2 text-sm sm:col-start-auto sm:min-w-[62px] sm:text-right">
-          {{ track.bpm }} <small class="text-[11px] text-muted">BPM</small>
+        <span class="num text-right text-[11px] text-muted">{{ i + 1 }}</span>
+        <span class="min-w-0 truncate">
+          <span class="font-medium">{{ step.track.label }}</span>
+          <span class="text-muted"> {{ info.get(step.track.id)?.artists.join(', ') }}</span>
         </span>
+        <KeyChip :camelot="step.track.camelot" size="sm" />
+        <span class="num min-w-[38px] text-right text-xs">{{ step.track.bpm }}</span>
       </li>
     </template>
   </ol>
