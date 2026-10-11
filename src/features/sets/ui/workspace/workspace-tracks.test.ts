@@ -193,8 +193,9 @@ describe('the workspace: why a track is left out', () => {
     )
     await settled()
     const odd = playlist('Odd ones')
-    // The pick method shows only when there is a limit.
+    // The pick method shows only when there is a limit; its place is kept either way.
     expect(odd.queryByRole('radiogroup', { name: 'How Odd ones picks' })).toBeNull()
+    expect(odd.getByTestId('pick-slot')).toBeEmptyDOMElement()
     await userEvent.type(odd.getByRole('textbox', { name: 'Limit of Odd ones' }), '2{Enter}')
     const method = within(odd.getByRole('radiogroup', { name: 'How Odd ones picks' }))
     expect(method.getByRole('radio', { name: 'Random' })).toBeChecked()
@@ -238,6 +239,7 @@ describe('the workspace: why a track is left out', () => {
     await userEvent.clear(odd.getByRole('textbox', { name: 'Limit of Odd ones' }))
     await userEvent.tab()
     expect(odd.queryByRole('radiogroup', { name: 'How Odd ones picks' })).toBeNull()
+    expect(odd.getByTestId('pick-slot')).toBeEmptyDOMElement()
   })
 
   it('says when the must-include tracks alone fill the limit', async () => {
@@ -287,6 +289,23 @@ describe('the workspace: key and BPM from the row', () => {
     expect(change).toHaveTextContent('8 → 9 tracks')
     expect(change).toHaveTextContent('+ Lemon Tree')
     expect(row('Odd ones', 'Lemon Tree')).toHaveTextContent('joined the set in the last change')
+  })
+
+  it('says on the key and the BPM that they open the editor', async () => {
+    await openWorkspace(setOf([core(), copyOf('odd', 'Odd ones', ['Lemon Tree'])]), {
+      unknown: ['Lemon Tree'],
+    })
+    await settled()
+    const key = inRow('WCS', 'Pompeii').getByRole('button', { name: /^Key of Pompeii/ })
+    const bpm = inRow('WCS', 'Pompeii').getByRole('button', { name: /^BPM of Pompeii/ })
+    expect(key).toHaveAccessibleName('Key of Pompeii: 11B · A major . Edit key and BPM')
+    expect(bpm).toHaveAccessibleName('BPM of Pompeii: 127.4 . Edit key and BPM')
+    expect(key).toHaveAttribute('title', 'Edit key and BPM')
+    expect(bpm).toHaveAttribute('title', 'Edit key and BPM')
+    // A missing value is a way in too.
+    expect(
+      inRow('Odd ones', 'Lemon Tree').getByRole('button', { name: /^BPM of Lemon Tree/ }),
+    ).toHaveAccessibleName(/\? \. Edit key and BPM$/)
   })
 
   it('opens the same dialog from the BPM, with where each value came from', async () => {

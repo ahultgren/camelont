@@ -71,6 +71,11 @@ export interface ChosenMix {
 
 /** The last save to Spotify, with what was written so later changes can be told. */
 export interface LastSave {
+  /**
+   * The Spotify playlist the save wrote: the only one a later save may replace. Null
+   * for a save recorded before IDs were, when its link doesn't give one.
+   */
+  playlistId: string | null
   url: string
   savedAt: number
   name: string

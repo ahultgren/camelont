@@ -1,9 +1,7 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/vue'
 import userEvent from '@testing-library/user-event'
-import { http, HttpResponse } from 'msw'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { inlineSolverClient, type SolverClient } from '@/features/mixing'
-import { SPOTIFY } from '@/test/spotify-mocks'
 import { wcsId } from '@/test/wcs'
 import {
   copyOf,
@@ -351,7 +349,7 @@ describe('one track, everywhere (W6)', () => {
   })
 })
 
-describe('the top bar: name and Save to Spotify', () => {
+describe('the top bar: the set’s name', () => {
   it('renames the set in place; a blank name is not taken', async () => {
     const { stored } = await openWorkspace(core())
     await settled()
@@ -371,98 +369,6 @@ describe('the top bar: name and Save to Spotify', () => {
     // Esc gives up an edit.
     await userEvent.type(name, ' night{Escape}')
     expect(name).toHaveValue('Saturday social')
-  })
-
-  it('saves the shown mix as a new private playlist and shows the link and the time', async () => {
-    const created: unknown[] = []
-    const added: string[][] = []
-    const sourceWrites: string[] = []
-    const handlers = [
-      http.post(`${SPOTIFY}/me/playlists`, async ({ request }) => {
-        created.push(await request.json())
-        const n = created.length
-        return HttpResponse.json(
-          {
-            id: `new-${n}`,
-            external_urls: { spotify: `https://open.spotify.com/playlist/new-${n}` },
-          },
-          { status: 201 },
-        )
-      }),
-      http.post(`${SPOTIFY}/playlists/:id/items`, async ({ request, params }) => {
-        if (!String(params.id).startsWith('new-')) sourceWrites.push(String(params.id))
-        added.push(((await request.json()) as { uris: string[] }).uris)
-        return HttpResponse.json({ snapshot_id: 's' }, { status: 201 })
-      }),
-    ]
-    const { stored } = await openWorkspace(core(), { handlers })
-    await settled()
-    expect(screen.queryByTestId('save-status')).toBeNull()
-    const order = orderTitles()
-
-    await userEvent.click(screen.getByRole('button', { name: 'Save to Spotify' }))
-    const status = await screen.findByTestId('save-status')
-    expect(status).toHaveTextContent(/^Saved/)
-    expect(within(status).getByRole('link', { name: 'Open in Spotify' })).toHaveAttribute(
-      'href',
-      'https://open.spotify.com/playlist/new-1',
-    )
-    expect(status.querySelector('time')).toHaveAttribute('datetime')
-
-    // A new private playlist named after the set, in mix order; no source was written to.
-    expect(created).toEqual([expect.objectContaining({ name: 'Friday social', public: false })])
-    expect((created[0] as { description: string }).description).toMatch(
-      /^Harmonic mix of “Friday social” made with Camelont: /,
-    )
-    expect(added).toHaveLength(1)
-    expect(added[0]).toEqual(order.map((title) => `spotify:track:${wcsId(title)}`))
-    expect(sourceWrites).toEqual([])
-    await waitFor(async () => {
-      expect((await stored())?.lastSave).toMatchObject({
-        url: 'https://open.spotify.com/playlist/new-1',
-        name: 'Friday social',
-      })
-    })
-
-    // A change to the set shows as "changed since"; the link stays.
-    await userEvent.click(inRow('WCS', 'Try').getByRole('button', { name: 'Exclude' }))
-    await settled()
-    await waitFor(() => {
-      expect(screen.getByTestId('save-status')).toHaveTextContent(/^Changed since the save of/)
-    })
-    expect(screen.getByRole('link', { name: 'Open in Spotify' })).toHaveAttribute(
-      'href',
-      'https://open.spotify.com/playlist/new-1',
-    )
-
-    // Saving again creates another playlist; nothing is updated in place.
-    await userEvent.click(screen.getByRole('button', { name: 'Save to Spotify' }))
-    await waitFor(() => {
-      expect(screen.getByRole('link', { name: 'Open in Spotify' })).toHaveAttribute(
-        'href',
-        'https://open.spotify.com/playlist/new-2',
-      )
-    })
-    expect(screen.getByTestId('save-status')).toHaveTextContent(/^Saved/)
-    expect(created).toHaveLength(2)
-    expect(added[1]).toHaveLength(7)
-    expect(sourceWrites).toEqual([])
-  })
-
-  it('says so when saving fails, and records no save', async () => {
-    const handlers = [
-      http.post(`${SPOTIFY}/me/playlists`, () =>
-        HttpResponse.json({ error: { status: 500, message: 'Server error' } }, { status: 500 }),
-      ),
-    ]
-    const { stored } = await openWorkspace(core(), { handlers })
-    await settled()
-    await userEvent.click(screen.getByRole('button', { name: 'Save to Spotify' }))
-    expect(await screen.findByRole('alert')).toHaveTextContent(
-      /Saving failed: .+ Nothing in Spotify changed\./,
-    )
-    expect(screen.queryByTestId('save-status')).toBeNull()
-    expect((await stored())?.lastSave).toBeNull()
   })
 })
 

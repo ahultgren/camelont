@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { playlistIdFromUrl } from '../domain/save'
 import type { MixSet } from '../domain/types'
 
 /** Stored records carry a schema version; another version is reported as unreadable. */
@@ -54,7 +55,19 @@ export const MixSetSchema = z.object({
   mix: MixSettingsSchema,
   chosenMix: z.object({ order: z.array(TrackId) }).nullable(),
   lastSave: z
-    .object({ url: z.string(), savedAt: z.number(), name: z.string(), order: z.array(TrackId) })
+    .object({
+      // Added with the save dialog. A set saved before has only the link, which names
+      // the playlist; without an ID the playlist is never offered for replacing.
+      playlistId: z.string().min(1).nullable().optional(),
+      url: z.string(),
+      savedAt: z.number(),
+      name: z.string(),
+      order: z.array(TrackId),
+    })
+    .transform((save) => ({
+      ...save,
+      playlistId: save.playlistId ?? playlistIdFromUrl(save.url),
+    }))
     .nullable(),
 }) satisfies z.ZodType<MixSet>
 

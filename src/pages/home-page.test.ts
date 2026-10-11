@@ -121,6 +121,7 @@ describe('home page (logged in): the sets list', () => {
     const saved: Partial<MixSet> = {
       chosenMix: { order },
       lastSave: {
+        playlistId: 'mix1',
         url: 'https://open.spotify.com/playlist/mix1',
         savedAt: DAY,
         name: 'Saved',

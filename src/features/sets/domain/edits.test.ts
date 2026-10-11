@@ -11,6 +11,7 @@ import {
   withOpener,
   withoutFollow,
   withPickMethod,
+  withIncompleteSave,
   withRole,
   withSave,
 } from './edits'
@@ -145,14 +146,28 @@ describe('chosen mix', () => {
 
   it('records a save, with the saved mix as the chosen one', () => {
     const order = ['t2', 't1']
-    const saved = withSave(base, { url: 'https://x/y', savedAt: 9, name: base.name, order })
-    expect(saved.lastSave).toEqual({ url: 'https://x/y', savedAt: 9, name: base.name, order })
+    const save = { playlistId: 'p1', url: 'https://x/y', savedAt: 9, name: 'Friday mix', order }
+    const saved = withSave(base, save)
+    expect(saved.lastSave).toEqual(save)
     expect(saved.chosenMix).toEqual({ order })
     expect(saveState(saved)).toBe('saved')
     // The stored order is the set's own copy.
     order.push('t3')
     expect(saved.lastSave?.order).toEqual(['t2', 't1'])
     expect(saveState(withChosenMix(saved, ['t1', 't2']))).toBe('changed')
+  })
+
+  it('remembers the playlist of a save that fell short, without calling any mix saved', () => {
+    const chosen = withChosenMix(base, ['t1', 't2'])
+    const short = withIncompleteSave(chosen, {
+      playlistId: 'p1',
+      url: 'https://x/y',
+      savedAt: 9,
+      name: 'Friday mix',
+    })
+    expect(short.lastSave).toMatchObject({ playlistId: 'p1', order: [] })
+    expect(short.chosenMix).toBe(chosen.chosenMix)
+    expect(saveState(short)).toBe('changed')
   })
 })
 

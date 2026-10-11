@@ -57,6 +57,12 @@ export const CreatedPlaylistDto = z.object({
 
 export const SnapshotDto = z.object({ snapshot_id: z.string() })
 
+/**
+ * What Spotify answers to a write we need nothing from: an empty body, or an object
+ * (a new `snapshot_id`). Anything else is not the answer of the route we meant.
+ */
+export const WriteAckDto = z.looseObject({}).optional()
+
 export type PlaylistDto = z.output<typeof PlaylistDto>
 export type PlaylistItemDto = z.output<typeof PlaylistItemDto>
 export type TrackDto = z.output<typeof TrackDto>

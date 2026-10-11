@@ -62,6 +62,9 @@ const changed = computed(() =>
   ui.joined.value.has(trackId) ? 'joined' : ui.left.value.has(trackId) ? 'left' : null,
 )
 
+/** What a click on the key or the BPM does: said in their tooltip and to assistive tech. */
+const EDIT = 'Edit key and BPM'
+
 const ROLES: { role: TrackRole; icon: IconName; label: string }[] = [
   { role: 'opener', icon: 'opener', label: 'Opener' },
   { role: 'closer', icon: 'closer', label: 'Closer' },
@@ -187,9 +190,7 @@ function onRowClick(event: MouseEvent) {
     <button
       type="button"
       class="fade value-button col-start-2 w-[132px] justify-self-start sm:col-start-auto"
-      :title="
-        camelot?.source === 'manual' ? 'Key set by hand. Click to edit' : 'Click to edit the key'
-      "
+      :title="`${camelot?.source === 'manual' ? 'Key set by hand. ' : ''}${EDIT}`"
       @click="ui.edit(trackId)"
     >
       <span class="sr-only">Key of {{ title }}: </span>
@@ -197,13 +198,14 @@ function onRowClick(event: MouseEvent) {
       <span v-if="camelot?.source === 'manual'" class="hand" data-testid="by-hand">
         <WsIcon name="pencil" :size="10" /><span class="sr-only">set by hand</span>
       </span>
+      <span class="sr-only">. {{ EDIT }}</span>
     </button>
 
     <button
       type="button"
       class="fade value-button num w-[64px] justify-end"
       :class="bpm ? '' : 'text-warn'"
-      :title="bpm?.source === 'manual' ? 'BPM set by hand. Click to edit' : 'Click to edit the BPM'"
+      :title="`${bpm?.source === 'manual' ? 'BPM set by hand. ' : ''}${EDIT}`"
       @click="ui.edit(trackId)"
     >
       <span class="sr-only">BPM of {{ title }}: </span>
@@ -216,6 +218,7 @@ function onRowClick(event: MouseEvent) {
           >
         </template>
       </span>
+      <span class="sr-only">. {{ EDIT }}</span>
     </button>
 
     <span role="group" :aria-label="`Role of ${title}`" class="toggles flex">
@@ -292,8 +295,15 @@ function onRowClick(event: MouseEvent) {
 .track-row[data-left-out] .fade {
   opacity: 0.5;
 }
+/* Key and BPM are the way into the edit dialog, and have to look it: a pointer, and a
+   frame on hover like the row's other controls. The frame takes no room, so the row
+   keeps its height. */
 .value-button {
-  @apply flex items-center gap-1 rounded px-0.5 hover:bg-band;
+  @apply flex cursor-pointer items-center gap-1 rounded border border-transparent px-0.5 hover:border-accent hover:bg-band;
+}
+/* Rows clip what they paint (content-visibility), so focus rings stay close. */
+.track-row button:focus-visible {
+  outline-offset: 0;
 }
 .hand {
   @apply inline-flex text-ok;

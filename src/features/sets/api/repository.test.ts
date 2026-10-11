@@ -29,6 +29,7 @@ const fullSet = (id: string, name = 'Friday social'): MixSet => ({
   mix: { opener: 't1', closer: null, follows: [['t1', 't2']], arc: 'twoWaves' },
   chosenMix: { order: ['t1', 't2'] },
   lastSave: {
+    playlistId: 'abc',
     url: 'https://open.spotify.com/playlist/abc',
     savedAt: 150,
     name: 'Friday social',
@@ -55,6 +56,32 @@ describe('sets repository', () => {
     expect(unreadable).toEqual([])
     expect(sets.find((s) => s.id === 's1')).toEqual(set)
     expect(sets.find((s) => s.id === 's2')).toEqual({ ...limited, id: 's2' })
+  })
+
+  it('reads a save recorded before playlist IDs were, taking the ID from its link', async () => {
+    const before = fullSet('old')
+    // As the first version wrote it: link, time, name and order, no ID.
+    const oldSave = {
+      url: 'https://open.spotify.com/playlist/abc',
+      savedAt: 150,
+      name: 'Friday social',
+      order: ['t1', 't2'],
+    }
+    const linkless = { ...oldSave, url: 'https://example.com/somewhere-else' }
+    const repo = createSetsRepo(
+      createMemoryStore({
+        old: stored({ ...before, lastSave: oldSave }),
+        odd: stored({ ...before, id: 'odd', lastSave: linkless }),
+      }),
+    )
+    const { sets, unreadable } = await repo.all()
+    expect(unreadable).toEqual([])
+    expect(sets.find((set) => set.id === 'old')?.lastSave).toEqual(before.lastSave)
+    // No ID to be had: the set still reads, and its playlist is simply not known.
+    expect(sets.find((set) => set.id === 'odd')?.lastSave).toEqual({
+      ...linkless,
+      playlistId: null,
+    })
   })
 
   it('stores records as { v: 1, data } under the set’s ID', async () => {

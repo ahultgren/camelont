@@ -65,6 +65,43 @@ test('problems in place of the mix', async ({ page }) => {
   await page.screenshot({ path: `${DIR}/problems.png` })
 })
 
+test('Save to Spotify: the first save, and saving again', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 720 })
+  await prepare(page)
+  const dialog = page.getByRole('dialog', { name: 'Save to Spotify' })
+  await page.getByRole('button', { name: 'Save to Spotify' }).click()
+  await dialog.getByRole('textbox', { name: 'Playlist name' }).fill('wcs')
+  await expect(dialog.getByText(/You already have a playlist called/)).toBeVisible()
+  await page.screenshot({ path: `${DIR}/save-first.png` })
+  await dialog.getByRole('textbox', { name: 'Playlist name' }).fill('Friday mix')
+  await dialog.getByRole('button', { name: 'Save as new playlist' }).click()
+  await expect(dialog).toBeHidden()
+
+  await page
+    .getByRole('radiogroup', { name: 'Alternative mixes' })
+    .getByRole('radio')
+    .nth(1)
+    .click()
+  await page.getByRole('button', { name: 'Save to Spotify' }).click()
+  await expect(dialog.getByRole('radio', { name: /^Replace/ })).toBeChecked()
+  await page.screenshot({ path: `${DIR}/save-again.png` })
+})
+
+test('a playlist header with a limit and its pick method', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 720 })
+  await prepare(page)
+  const wcs = playlist(page, 'WCS')
+  await wcs.getByRole('textbox', { name: 'Limit of WCS' }).fill('12')
+  await wcs.getByRole('textbox', { name: 'Limit of WCS' }).press('Enter')
+  await expect(wcs.getByRole('radiogroup', { name: 'How WCS picks' })).toBeVisible()
+  await wcs.getByRole('radio', { name: 'Best fit' }).click()
+  await wcs.getByRole('radio', { name: 'Random' }).click()
+  await wcs.getByRole('radio', { name: 'Best fit' }).click()
+  await mixSettled(page)
+  await page.mouse.move(900, 500)
+  await page.screenshot({ path: `${DIR}/header-with-limit.png` })
+})
+
 test('phone', async ({ page }) => {
   // Prepared at laptop width, where every tool is on screen at once.
   await page.setViewportSize({ width: 1280, height: 720 })

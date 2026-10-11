@@ -102,6 +102,16 @@ export const withSave = (set: MixSet, save: LastSave): MixSet => ({
   lastSave: { ...save, order: [...save.order] },
 })
 
+/**
+ * A save that created or reached its playlist but didn't get every track into it. The
+ * playlist is remembered, so the next save can replace it, but no mix counts as saved:
+ * the set reads as changed since.
+ */
+export const withIncompleteSave = (set: MixSet, save: Omit<LastSave, 'order'>): MixSet => ({
+  ...set,
+  lastSave: { ...save, order: [] },
+})
+
 /** The toggles on a track row, of which at most one is on (spec §9.1). */
 export type TrackRole = 'opener' | 'closer' | TrackMark
 

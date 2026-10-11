@@ -80,6 +80,7 @@ describe('duplicateSet', () => {
     mix: { opener: 't1', closer: null, follows: [['t1', 't2']], arc: 'twoWaves' },
     chosenMix: { order: ['t1', 't2'] },
     lastSave: {
+      playlistId: 'x',
       url: 'https://open.spotify.com/playlist/x',
       savedAt: 5,
       name: 'Friday social',
@@ -132,6 +133,7 @@ describe('saveState', () => {
     ...base,
     chosenMix: { order: ['a', 'b', 'c'] },
     lastSave: {
+      playlistId: 'x',
       url: 'https://open.spotify.com/playlist/x',
       savedAt: 5,
       name: 'Friday social',
@@ -143,16 +145,27 @@ describe('saveState', () => {
     expect(saveState(base)).toBe('never')
   })
 
-  it('is "saved" while the set would be written as it was', () => {
+  it('is "saved" while the mix would be written as it was', () => {
     expect(saveState(saved)).toBe('saved')
     expect(saveState({ ...saved, editedAt: 99, marks: { z: 'exclude' } })).toBe('saved')
   })
 
-  it('is "changed" when the mix or the name differs from what was written', () => {
+  it('is "changed" when the mix differs from what was written', () => {
     expect(saveState({ ...saved, chosenMix: { order: ['a', 'c', 'b'] } })).toBe('changed')
     expect(saveState({ ...saved, chosenMix: { order: ['a', 'b'] } })).toBe('changed')
     expect(saveState({ ...saved, chosenMix: null })).toBe('changed')
-    expect(saveState({ ...saved, name: 'Saturday social' })).toBe('changed')
+  })
+
+  it('takes no notice of names: the playlist’s name is chosen when saving', () => {
+    expect(saveState({ ...saved, name: 'Saturday social' })).toBe('saved')
+    const renamed = { ...saved.lastSave, name: 'Friday mix v2' } as MixSet['lastSave']
+    expect(saveState({ ...saved, lastSave: renamed })).toBe('saved')
+  })
+
+  it('is "changed" after a save that didn’t write the whole mix', () => {
+    const incomplete = { ...saved.lastSave, order: [] } as MixSet['lastSave']
+    expect(saveState({ ...saved, lastSave: incomplete })).toBe('changed')
+    expect(saveState({ ...saved, lastSave: incomplete, chosenMix: null })).toBe('changed')
   })
 })
 

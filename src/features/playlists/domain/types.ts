@@ -4,6 +4,8 @@ export interface PlaylistSummary {
   imageUrl: string | null
   ownerName: string
   trackCount: number | null
+  /** The logged-in user owns it (a collaborative playlist of someone else's is not). */
+  owned: boolean
   /** Owned or collaborative: Spotify returns items only for these. */
   canMix: boolean
   url: string | null
@@ -47,6 +49,45 @@ export type PlaylistReading =
       snapshotId: string | null
     } & PlaylistContents)
   | { kind: 'unreadable'; reason: 'gone' | 'notYours' }
+
+/** Whose a playlist is now, asked before it is written to. */
+export type PlaylistAccess =
+  | { kind: 'mine'; name: string; url: string | null }
+  /** It exists, but the logged-in user doesn't own it. */
+  | { kind: 'notYours' }
+  /** Spotify no longer has it, or won't show it. */
+  | { kind: 'gone' }
+
+/** What a save writes: the playlist's name and description, and its tracks in order. */
+export interface SaveRequest {
+  name: string
+  description: string
+  uris: readonly string[]
+}
+
+/**
+ * Why a write to Spotify didn't go through. `reason` is what Spotify (or the network)
+ * said.
+ * - `unavailable`: Spotify doesn't offer the route (404 or 405); nothing was written.
+ * - `forbidden`: Spotify refused (403), e.g. the playlist is public now and the app may
+ *   only change private ones; nothing was written.
+ * - `failed`: anything else before the first write; nothing was written.
+ * - `incomplete`: the playlist was written to, but not all of its tracks are in.
+ */
+export interface WriteFailure {
+  ok: false
+  kind: 'unavailable' | 'forbidden' | 'failed' | 'incomplete'
+  reason: string
+}
+
+export type CreateOutcome =
+  | { ok: true; id: string; url: string }
+  /** `created`: the playlist exists in Spotify although the save fell short. */
+  | (WriteFailure & { created: { id: string; url: string } | null })
+
+export type ReplaceOutcome =
+  /** `detailsFailed`: the tracks are in, but the name and description weren't taken. */
+  { ok: true; detailsFailed: string | null } | WriteFailure
 
 /** Why a playlist can't be mixed (followed, not owned). */
 export const FOLLOWED_REASON =

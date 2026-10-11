@@ -1,6 +1,7 @@
 import { ApiError, createHttpClient, paginate, type TokenSource } from '@/shared/api'
 import {
   entryIds,
+  type PlaylistAccess,
   type PlaylistContents,
   type PlaylistEntry,
   type PlaylistReading,
@@ -14,6 +15,7 @@ import {
   PlaylistPageDto,
   isTrack,
   SnapshotDto,
+  WriteAckDto,
   type PlaylistItemDto,
 } from './schemas'
 
@@ -30,9 +32,20 @@ export interface SpotifyApi {
    * Spotify can't be reached.
    */
   readPlaylist(playlistId: string, knownSnapshotId: string | null): Promise<PlaylistReading>
+  /** Whose the playlist is now. Reads only; throws when Spotify can't be reached. */
+  playlistAccess(playlistId: string): Promise<PlaylistAccess>
   /** Always creates a new private playlist (decision #17). */
   createPrivatePlaylist(name: string, description: string): Promise<{ id: string; url: string }>
+  /** Appends, in batches of 100. */
   addItems(playlistId: string, uris: readonly string[]): Promise<void>
+  /**
+   * Replaces a playlist's tracks with these, at most 100 (`PUT …/items`); the rest are
+   * added with `addItems`. Only ever called for a playlist a set's own save created
+   * (spec §8.5). Unverified against the Feb 2026 API.
+   */
+  setItems(playlistId: string, uris: readonly string[]): Promise<void>
+  /** Changes a playlist's name and description (`PUT /playlists/{id}`). Unverified too. */
+  updateDetails(playlistId: string, details: { name: string; description: string }): Promise<void>
 }
 
 export function toSummary(dto: PlaylistDto, myId: string): PlaylistSummary {
@@ -42,6 +55,7 @@ export function toSummary(dto: PlaylistDto, myId: string): PlaylistSummary {
     imageUrl: dto.images?.[0]?.url ?? null,
     ownerName: dto.owner.display_name ?? dto.owner.id,
     trackCount: dto.items?.total ?? dto.tracks?.total ?? null,
+    owned: dto.owner.id === myId,
     canMix: dto.owner.id === myId || dto.collaborative,
     url: dto.external_urls?.spotify ?? null,
   }
@@ -146,12 +160,40 @@ export function createSpotifyApi(auth: TokenSource, fetchImpl?: typeof fetch): S
       }
     },
 
+    async playlistAccess(playlistId) {
+      let dto: PlaylistDto
+      try {
+        dto = await http.request(`/playlists/${encodeURIComponent(playlistId)}`, PlaylistDto)
+      } catch (error) {
+        if (isGone(error)) return { kind: 'gone' }
+        throw error
+      }
+      const summary = toSummary(dto, (await whoAmI()).id)
+      return summary.owned
+        ? { kind: 'mine', name: summary.name, url: summary.url }
+        : { kind: 'notYours' }
+    },
+
     async createPrivatePlaylist(name, description) {
       const created = await http.request('/me/playlists', CreatedPlaylistDto, {
         method: 'POST',
         body: { name, description, public: false },
       })
       return { id: created.id, url: created.external_urls.spotify }
+    },
+
+    async setItems(playlistId, uris) {
+      await http.request(`/playlists/${encodeURIComponent(playlistId)}/items`, WriteAckDto, {
+        method: 'PUT',
+        body: { uris: uris.slice(0, ADD_BATCH) },
+      })
+    },
+
+    async updateDetails(playlistId, { name, description }) {
+      await http.request(`/playlists/${encodeURIComponent(playlistId)}`, WriteAckDto, {
+        method: 'PUT',
+        body: { name, description },
+      })
     },
 
     async addItems(playlistId, uris) {

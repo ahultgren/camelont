@@ -64,6 +64,8 @@ describe('listMyPlaylists', () => {
       ['c', true, 20, 'FRIEND'],
     ])
     expect(lists[0]?.imageUrl).toBe('https://img/a')
+    // Mine to write to is narrower than mine to mix: a friend's collaborative playlist isn't.
+    expect(lists.map((l) => l.owned)).toEqual([true, false, false])
   })
 })
 

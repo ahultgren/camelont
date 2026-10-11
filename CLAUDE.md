@@ -3,8 +3,8 @@
 Browser-only Vue 3 + TypeScript SPA that builds a harmonically mixed *set* from one or
 more Spotify playlists, using the user's directional Camelot chart. The user chooses
 which tracks each playlist contributes (BPM range, marks, a limit with picks), compares
-alternative mixes on a BPM/key chart in one workspace, and saves the chosen mix as a new
-Spotify playlist. Sets live in the browser. No backend: Spotify PKCE login, and key/BPM
+alternative mixes on a BPM/key chart in one workspace, and saves the chosen mix to
+Spotify: as a new playlist, or over the one the same set saved before. Sets live in the browser. No backend: Spotify PKCE login, and key/BPM
 come from ReccoBeats.
 
 ## Read first

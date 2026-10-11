@@ -85,12 +85,14 @@ export function chosenIndex(
 export type SaveState = 'never' | 'saved' | 'changed'
 
 /**
- * Whether the set has changed since it was saved to Spotify (spec §8.5): it has when
- * saving now would write another name or another track order than the last save did.
+ * Whether the mix has changed since it was saved to Spotify (spec §8.5): it has when
+ * saving now would write another track order than the last save did. The playlist's
+ * name is chosen in the save dialog and takes no part. A save that didn't write the
+ * whole mix (its `order` is empty) always counts as changed.
  */
 export function saveState(set: MixSet): SaveState {
   const { lastSave, chosenMix } = set
   if (lastSave === null) return 'never'
-  const order = chosenMix?.order ?? []
-  return lastSave.name === set.name && sameOrder(lastSave.order, order) ? 'saved' : 'changed'
+  if (lastSave.order.length === 0) return 'changed'
+  return sameOrder(lastSave.order, chosenMix?.order ?? []) ? 'saved' : 'changed'
 }

@@ -93,9 +93,15 @@ export const wcsPlaylistItems = () =>
   })
 
 export interface SpotifyLog {
+  /** The body of every `POST /me/playlists`. */
   created: unknown[]
+  /** The URIs of every `POST …/items` to a playlist a save created. */
   added: string[][]
-  /** Any write to one of the user's own playlists (must stay empty). */
+  /** Every replace of a created playlist's tracks (`PUT …/items`). */
+  replaced: { id: string; uris: string[] }[]
+  /** Every change of a created playlist's name and description (`PUT /playlists/{id}`). */
+  renamed: { id: string; name: string }[]
+  /** Any write to a playlist no save created (must stay empty). */
   sourceWrites: string[]
 }
 
@@ -122,7 +128,9 @@ export async function logIn(page: Page) {
  * plus a followed one. Every other external request fails.
  */
 export async function mockApis(page: Page): Promise<SpotifyLog> {
-  const log: SpotifyLog = { created: [], added: [], sourceWrites: [] }
+  const log: SpotifyLog = { created: [], added: [], replaced: [], renamed: [], sourceWrites: [] }
+  /** Playlists that saves created, by ID: `new-mix`, then `new-mix-2`, … */
+  const saved = new Map<string, { name: string }>()
   const tracks = wcs.orders.original.ids.map((id) => {
     const t = wcs.tracks.find((x) => x.id === id)
     if (!t) throw new Error(id)
@@ -141,9 +149,39 @@ export async function mockApis(page: Page): Promise<SpotifyLog> {
           playlist('wcs', 'WCS', 'me', 20),
           playlist('slow', 'Slow ones', 'me', 6),
           playlist('top', 'Top Hits', 'spotify', 50),
+          ...[...saved].map(([id, { name }]) => playlist(id, name, 'me', 3)),
         ],
         next: null,
       })
+    }
+    // A playlist a save created: it can be looked at, replaced, renamed, and (should the
+    // user add it to a set) read.
+    const ofSaved = /^\/playlists\/([^/]+)(\/items)?$/.exec(path)
+    const savedId = ofSaved?.[1] ?? ''
+    const savedPlaylist = saved.get(savedId)
+    if (savedPlaylist) {
+      const items = ofSaved?.[2] !== undefined
+      if (method === 'GET' && !items) {
+        return json(route, {
+          ...playlist(savedId, savedPlaylist.name, 'me', 3),
+          snapshot_id: `${savedId}-1`,
+        })
+      }
+      if (method === 'GET') return json(route, { items: tracks.slice(0, 3).map(item), next: null })
+      const body = route.request().postDataJSON() as { uris?: string[]; name?: string }
+      if (method === 'POST' && items) {
+        log.added.push(body.uris ?? [])
+        return json(route, { snapshot_id: 'snap' }, 201)
+      }
+      if (method === 'PUT' && items) {
+        log.replaced.push({ id: savedId, uris: body.uris ?? [] })
+        return json(route, { snapshot_id: 'snap' })
+      }
+      if (method === 'PUT') {
+        savedPlaylist.name = body.name ?? savedPlaylist.name
+        log.renamed.push({ id: savedId, name: savedPlaylist.name })
+        return route.fulfill({ status: 200, body: '' })
+      }
     }
     // A playlist as a set reads it: with the version Spotify has now.
     if (method === 'GET' && path === '/playlists/wcs') {
@@ -159,19 +197,19 @@ export async function mockApis(page: Page): Promise<SpotifyLog> {
       return json(route, { items: slowItems(tracks), next: null })
     }
     if (method === 'POST' && path === '/me/playlists') {
-      log.created.push(route.request().postDataJSON())
+      const body = route.request().postDataJSON() as { name: string }
+      log.created.push(body)
+      const id = saved.size === 0 ? 'new-mix' : `new-mix-${String(saved.size + 1)}`
+      saved.set(id, { name: body.name })
       return json(
         route,
-        { id: 'new-mix', external_urls: { spotify: 'https://open.spotify.com/playlist/new-mix' } },
+        { id, external_urls: { spotify: `https://open.spotify.com/playlist/${id}` } },
         201,
       )
     }
-    if (method === 'POST' && path === '/playlists/new-mix/items') {
-      log.added.push((route.request().postDataJSON() as { uris: string[] }).uris)
-      return json(route, { snapshot_id: 'snap' }, 201)
-    }
-    if (/^\/playlists\/(wcs|slow)/.test(path) && method !== 'GET')
+    if (path.startsWith('/playlists/') && method !== 'GET') {
       log.sourceWrites.push(`${method} ${path}`)
+    }
     return json(route, { error: { status: 404, message: 'Not mocked' } }, 404)
   })
   await page.route(`${RECCOBEATS}/**`, (route) => {
