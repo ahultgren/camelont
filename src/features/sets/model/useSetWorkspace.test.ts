@@ -1,6 +1,7 @@
 import { http, HttpResponse } from 'msw'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
+  evaluateMix,
   inlineFitClient,
   inlineSolverClient,
   type FitClient,
@@ -20,7 +21,10 @@ import type { MixSet, SetTrack } from '../domain/types'
 import { useSetsStore } from './sets-store'
 import { useSetWorkspace, type SetWorkspace, type WorkspaceView } from './useSetWorkspace'
 
+// The solver runs in-process here, and beside the other solver-heavy test files a solve
+// can take seconds. The clock is not what these tests are about.
 const SLOW = { timeout: 15_000 }
+vi.setConfig({ testTimeout: 60_000 })
 
 // ── Fixtures ───────────────────────────────────────────────────────────────────────
 // The WCS tracks with their real keys and tempos, plus made-up ones ("x…") in 8A.
@@ -47,14 +51,14 @@ const ALL = WCS_TRACKS.map((t) => t.id)
 const EASY = ALL.filter((id) => id !== wcsId('Bloodstream'))
 
 type Provider = NonNullable<TrackFeatureOptions['provider']>
-/** Knows the WCS tracks and "x" tracks (8A, the BPM in the ID: `x100`), except the ones listed. */
+/** Knows the WCS tracks and "x" tracks (8A, the BPM in the ID: `x100`, `x100n7`), except the ones listed. */
 const provider = (unknown: string[] = []): Provider => ({
   fetch: (trackIds, now) =>
     Promise.resolve(
       trackIds.map((trackId) => {
         const known = WCS_TRACKS.find((t) => t.id === trackId)
         const camelot = parseCamelot(known?.camelot ?? '8A')
-        const bpm = known?.bpm ?? Number(trackId.replace(/\D/g, ''))
+        const bpm = known?.bpm ?? Number(/^x(\d+)/.exec(trackId)?.[1])
         const found = !unknown.includes(trackId) && (known !== undefined || trackId.startsWith('x'))
         return found
           ? { trackId, found: true, camelot, bpm, energy: null, fetchedAt: now }
@@ -1036,33 +1040,64 @@ describe('playlists that changed in Spotify', () => {
 })
 
 describe('a large pool', () => {
+  /** Orders nothing: the tracks as they come. These tests are about what is worked out again. */
+  function countingSolver() {
+    let runs = 0
+    const client: SolverClient = (request) => {
+      runs++
+      const left = new Set(request.constraints.excluded)
+      const order = request.tracks.filter((t) => !left.has(t.id))
+      const stats = { expansions: 0, elapsedMs: 0, timedOut: false }
+      return {
+        result: Promise.resolve({
+          kind: 'solved',
+          candidates: [evaluateMix(order, request.profile)],
+          stats,
+        }),
+        cancel: () => undefined,
+      }
+    }
+    return { client, runs: () => runs }
+  }
+
   it('re-selects only when a track choice changes, not for the arc or the chosen mix', async () => {
     // 1,000 tracks in the pool, 60 of them in the set.
     const pool = Array.from({ length: 1000 }, (_, i) => `x${80 + (i % 60)}n${i}`)
+    const solver = countingSolver()
     const { workspace } = await open({
       playlists: [copy('big', pool)],
       prepare: (set) => ({
         ...set,
         playlists: set.playlists.map((p) => ({ ...p, choices: { ...p.choices, limit: 60 } })),
       }),
+      solverClient: solver.client,
     })
     await settled(workspace)
     const selection = workspace.selection.value
     const tracks = workspace.tracks.value
+    const features = workspace.features.value
     expect(selection?.pool).toBe(1000)
     expect(selection?.inSet).toHaveLength(60)
+    expect(solver.runs()).toBe(1)
 
+    // The arc asks for another mix of the same tracks; choosing one asks for nothing.
     workspace.setArc('twoWaves')
+    await vi.waitFor(() => {
+      expect(solver.runs()).toBe(2)
+    }, SLOW)
+    await settled(workspace)
     workspace.chooseAlternative(0)
     await settled(workspace)
     expect(workspace.selection.value).toBe(selection)
     expect(workspace.tracks.value).toBe(tracks)
+    expect(workspace.features.value).toBe(features)
+    expect(solver.runs()).toBe(2)
 
-    const started = performance.now()
+    // A range selects again, at once, over the same pool and the same track data.
     workspace.setBpmRange('big', { min: 90, max: null })
     expect(workspace.selection.value).not.toBe(selection)
+    expect(workspace.selection.value?.playlists[0]?.counts.byReason.outsideRange).toBeGreaterThan(0)
     expect(workspace.tracks.value).toBe(tracks)
-    // Generous: the point is that it is a few milliseconds, not a solver run.
-    expect(performance.now() - started).toBeLessThan(250)
+    expect(workspace.features.value).toBe(features)
   })
 })
