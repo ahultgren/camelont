@@ -210,6 +210,15 @@ New feature `features/sets`. Proposed edges: `sets → playlists, track-features
 - [x] Adversarial review of the heuristic before it is wired in
   → five fixes and six known limits, recorded in decision 31
 
+### How steps 4–6 are split (2026-10-11)
+Three sessions, the first two in parallel:
+- **4** the workspace's model: selection, best fit off the main thread, planner, change
+  summary, playlist change check. No pages.
+- **5a** the home page: sets list, New set, `/sets/:id` with a stub page, `installSets`.
+  The old playlist page stays reachable by URL until 5b replaces it.
+- **5b + 6** (after 4 and 5a are merged) the workspace page per spec §9.1, Save to
+  Spotify from the set, removing the playlist page, e2e and docs.
+
 ### Step 4 — wire sets into mixing
 - [ ] The planner takes its tracks, rules and arc from the set; left-out tracks go in as
   `excluded` so diagnostics can name ones that would unblock a mix (U7)
