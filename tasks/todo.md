@@ -231,7 +231,7 @@ Three sessions, the first two in parallel:
   - [x] `installSets` in `app/plugins.ts` and `src/test/render.ts`; route `/sets/:id`
     with a stub `SetPage` (name, playlists, pool sizes, not found / unreadable)
   - [x] `PlaylistPicker` selection mode (link mode kept for the old page)
-  - [ ] `sets/ui/SetsList`: rows, rename, duplicate, delete, unreadable sets, load and
+  - [x] `sets/ui/SetsList`: rows, rename, duplicate, delete, unreadable sets, load and
     save errors; the home page shows it when logged in
   - [ ] `sets/ui/NewSetDialog`: name + playlists, reads the tracks, progress, retry,
     skipped items; edge `sets → playlists`

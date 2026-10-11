@@ -11,7 +11,7 @@ How the app is built. The *what* is in [`spec.md`](spec.md) and the *why* is in
 | Build | Vite |
 | UI | Vue 3 (`<script setup lang="ts">`, Composition API only) |
 | Language | TypeScript 6.0 (typescript-eslint does not support 7 yet), `strict` + `noUncheckedIndexedAccess` + `exactOptionalPropertyTypes`; `vue-tsc` for type checks |
-| Routing | vue-router, history mode, base `/camelont/`; `404.html` copy of `index.html` for GitHub Pages deep links |
+| Routing | vue-router, history mode, base `/camelont/`; `404.html` copy of `index.html` for GitHub Pages deep links. Routes: `/` (intro and login, or the sets list), `/callback`, `/sets/:id` (a set; a stand-in page until the workspace is built), `/playlists/:id` (the old single-playlist mixer, reachable by address only until the workspace replaces it) |
 | Client state | Pinia (setup stores) |
 | Server state | TanStack Vue Query (Spotify + ReccoBeats reads; caching, retries, dedupe) |
 | Validation | zod, at every boundary: Spotify, ReccoBeats, IndexedDB reads, JSON import |
@@ -332,6 +332,14 @@ no other feature; pages map playlists, track features and mix results to and fro
   quick successive edits can't overtake each other. Waiting changes are flushed when
   the page is hidden or left. A failed write shows in `saveError` and is tried again
   with the next change; a failed load shows in `loadError`.
+- `ui/`: `SetsList` is the home page once logged in (spec U2, U12): the sets, newest
+  edit first, each with its name (the link that opens it), its playlists, a track
+  count, the last edit and whether it was saved to Spotify (with the link). The count
+  is the chosen mix's length when the set has one and otherwise the pool's size, named
+  as such (`set-summary.ts`): "tracks in the set" needs key and BPM data, which the
+  list doesn't load. Rename and delete are dialogs (the delete one says Spotify isn't
+  touched), duplicate is immediate. Unreadable sets are listed below by ID with the
+  reason and can be deleted; `loadError` and `saveError` are shown as alerts.
 
 ## Auth (`features/auth`)
 
@@ -366,7 +374,7 @@ no other feature; pages map playlists, track features and mix results to and fro
 | domain | Vitest | Exhaustive: chart (576 pairs), camelot conversion anchors, tempo, evaluator, constraints, solver properties, diagnostics |
 | api | Vitest + MSW | Request shape, pagination, 429 handling, DTO mapping, zod rejection of bad payloads |
 | model/ui | Vitest + Testing Library | Behaviour through the DOM, not implementation details |
-| app | Playwright | Login (stubbed token), pick playlist, fill a missing key, generate, compare, explore, save. All network mocked. |
+| app | Playwright | Login (stubbed token); the old mixer by its address: fill a missing key, generate, compare, explore, save. All network mocked. |
 
 Coverage thresholds apply to `domain/` (≥ 90% lines). The rest is judged by behaviour
 coverage, not a number.
