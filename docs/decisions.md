@@ -270,3 +270,22 @@ the first playlist that lets it in and has no limit, else by the first that lets
 playlist would take it. Exclude and must-include belong to the track: an excluded track
 is excluded in every playlist. **Not built:** passing a track that wasn't picked on to
 a later limited playlist (picks would then depend on each other in both directions).
+
+### 33. Tracks are selected on the main thread; best fit answers from the worker (2026-10-11)
+**Context:** `selectTracks` is synchronous and best fit is too slow for the main thread.
+**Decision:** the selection runs on the main thread with the best-fit answers at hand; a
+pick without an answer is worked out in the solver worker and the selection is made
+again. Answers are kept by what they depend on (candidates, tracks in the set, count,
+mix rules, the order handed on), so the arc or an unrelated edit never picks again.
+**Rejected:** selecting and solving together in the worker (the track list would wait
+for the mix to show its statuses, and the worker would need the sets feature, which
+`mixing` must not import). **Cost:** one worker round trip per best-fit playlist that
+picks again.
+
+### 34. A stored chosen mix that is not on screen is forgotten (2026-10-11)
+**Context:** the set remembers the chosen alternative (spec §8.5), but alternatives have
+no identity across recalculations. **Decision:** the stored mix is shown on opening only
+if it is one of the alternatives worked out then; after a change the best mix is shown.
+In both cases a stored mix that differs from the shown one is removed from the set, so
+"changed since the last save" reflects what a save would write. **Consequence:** opening
+a set whose stored mix went stale (an override made elsewhere) edits the set.
