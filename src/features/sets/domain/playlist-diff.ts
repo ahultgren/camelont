@@ -106,6 +106,51 @@ export function diffPlaylist(
   }
 }
 
+const MARK_WORDS: Record<TrackMark, string> = {
+  mustInclude: 'always include',
+  exclude: 'excluded',
+}
+/** Names listed before "and N more". */
+const NAMED = 4
+
+function listed(names: readonly string[]): string {
+  const more = names.length - NAMED
+  return more > 0 ? `${names.slice(0, NAMED).join(', ')} and ${more} more` : names.join(', ')
+}
+
+/**
+ * What goes, in words, one line per kind (spec §8.2: "says what goes with it"). Empty
+ * when nothing goes: every track is in another playlist of the set too.
+ */
+export function describeDropped(dropped: Dropped, name: (trackId: string) => string): string[] {
+  const { tracks, marks, rules } = dropped
+  const lines: string[] = []
+  if (tracks.length > 0) {
+    lines.push(
+      `${tracks.length} ${tracks.length === 1 ? 'track leaves' : 'tracks leave'} the set: ${listed(tracks.map((track) => track.title))}.`,
+    )
+  }
+  if (marks.length > 0) {
+    lines.push(
+      `${marks.length} ${marks.length === 1 ? 'mark' : 'marks'}: ${listed(marks.map(({ trackId, mark }) => `${name(trackId)} (${MARK_WORDS[mark]})`))}.`,
+    )
+  }
+  if (rules.length > 0) {
+    const worded = rules.map((rule) => {
+      switch (rule.kind) {
+        case 'opener':
+          return `${name(rule.trackId)} as the opener`
+        case 'closer':
+          return `${name(rule.trackId)} as the closer`
+        case 'follow':
+          return `the pair ${name(rule.from)} → ${name(rule.to)}`
+      }
+    })
+    lines.push(`${rules.length} mix ${rules.length === 1 ? 'rule' : 'rules'}: ${listed(worded)}.`)
+  }
+  return lines
+}
+
 /** The change notice in words, e.g. "3 new, 1 removed"; null when no track came or went. */
 export function describeChange(diff: Pick<PlaylistDiff, 'added' | 'removed'>): string | null {
   const parts = [

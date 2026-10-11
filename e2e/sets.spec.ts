@@ -1,24 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 import { logIn, mockApis } from './support/mocks'
-
-/** The names of the sets in the browser's storage (IndexedDB `camelont-sets`). */
-const storedSetNames = (page: Page) =>
-  page.evaluate(
-    () =>
-      new Promise<string[]>((resolve, reject) => {
-        const opening = indexedDB.open('camelont-sets')
-        opening.onerror = () => {
-          reject(new Error('Could not open the sets database'))
-        }
-        opening.onsuccess = () => {
-          const reading = opening.result.transaction('kv').objectStore('kv').getAll()
-          reading.onsuccess = () => {
-            const records = reading.result as { data: { name: string } }[]
-            resolve(records.map((record) => record.data.name).sort())
-          }
-        }
-      }),
-  )
+import { playlist, storedSetNames } from './support/set'
 
 const setRows = (page: Page) => page.getByRole('list', { name: 'Your sets' }).getByRole('listitem')
 
@@ -51,13 +33,14 @@ test('creates a set from two playlists, keeps it, and manages it', async ({ page
   await expect(dialog.getByText('Slow ones: 1 local file, 1 episode')).toBeVisible()
   await dialog.getByRole('button', { name: 'Open the set' }).click()
 
-  // The set opens at its own address and shows both playlists.
+  // The set opens at its own address, in its workspace, with both playlists.
   await expect(page).toHaveURL(/\/camelont\/sets\/[\w-]+$/)
-  await expect(page.getByRole('heading', { level: 1, name: 'Friday social' })).toBeVisible()
-  await expect(page.getByRole('listitem')).toHaveText(['WCS20 tracks', 'Slow ones4 tracks'])
+  await expect(page.getByRole('textbox', { name: 'Set name' })).toHaveValue('Friday social')
+  await expect(playlist(page, 'WCS').getByRole('listitem')).toHaveCount(20)
+  await expect(playlist(page, 'Slow ones').getByRole('listitem')).toHaveCount(4)
 
   // Back on the list: one row, counting each track of the pool once.
-  await page.getByRole('link', { name: /Your sets/ }).click()
+  await page.getByRole('link', { name: 'Back to your sets' }).click()
   await expect(setRows(page)).toHaveCount(1)
   await expect(setRows(page).first()).toContainText('Friday social')
   await expect(setRows(page).first()).toContainText('22 tracks in the pool')
@@ -67,10 +50,10 @@ test('creates a set from two playlists, keeps it, and manages it', async ({ page
   await page.reload()
   await expect(setRows(page)).toHaveCount(1)
   await page.getByRole('link', { name: 'Friday social' }).click()
-  await expect(page.getByRole('heading', { level: 1, name: 'Friday social' })).toBeVisible()
+  await expect(page.getByRole('textbox', { name: 'Set name' })).toHaveValue('Friday social')
   await page.reload()
-  await expect(page.getByRole('heading', { level: 1, name: 'Friday social' })).toBeVisible()
-  await page.getByRole('link', { name: /Your sets/ }).click()
+  await expect(page.getByRole('textbox', { name: 'Set name' })).toHaveValue('Friday social')
+  await page.getByRole('link', { name: 'Back to your sets' }).click()
 
   // Rename.
   await page.getByRole('button', { name: 'Rename Friday social' }).click()
@@ -125,7 +108,7 @@ test('says which playlist couldn’t be read, creates nothing, and tries again',
   failing = false
   await dialog.getByRole('button', { name: 'Try again' }).click()
   await dialog.getByRole('button', { name: 'Open the set' }).click()
-  await expect(page.getByRole('heading', { level: 1, name: 'Friday social' })).toBeVisible()
+  await expect(page.getByRole('textbox', { name: 'Set name' })).toHaveValue('Friday social')
 })
 
 test('the sets list and the New set dialog fit a phone', async ({ page }) => {
@@ -142,7 +125,7 @@ test('the sets list and the New set dialog fit a phone', async ({ page }) => {
   expect(await fits()).toBe(true)
   await dialog.getByRole('button', { name: 'Open the set' }).click()
   expect(await fits()).toBe(true)
-  await page.getByRole('link', { name: /Your sets/ }).click()
+  await page.getByRole('link', { name: 'Back to your sets' }).click()
   await expect(setRows(page)).toHaveCount(1)
   expect(await fits()).toBe(true)
 

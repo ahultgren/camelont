@@ -66,6 +66,14 @@ export {
   type WorkspaceView,
 } from './model/useSetWorkspace'
 
+// What the workspace's page-level pieces show.
+export { describeDropped } from './domain/playlist-diff'
+export { describeSkipped, skippedCount } from './domain/skipped'
+export type { SkippedItems } from './domain/types'
+
 // The home page (step 5a).
-export { poolSize } from './ui/set-summary'
+export { poolSize } from './domain/set-summary'
 export { default as SetsList } from './ui/SetsList.vue'
+
+// The workspace page (steps 5b and 6).
+export { default as WorkspaceScreen } from './ui/workspace/WorkspaceScreen.vue'

@@ -29,9 +29,11 @@ describe('layout helpers', () => {
     expect([y(100), y(0)]).toEqual([10, 90])
   })
 
-  it('widens the chart for long mixes', () => {
-    expect(chartWidth(20)).toBe(740)
+  it('fills its box, and widens for mixes too long to fit it', () => {
+    expect(chartWidth(20, 480)).toBe(480)
     expect(chartWidth(5)).toBe(640)
+    // 100 tracks at 20 px each no longer fit: the chart scrolls sideways.
+    expect(chartWidth(100, 480)).toBe(2048)
   })
 
   it('counts keys', () => {

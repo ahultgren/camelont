@@ -19,8 +19,9 @@ const FEATURE_EDGES: Record<string, string[]> = {
   playlists: ['auth'],
   mixing: ['track-features'],
   'mix-view': ['mixing', 'track-features'],
-  // The set workspace: reads playlists, looks up key and BPM, picks and mixes.
-  sets: ['playlists', 'track-features', 'mixing'],
+  // The set workspace: reads playlists, looks up key and BPM, picks and mixes, and
+  // shows the mix with mix-view's chart, wheel and running order.
+  sets: ['playlists', 'track-features', 'mixing', 'mix-view'],
 }
 
 const SEGMENTS = ['domain', 'api', 'model', 'ui'] as const

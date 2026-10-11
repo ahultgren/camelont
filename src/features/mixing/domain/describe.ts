@@ -5,9 +5,7 @@ import type { MixProfile } from './profile'
 /** Spotify's playlist description limit. */
 const DESCRIPTION_MAX = 300
 
-export const mixPlaylistName = (source: string): string => `${source} · Camelot mix`
-
-/** Playlist description: what the mix is and the profile that made it. */
+/** The saved playlist's description: what the mix is and the profile that made it. */
 export function mixDescription(
   mix: EvaluatedMix,
   profile: MixProfile,

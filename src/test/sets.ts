@@ -20,6 +20,7 @@ export const playlistCopy = (
   })),
   snapshotId: null,
   readAt: 1,
+  skipped: { localFiles: 0, episodes: 0, unavailable: 0 },
 })
 
 /** A set as the store would have made it, last edited at `editedAt`. */

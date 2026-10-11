@@ -28,6 +28,7 @@ const copy = (playlistId: string, trackIds: string[]): PlaylistCopy => ({
   tracks: trackIds.map(track),
   snapshotId: `snap-${playlistId}`,
   readAt: 50,
+  skipped: { localFiles: 0, episodes: 0, unavailable: 0 },
 })
 
 describe('newSet', () => {

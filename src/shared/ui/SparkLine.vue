@@ -7,24 +7,28 @@ const {
   colors = [],
   width = 200,
   height = 44,
+  radius = 3,
   label,
 } = defineProps<{
   values: readonly number[]
   colors?: readonly string[]
   width?: number
   height?: number
+  /** Dot size; small for a line of many points. */
+  radius?: number
   label: string
 }>()
 
-const PAD = 4
+const PAD = computed(() => radius + 1)
 const points = computed(() => {
   const min = Math.min(...values)
   const max = Math.max(...values)
   const span = max - min || 1
-  const step = values.length > 1 ? (width - 2 * PAD) / (values.length - 1) : 0
+  const pad = PAD.value
+  const step = values.length > 1 ? (width - 2 * pad) / (values.length - 1) : 0
   return values.map((v, i) => ({
-    x: PAD + i * step,
-    y: PAD + ((max - v) / span) * (height - 2 * PAD),
+    x: pad + i * step,
+    y: pad + ((max - v) / span) * (height - 2 * pad),
     color: colors[i] ?? 'var(--muted)',
   }))
 })
@@ -41,7 +45,7 @@ const points = computed(() => {
     <polyline
       fill="none"
       stroke="var(--muted)"
-      stroke-width="1.5"
+      :stroke-width="radius < 2.5 ? 1 : 1.5"
       stroke-linejoin="round"
       :points="points.map((p) => `${p.x},${p.y}`).join(' ')"
     />
@@ -50,10 +54,10 @@ const points = computed(() => {
       :key="i"
       :cx="p.x"
       :cy="p.y"
-      r="3"
+      :r="radius"
       :fill="p.color"
       stroke="var(--surface)"
-      stroke-width="1.5"
+      :stroke-width="radius < 2.5 ? 0.5 : 1.5"
     />
   </svg>
 </template>

@@ -8,7 +8,6 @@ defineProps<{ source: FeatureSource }>()
   <span
     class="num inline-block rounded px-1.5 text-[11px] leading-[18px] font-medium"
     :class="source === 'manual' ? 'bg-ok-bg text-ok' : 'bg-band text-muted'"
-    :title="`Source: ${SOURCE_LABEL[source]}`"
-    >{{ SOURCE_LABEL[source] }}</span
+    ><span class="sr-only">Source: </span>{{ SOURCE_LABEL[source] }}</span
   >
 </template>

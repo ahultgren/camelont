@@ -11,7 +11,7 @@ How the app is built. The *what* is in [`spec.md`](spec.md) and the *why* is in
 | Build | Vite |
 | UI | Vue 3 (`<script setup lang="ts">`, Composition API only) |
 | Language | TypeScript 6.0 (typescript-eslint does not support 7 yet), `strict` + `noUncheckedIndexedAccess` + `exactOptionalPropertyTypes`; `vue-tsc` for type checks |
-| Routing | vue-router, history mode, base `/camelont/`; `404.html` copy of `index.html` for GitHub Pages deep links. Routes: `/` (intro and login, or the sets list), `/callback`, `/sets/:id` (a set; a stand-in page until the workspace is built), `/playlists/:id` (the old single-playlist mixer, reachable by address only until the workspace replaces it) |
+| Routing | vue-router, history mode, base `/camelont/`; `404.html` copy of `index.html` for GitHub Pages deep links. Routes: `/` (intro and login, or the sets list, with export and import of corrections), `/callback`, `/sets/:id` (a set's workspace; `meta.fullScreen`: it lays out the whole window itself) |
 | Client state | Pinia (setup stores) |
 | Server state | TanStack Vue Query (Spotify + ReccoBeats reads; caching, retries, dedupe) |
 | Validation | zod, at every boundary: Spotify, ReccoBeats, IndexedDB reads, JSON import |
@@ -36,8 +36,8 @@ src/
     playlists/         list own playlists, load playlist items, save mix as new playlist
     track-features/    ReccoBeats provider, overrides repo, merge → TrackFeatures, edit dialog, import/export
     mixing/            chart, profiles, evaluator, constraints, arc, solver (+ worker), diagnostics; constraint + candidate UI
-    mix-view/          tempo-arc chart, key wheel, running order, hover card
-    sets/              the set (playlist copies, track choices, marks, mix settings), which tracks are in it
+    mix-view/          tempo-arc chart, key wheel, running order (with pins), hover card
+    sets/              the set (playlist copies, track choices, marks, mix settings), which tracks are in it, the workspace
   shared/
     music/             Camelot kernel: CamelotKey type, parse/format, fromPitchClass, keyName, keyHue
     api/               fetch wrapper (base URL, auth header injection, 429 Retry-After, zod parse, typed errors), paginate()
@@ -76,9 +76,10 @@ app → pages → features → shared
 - A feature imports `shared/*` and **other features only via their `index.ts`**. No
   circular feature dependencies. Allowed edges today: `playlists → auth`,
   `mixing → track-features`, `mix-view → mixing, track-features`,
-  `sets → playlists, track-features, mixing` (the set workspace reads playlists, looks
-  up key and BPM, picks and mixes; `mixing` never imports `sets`). Adding an edge is a
-  design decision: record it here.
+  `sets → playlists, track-features, mixing, mix-view` (the set workspace reads
+  playlists, looks up key and BPM, picks and mixes, and shows the mix with mix-view's
+  chart, wheel and running order; `mixing` and `mix-view` never import `sets`). Adding
+  an edge is a design decision: record it here.
 - Inside a feature: `ui → (model, domain)`, `model → (api, domain)`, `api → domain`;
   `domain` imports only `shared/music` and `shared/lib`. `ui` may use domain types and
   pure helpers (e.g. move metadata), never `api`.
@@ -168,8 +169,11 @@ Spotify ──(playlists/api readPlaylist)──▶ change notice per playlist �
   changes until the answer for that list is there (an answer says which list it is
   for), so a caller can hold what it showed instead of treating new tracks as lacking
   data.
-- `ui/`: `TrackTable` (key in both notations, BPM, source badge per value, Fix/Edit
-  per row, an `actions` slot for the page), `OverrideDialog`, `OverridesTransfer`.
+- `ui/`: `OverrideDialog` (key, BPM with Half and Double, a note; next to each field a
+  `SourceBadge` says where the value in use came from, and what ReccoBeats answered is
+  quoted above them) and `OverridesTransfer` (export and import, on the home page). The
+  track list itself belongs to the set workspace, which marks only hand-set values on a
+  row (decision 29) and opens this dialog from a row's key or BPM.
 
 ## Mixing engine (`features/mixing/domain`)
 
@@ -268,39 +272,45 @@ type, beats greedy from the same opener, matches the hand-tuned order under the
 two-waves profile, and reports Bloodstream-style bottlenecks when made infeasible. The
 chart equals the JSON for all 576 pairs.
 
-## Mix UI (`mixing/model`, `mixing/ui`, `mix-view`, `pages/PlaylistPage.vue`)
+## Mix views and mixing UI (`mixing/model`, `mixing/ui`, `mix-view`)
 
-- `mixing/model/mix-input.ts` maps playlist entries + merged track features to
-  `MixTrack`s and sets aside entries without data. `useMixPlanner` holds the
-  constraints and arc choice, blocks mixing while a track lacks data and isn't
-  excluded, validates constraints instantly, and re-solves (debounced 250 ms) whenever
-  the input changes; `useMixer` cancels the stale run. The solver client is injectable
-  (`installMixing`); without `Worker` it falls back to `inlineSolverClient`.
-- `mixing/ui`: `ConstraintsPanel` (first/last track, "must be followed by" pairs; the
-  exclude toggles sit on the track table), `ArcPicker`, `CandidateList` (a radio group
-  of cards: sparkline, move-tone counts, BPM range, peaks, opener, closer, cost) and
-  `MixProblems` (constraint errors and diagnostics in plain language).
+These know nothing about sets: they take a mix and say what the user did. The set
+workspace (below) composes them.
+
+- `mixing/model/mix-input.ts` maps tracks + merged track features to `MixTrack`s and
+  sets aside the ones without data. `useMixer` and `useFitter` run the solver and best
+  fit one at a time (`useLatestRun`); the clients are injectable (`installMixing`) and
+  fall back to in-process ones where there is no `Worker`.
+- `mixing/ui`: `CandidateList` (the alternatives as a radio group of small cards:
+  number, cost, a tempo sparkline, moves by kind; BPM range, peaks, opener and closer
+  are in each card's label and tooltip) and `ArcPicker` (a segmented radio group).
 - `mix-view`: `TempoArcChart` (hand-built SVG; key-coloured dots, a move badge per
   segment, the arc target dashed, each point focusable with a full `aria-label`, and a
-  card on hover/tap/focus), `KeyWheel`, `RunningOrder` (connectors: keys, move, BPM
-  change) and `MixExplorer` composing them. Pure geometry lives in
-  `mix-view/domain/layout.ts`. The chart scrolls horizontally inside its card on
-  narrow screens; row grids use `minmax(0,1fr)` so long titles never widen the page.
-- Saving: `mixing/domain/describe.ts` builds the new playlist's name
-  (`<source> · Camelot mix`) and description (moves, BPM range, profile, arc; ≤ 300
-  characters); `playlists/ui/SavePlaylistButton` creates the private playlist and adds
-  the URIs in batches of 100, then links to it. The page is the glue: it maps the
-  chosen mix's entry IDs to URIs.
-- The playlist page and `useMixPlanner` mix one playlist whole. They stay until the
-  workspace page replaces them; the model that page sits on is `useSetWorkspace`
-  (below), which uses the same solver client, `useMixer`, `validateConstraints` and
-  diagnostics, and takes its tracks, rules and arc from a set.
-
+  card on hover/tap/focus), `KeyWheel` and `RunningOrder` (a line per track and a
+  connector per pair: keys, move, BPM change). Pure geometry lives in
+  `mix-view/domain/layout.ts`.
+  - **One track, everywhere (W6).** Each of the three takes `highlighted` (a track ID)
+    and emits `point` (the track under the pointer or with focus, or null); the chart
+    and the running order also emit `select` on a click. The chart marks the track with
+    a ring and a guide line, the wheel outlines its key (and points at the first track
+    of a key), the running order tints its row and scrolls it into view when the
+    pointing happens elsewhere.
+  - **Pins.** `RunningOrder` takes `pinned` (pairs of track IDs) and emits `pin` /
+    `unpin` from a toggle on each connector: "keep these two together" (spec §9.1).
+  - **Size.** The chart is drawn 1:1 at the width of its box (measured with a
+    `ResizeObserver`) and the `height` it is given; once a track would get less than
+    20 px it grows wider than the box and scrolls sideways inside it. Position numbers
+    thin out to every fifth when they no longer fit.
+- Saving: `mixing/domain/describe.ts` builds the new playlist's description (moves,
+  BPM range, profile, arc; ≤ 300 characters); `playlists/ui/SavePlaylistButton` creates
+  the private playlist, adds the URIs in batches of 100 and emits `saved` with the link.
+  What is saved (the set's name, the shown mix's order) and what is remembered of it is
+  the workspace's business (`saveInput`, `recordSave`).
 - `playlists/ui/PlaylistPicker` lists the user's playlists (searchable; followed ones
-  are shown but can't be used, with the reason) in two modes. With `linkTo` every
-  mixable playlist is a link (the old playlist page). Without it the picker selects:
-  each row is a checkbox and `v-model:selected` holds the chosen playlists in the
-  order they were ticked, named above the list so a search can't hide them.
+  are shown but can't be used, with the reason). Each row is a checkbox and
+  `v-model:selected` holds the chosen playlists in the order they were ticked, named
+  above the list so a search can't hide them. `taken` disables playlists a set already
+  has. New set and the workspace's Add playlists both use it.
 
 ## Sets (`features/sets`)
 
@@ -309,16 +319,32 @@ shapes and import no other feature. `model/` is where a set meets the rest of th
 it reads playlists (`playlists`), looks up key and BPM (`track-features`) and picks and
 mixes (`mixing`), mapping to and from those features' types in `model/mix-request.ts`.
 A set names a track by its track ID (it holds a track once), and that ID is the mixer's
-entry ID. `ui/` also uses the playlists feature, to choose
-playlists for a new set.
+entry ID. `ui/` uses the playlists feature (to choose playlists, and to save), the
+track-features feature (the edit dialog), `mixing`'s alternatives and arc picker and
+`mix-view`'s chart, wheel and running order: the workspace is where they meet.
 
 - `domain/types.ts`: `MixSet { id, name, createdAt, editedAt, playlists, marks, mix,
   chosenMix, lastSave }`. A `SetPlaylist` is the stored copy of a Spotify playlist (its
-  tracks as read, `snapshotId`, `readAt`) plus its `TrackChoices { bpmMin, bpmMax, limit,
+  tracks as read, `snapshotId`, `readAt`, and `skipped`: the local files, episodes and
+  unavailable tracks the copy leaves out) plus its `TrackChoices { bpmMin, bpmMax, limit,
   pick: 'random' | 'bestFit', seed }`. `marks` (`mustInclude | exclude`) are keyed by
   track ID on the set: a mark belongs to the track, in every playlist that has it. `MixSettings` holds
   opener, closer, follow pairs and the arc choice; `ChosenMix` the track order;
   `LastSave` the link, the time, and the name and order that were written.
+- `domain/set-summary.ts` (`poolSize`, the sets list's track count), `domain/skipped.ts`
+  (what a copy leaves out, in words).
+- `domain/track-list.ts`: `visibleRows(rows, facts, { text, status, sort })`, the one
+  track list's filter (words in title or artist, accents folded; in the set / left out /
+  needs data) and sort (playlist order, BPM, key in wheel order; rows without the value
+  last), applied inside each playlist (W7).
+- `domain/bpm-histogram.ts`: a playlist's BPM distribution on a scale of whole steps
+  (5 BPM, wider for a wide spread), which bars a range lets through, and the mapping
+  between a place on that scale and a range end: the scale's own end means "open" (W8).
+- `domain/follow.ts`: follow pairs as a row makes them (spec §9.1). `followBlock(rules,
+  from, to)` says why `to` can't follow `from` (itself, follows it already, has a
+  leader, would close the chain, is the opener), `armBlock` why a track can have no
+  follower (the closer), `withFollower` gives a track its follower in place of the one
+  it had. Whether the pair is a chart move is asked of `mixing` in `ui/`.
 - `domain/set.ts`: `newSet`, `addPlaylist` (a playlist is in a set once), `duplicateSet`
   (a deep copy that hasn't been saved to Spotify), `ruleTrackIds` (the tracks named in a
   mix rule) and `saveState` → `never | saved | changed`: a set has changed since its
@@ -358,7 +384,9 @@ playlists for a new set.
   playlist. `Dropped` lists the tracks that leave the pool, their marks, and the mix
   rules naming them. A track another playlist of the set still has leaves nothing
   behind. `updatePlaylist` and `removePlaylist` make the change through the same
-  function, so what is announced is what is dropped. The chosen mix is not touched
+  function, so what is announced is what is dropped. `describeDropped` puts a
+  `Dropped` in words, a line per kind, for the Remove confirmation and for the note
+  after an Update. The chosen mix is not touched
   here: it is checked against the current selection when it is read (track data can
   change outside the set too).
 - `domain/select-set.ts`: `selectForSet(input, bestFitAnswers)` is `selectTracks` with
@@ -368,7 +396,8 @@ playlists for a new set.
   that needs no pick (and so the blockers) is final.
 - `domain/edits.ts`: every edit the workspace makes, as a function for the store's
   `update`: `withBpmRange`, `withLimit`, `withPickMethod`, `withMark`, `withOpener`,
-  `withCloser`, `withFollow`, `withoutFollow`, `withArc`, `withChosenMix`, and
+  `withCloser`, `withFollow`, `withoutFollow`, `withArc`, `withChosenMix`, `withSave`
+  (the last save, with the saved mix as the chosen one), and
   `roleOf` / `withRole` for the row's toggle group (spec §9.1: at most one of opener,
   closer, must-include, exclude). An edit returns the same set when nothing changes
   and replaces only the part it changes; the workspace relies on that to know what to
@@ -383,7 +412,9 @@ playlists for a new set.
   joined and left, picks that went out and came in per playlist, tracks and cost
   before and after, whether the order changed. A pick change is a track that came or
   went through a pick: a locked pick, or a track that stays when a limit arrives, is
-  none.
+  none. `describeSummary` words it for the page: tracks before → after, who joined and
+  left, each playlist's picks out and in (a track that came or went through a pick is
+  named there, not twice), and the cost before → after.
 - `domain/set.ts` also has `chosenIndex(chosen, alternatives)`: the stored mix is used
   only if it is one of the alternatives as they are now (track data can change
   outside the set). `playlist-diff.ts` has `describeChange` → "3 new, 1 removed".
@@ -410,19 +441,20 @@ playlists for a new set.
   edit first, each with its name (the link that opens it), its playlists, a track
   count, the last edit and whether it was saved to Spotify (with the link). The count
   is the chosen mix's length when the set has one and otherwise the pool's size, named
-  as such (`set-summary.ts`): "tracks in the set" needs key and BPM data, which the
+  as such: "tracks in the set" needs key and BPM data, which the
   list doesn't load. Rename and delete are dialogs (the delete one says Spotify isn't
   touched), duplicate is immediate. Unreadable sets are listed below by ID with the
   reason and can be deleted; `loadError` and `saveError` are shown as alerts.
   `NewSetDialog` (spec U2, §8.1–8.2) takes a name and one or more playlists
-  (`PlaylistPicker` in selection mode). `useCreateSet` then reads each playlist's
-  tracks through the playlists feature's Spotify client, one at a time with the
-  progress shown, and creates the set only when all are read: a failed read creates
-  nothing, names the playlist, and a retry reads only what is still missing. A blank
-  name becomes the first chosen playlist's name. Items that can't be mixed are skipped
-  as before; when there were any, the dialog names them per playlist before the set is
-  opened (the set itself doesn't store that count). The stored copy has no
-  `snapshotId` yet: the items route doesn't return one.
+  (`PlaylistPicker`). `model/useCreateSet` then reads each playlist with
+  `model/useReadPlaylists` (the playlists feature's `usePlaylistReader`: the playlist
+  as it is in Spotify now, with its `snapshot_id`, so the first change check reads no
+  tracks again), one at a time with the progress shown, and creates the set only when
+  all are read: a failed read creates nothing, names the playlist, and a retry reads
+  only what is still missing. A blank name becomes the first chosen playlist's name.
+  Items that can't be mixed are skipped and counted in the copy; when there were any,
+  the dialog names them per playlist before the set is opened. The workspace's Add
+  playlists reads the same way.
 
 ### The set workspace (`sets/model/useSetWorkspace.ts`)
 
@@ -437,8 +469,10 @@ belongs to one set for as long as it lives: the page gives its component the set
 | `selection`, `picking` | `Selection`: status and reason per track, counts and `limitFilled` per playlist, the tracks in the set, blockers |
 | `view`, `updating`, `summary`, `retry` | the mix (alternatives, the shown one, whether it is the stored choice) or the problems in its place; what the last update changed |
 | `notices`, `checkPlaylists`, `updatePlaylist` | the change check against Spotify |
+| `adding`, `addPlaylists`, `cancelAdd`, `removalOf`, `removePlaylist` | the set's playlists (U13): add (read first, all or none), what a removal takes with it, and the removal |
+| `rename`, `saveInput`, `saveState`, `recordSave` | the name; what a save to Spotify would write now (the set's name, a description, the shown mix's URIs); never / saved / changed; recording a save |
 | `pointedTrackId` | one shared ref for cross-highlighting (W6) |
-| `setBpmRange`, `setLimit`, `setPickMethod`, `reshuffle`, `setMark`, `setRole`, `setOpener`, `setCloser`, `addFollow`, `removeFollow`, `setArc`, `chooseAlternative` | edits, each written through the store at once |
+| `setBpmRange`, `setLimit`, `setPickMethod`, `reshuffle`, `setMark`, `setRole`, `setOpener`, `setCloser`, `addFollow`, `setFollower`, `removeFollow`, `setArc`, `chooseAlternative` | edits, each written through the store at once |
 
 How it works:
 
@@ -501,9 +535,89 @@ How it works:
   read through `updatePlaylist` and returns what was dropped. Nothing is ever written
   to Spotify here.
 
+- **Saving (spec §8.5).** The workspace never talks to Spotify to write: the page's
+  save button does, and tells the workspace the link. `recordSave` stores the link, the
+  time, the name and the order, and makes the saved mix the chosen one, so the set
+  reads as `saved` until it gives another mix or gets another name.
+
 Tests drive the composable through `src/test/set-app.ts` (the app's plugins without a
 page): an in-memory store, MSW for Spotify, a fake feature provider, and in-process or
 gated solver and fit clients.
+
+### The workspace page (`sets/ui/workspace/`, `pages/SetPage.vue`)
+
+`SetPage` only gives `WorkspaceScreen` the set ID, as prop and as `key`. The route has
+`meta.fullScreen`, so `App.vue` renders it without the app's header and page width: the
+workspace is `100dvh` high and nothing but its own areas scrolls (W1, W2).
+
+```
+WorkspaceScreen          useSetWorkspace + provideWorkspaceUi; top bar (back, name, save)
+├─ TrackColumn           filter, sort, Add playlists; the "Followed by…" notice; the list
+│  └─ PlaylistGroup      one per playlist: rows through visibleRows
+│     ├─ PlaylistHeader  fold, name, in set / in pool, BpmRangeControl, limit, pick
+│     │                  method (only with a limit) + Reshuffle, change notice, menu
+│     └─ TrackRow        one line per track
+├─ ChangeSummaryLine     W4
+├─ MixResult             headline + TempoArcChart, or the problems, or "working"
+├─ MixControls           CandidateList, ArcPicker, the pairs
+├─ MixOrder              KeyWheel + RunningOrder with pins
+└─ AddPlaylistsDialog
+```
+
+- **`context.ts`** is what these share besides the set (`provideWorkspaceUi` /
+  `useWorkspaceUi`): the track being edited (one `OverrideDialog`, in `TrackColumn`),
+  the track that waits for a follower, a request to bring a row into view, and the
+  sets of tracks that joined and left in the last change. Components read the set
+  through `ui.ws`, so nothing is passed down but IDs.
+- **Layout.** From 1024 px (`useWide`) two columns, `3fr 2fr`: the track column scrolls
+  by itself, playlist headers stick to its top; the mix column never scrolls, its
+  running order does (`flex-1 min-h-0`). Below that width the same components are
+  stacked: `MixResult` with a lower chart on top, then tabs (Tracks, Mix, Order) whose
+  panels are hidden, not removed, so a tab keeps its scroll, filter and folds (W5, W10).
+- **`TrackRow`.** Title and artist; a reason tag only when the app decided (outside
+  range, not picked, picked, needs key/BPM, in ‹playlist›; "looking up" while a new
+  track has no status); the pairs it is in ("after …", "then …"; pointing at one
+  highlights the partner, a click shows it); key (`KeyChip`) and BPM as buttons into
+  the edit dialog, with a pencil only on a value set by hand; one group of four toggles
+  (`setRole`, at most one on); and the link button. Every row carries its status in
+  the spec's words (`statusLabel`) for assistive tech; left-out rows are dimmed, their
+  controls are not. Rows use `content-visibility: auto`, so a pool of 1,000 costs
+  layout only for what is on screen; a row re-renders only when something it reads
+  changed.
+- **`BpmRangeControl` (W8).** The playlist's histogram with a handle per end and a
+  field per end. Bars a range leaves out are faded as the handle moves. A handle is a
+  `role="slider"`: arrows ±1, Page keys ± one bar, Home/End to its own end of the
+  scale, which means "open"; a field commits on Enter or when it is left, and an empty
+  one is open.
+- **"Followed by…" (spec §9.1).** The link button arms a row (`ui.armed`). While a
+  track waits, the notice above the list names it; every other row shows the move the
+  pair would make (`moveBetween` → `MoveBadge`) on a button that completes the pair, or
+  says why it can't (a clash, `followBlock`'s reasons, excluded, no key); a click
+  anywhere on a row that can be chosen chooses it too. Esc, Cancel or the armed button
+  cancel. The list is scrolled by the notice's height when it appears, so the row under
+  the pointer stays put. A pair is made with `setFollower`: arming a pair's second
+  track extends the chain, arming its first replaces the follower.
+- **`MixResult` (W3, W9).** A mix: headline numbers, "Updating…" while `ws.updating`
+  (the last mix stays), the chart. Problems: the same box holds each `message` and the
+  fixes `problem-fixes.ts` offers for it (set key and BPM, stop excluding, remove the
+  pair, always include a left-out track that would fit, exclude the track that can't be
+  placed, try again). Before the first result: one quiet line in a box of the same
+  height.
+- **Cross-highlight (W6)** is `ws.pointedTrackId`: rows, pairs, the chart, the wheel
+  and the running order write it on pointer and focus and read it for their mark. A
+  click in the chart, the running order or a pair asks `ui.reveal`, and `TrackColumn`
+  unfolds the playlist that decides the track, drops a filter that hides it and scrolls
+  the row into view.
+- **Playlists (U13).** The header's menu (Reka `DropdownMenu`) has Update, Check again
+  and Remove from set, and says what the copy skipped. Update shows `describeDropped`
+  under the header until dismissed; Remove asks first, with the same words.
+- **Save (spec §8.5).** `SavePlaylistButton` gets `ws.saveInput`; on `saved` the page
+  calls `ws.recordSave(url)`. `SaveStatus` shows "Saved ‹time›" or "Changed since the
+  save of ‹time›" with the link.
+
+Tests: `src/test/workspace.ts` opens a stored set built from the WCS fixture in the
+real component tree (MSW for Spotify and ReccoBeats, the solver in-process) and the
+`workspace-*.test.ts` files drive it through the DOM.
 
 ## Auth (`features/auth`)
 
@@ -537,8 +651,8 @@ gated solver and fit clients.
 |---|---|---|
 | domain | Vitest | Exhaustive: chart (576 pairs), camelot conversion anchors, tempo, evaluator, constraints, solver properties, diagnostics |
 | api | Vitest + MSW | Request shape, pagination, 429 handling, DTO mapping, zod rejection of bad payloads |
-| model/ui | Vitest + Testing Library | Behaviour through the DOM, not implementation details |
-| app | Playwright | Login (stubbed token); sets: create one from two playlists, reopen after a reload, rename, duplicate, delete, a failed read and its retry, phone width; the old mixer by its address: fill a missing key, generate, compare, explore, save. All network mocked. |
+| model/ui | Vitest + Testing Library | Behaviour through the DOM, not implementation details. The workspace is tested as a whole tree on a stored set (`src/test/workspace.ts`) |
+| app | Playwright | Login (stubbed token); sets: create one from two playlists, reopen after a reload, rename, duplicate, delete, a failed read and its retry, phone width; the workspace: fix a missing key from a row, a range, a mark, a limit with picks, the change summary, a follow pair both ways, an alternative, reload and find it as left, save; a playlist changed in Spotify and Update; "no mix possible" and its fix; no page scroll at 1280 × 720 and 1440 × 900 with the mix in view; phone tabs. All network mocked. `e2e/workspace-shots.spec.ts` takes the screenshots in `docs/reference/workspace/` and runs only with `SHOTS=1`. |
 
 Coverage thresholds apply to `domain/` (≥ 90% lines). The rest is judged by behaviour
 coverage, not a number.

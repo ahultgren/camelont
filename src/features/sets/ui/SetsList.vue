@@ -7,7 +7,7 @@ import { saveState } from '../domain/set'
 import type { MixSet } from '../domain/types'
 import { useSetsStore } from '../model/sets-store'
 import NewSetDialog from './NewSetDialog.vue'
-import { trackCountLabel } from './set-summary'
+import { trackCountLabel } from '../domain/set-summary'
 
 /** The user's sets, newest edit first, with rename, duplicate and delete (spec U2, U12). */
 defineProps<{ linkTo: (setId: string) => RouteLocationRaw }>()

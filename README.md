@@ -1,25 +1,28 @@
 # Camelont
 
-Mix a Spotify playlist with the Camelot wheel, in the browser.
+Build a harmonically mixed set from your Spotify playlists, in the browser.
 
-Camelont proposes several orders for your tracks in which every transition is a
+A *set* is one or more of your playlists gathered under a name. For each playlist you
+choose what it contributes: a BPM range (set on the playlist's own BPM distribution),
+tracks to always include or exclude, and an optional limit with random or best-fit
+picks. Camelont then proposes several orders in which every transition is a
 harmonically compatible move on a directional Camelot chart, shaped by tempo and an
-optional energy arc. Explore each one as a BPM/key progression chart, then save your
-favourite as a new playlist. Your source playlists are never touched.
+optional energy arc.
 
-After login the first page lists your *sets*: one or more of your playlists gathered
-under a name, kept in this browser. **New set** makes one; a set can be renamed,
-duplicated and deleted, and none of that changes anything in Spotify.
+Everything happens in one workspace: the tracks on the left, the mix always in view on
+the right (tempo chart, alternatives, key wheel, running order), updating in place with
+a line that says what each change did. Opener, closer and "followed by" pairs are set
+from the track rows or by pinning a transition. Save the mix you like as a new private
+playlist; your own playlists are never touched, and sets are kept in this browser.
 
 - Vue 3 + TypeScript + Vite, no backend (Spotify PKCE login)
 - Key and BPM from [ReccoBeats](https://reccobeats.com), with manual corrections stored
   on your device
 
 **Status:** implemented and tested with mocked Spotify and ReccoBeats; not yet
-verified against a real Spotify account. Sets are being built: the list and New set are
-in place, mixing a set is not yet. Until it is, the mixer for a single playlist is at
-`/playlists/<playlist id>`. See [`docs/spec.md`](docs/spec.md) and the
-review in [`tasks/todo.md`](tasks/todo.md).
+verified against a real Spotify account. See [`docs/spec.md`](docs/spec.md), the
+screenshots in [`docs/reference/workspace/`](docs/reference/workspace/) and the review
+in [`tasks/todo.md`](tasks/todo.md).
 
 Access is limited to users allowlisted on the Spotify developer app (Spotify
 development mode). Setup: [`docs/setup.md`](docs/setup.md).

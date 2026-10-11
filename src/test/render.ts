@@ -4,7 +4,12 @@ import { createPinia } from 'pinia'
 import { defineComponent, h, type Component } from 'vue'
 import { createMemoryHistory, createRouter, RouterView, type RouteRecordRaw } from 'vue-router'
 import { installAuth, requireLogin } from '@/features/auth'
-import { inlineSolverClient, installMixing } from '@/features/mixing'
+import {
+  inlineFitClient,
+  inlineSolverClient,
+  installMixing,
+  type SolverClient,
+} from '@/features/mixing'
 import { installSets } from '@/features/sets'
 import { installTrackFeatures } from '@/features/track-features'
 import { createMemoryStore, type KeyValueStore } from '@/shared/storage'
@@ -21,6 +26,8 @@ export interface RenderPageOptions {
   cacheStore?: KeyValueStore
   /** Stored sets; defaults to none. */
   setsStore?: KeyValueStore
+  /** Defaults to the solver running in-process. */
+  solverClient?: SolverClient
 }
 
 /** Renders routes inside the app's plugins (Pinia, Vue Query, auth, router). */
@@ -50,7 +57,10 @@ export async function renderRoutes(options: RenderPageOptions) {
               cacheStore: options.cacheStore ?? createMemoryStore(),
               overridesStore: options.overridesStore ?? createMemoryStore(),
             })
-            installMixing(app, { client: inlineSolverClient })
+            installMixing(app, {
+              client: options.solverClient ?? inlineSolverClient,
+              fitClient: inlineFitClient,
+            })
             installSets(app, { store: options.setsStore ?? createMemoryStore() })
           },
         },

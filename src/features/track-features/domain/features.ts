@@ -5,7 +5,7 @@ export type FeatureSource = 'reccobeats' | 'manual'
 
 export const SOURCE_LABEL: Record<FeatureSource, string> = {
   reccobeats: 'ReccoBeats',
-  manual: 'Manual',
+  manual: 'Set by hand',
 }
 
 export interface Sourced<T> {

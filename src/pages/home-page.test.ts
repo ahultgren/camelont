@@ -2,7 +2,8 @@ import { screen, within } from '@testing-library/vue'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { describe, expect, it } from 'vitest'
-import type { MixSet } from '@/features/sets'
+import { defineComponent, h } from 'vue'
+import { poolSize, useSetsStore, type MixSet } from '@/features/sets'
 import type { KeyValueStore } from '@/shared/storage'
 import { server } from '@/test/msw'
 import { renderRoutes, route } from '@/test/render'
@@ -10,11 +11,30 @@ import { aSet, playlistCopy, setsStorage } from '@/test/sets'
 import { slowItems, SPOTIFY, spotifyHandlers } from '@/test/spotify-mocks'
 import { loggedInStorage } from '@/test/storage'
 import HomePage from './HomePage.vue'
-import SetPage from './SetPage.vue'
+
+/** Where a set opens. The workspace has its own tests; here it is enough that it opens. */
+const SetStub = defineComponent({
+  props: { id: { type: String, required: true } },
+  setup(props) {
+    const sets = useSetsStore()
+    return () => {
+      const set = sets.get(props.id)
+      return [
+        h('h1', set?.name),
+        h(
+          'ul',
+          set?.playlists.map((playlist) =>
+            h('li', `${playlist.name}${String(poolSize([playlist]))} tracks`),
+          ),
+        ),
+      ]
+    }
+  },
+})
 
 const routes = [
   route('/', HomePage, { name: 'home' }),
-  route('/sets/:id', SetPage, { name: 'set', props: true, meta: { requiresAuth: true } }),
+  route('/sets/:id', SetStub, { name: 'set', props: true, meta: { requiresAuth: true } }),
 ]
 
 const wcs = playlistCopy('wcs', 'WCS', ['a', 'b', 'c'])
@@ -46,6 +66,8 @@ describe('home page (logged out)', () => {
     expect(screen.getByRole('heading', { level: 1, name: 'Camelont' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Log in with Spotify' })).toBeInTheDocument()
     expect(screen.queryByText('Friday')).toBeNull()
+    // It describes sets built from playlists, not the old one-playlist mixer.
+    expect(screen.getByText(/Build a harmonically mixed set from your playlists/)).toBeVisible()
   })
 })
 
@@ -54,6 +76,13 @@ describe('home page (logged in): the sets list', () => {
     await openHome()
     expect(await screen.findByRole('heading', { name: 'No sets yet' })).toBeVisible()
     expect(screen.getByRole('heading', { level: 1, name: 'Your sets' })).toBeInTheDocument()
+  })
+
+  it('offers export and import of the corrections made by hand (U4)', async () => {
+    await openHome()
+    expect(await screen.findByRole('heading', { name: 'Key and BPM corrections' })).toBeVisible()
+    expect(screen.getByRole('button', { name: 'Export corrections' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Import corrections' })).toBeEnabled()
   })
 
   it('lists the sets, most recently edited first, each linking to its page', async () => {
@@ -267,6 +296,45 @@ describe('home page (logged in): a new set', () => {
       'Slow ones4 tracks',
       'WCS20 tracks',
     ])
+  })
+
+  it('stores each playlist’s Spotify version and what its copy leaves out', async () => {
+    server.use(...spotifyHandlers())
+    const storage = setsStorage([])
+    const { dialog } = await openDialog(storage)
+    await userEvent.click(dialog.getByRole('checkbox', { name: /Slow ones/ }))
+    await userEvent.click(dialog.getByRole('checkbox', { name: /WCS/ }))
+    await userEvent.click(dialog.getByRole('button', { name: 'Create set' }))
+    await dialog.findByText('“Slow ones” is ready.')
+
+    const [record] = await storage.entries()
+    const stored = (record?.[1] as { data: MixSet }).data
+    // The change check compares against this version instead of reading the tracks again.
+    expect(stored.playlists.map((playlist) => [playlist.playlistId, playlist.snapshotId])).toEqual([
+      ['slow', 'slow-1'],
+      ['wcs', 'wcs-1'],
+    ])
+    expect(stored.playlists.map((playlist) => playlist.skipped)).toEqual([
+      { localFiles: 1, episodes: 1, unavailable: 0 },
+      { localFiles: 0, episodes: 0, unavailable: 0 },
+    ])
+  })
+
+  it('says why a playlist that is no longer mine can’t be read', async () => {
+    server.use(
+      http.get(`${SPOTIFY}/playlists/wcs`, () =>
+        HttpResponse.json({ id: 'wcs', name: 'WCS', images: [], owner: { id: 'someone-else' } }),
+      ),
+      ...spotifyHandlers(),
+    )
+    const storage = setsStorage([])
+    const { dialog } = await openDialog(storage)
+    await userEvent.click(dialog.getByRole('checkbox', { name: /WCS/ }))
+    await userEvent.click(dialog.getByRole('button', { name: 'Create set' }))
+    expect(await dialog.findByRole('alert')).toHaveTextContent(
+      /Couldn’t read “WCS”: it isn’t yours, .* No set was created\./,
+    )
+    expect(await storedNames(storage)).toEqual([])
   })
 
   it('can’t take a followed playlist', async () => {

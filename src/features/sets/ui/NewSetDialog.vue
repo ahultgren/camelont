@@ -3,7 +3,8 @@ import { nextTick, ref, useTemplateRef, watch } from 'vue'
 import { PlaylistPicker, type PlaylistSummary } from '@/features/playlists'
 import { AppButton, AppDialog } from '@/shared/ui'
 import type { MixSet } from '../domain/types'
-import { describeSkipped, useCreateSet } from './useCreateSet'
+import { describeSkipped } from '../domain/skipped'
+import { useCreateSet } from '../model/useCreateSet'
 
 /** Names a set, picks its playlists and reads their tracks (spec U2, §8.1–8.2). */
 const open = defineModel<boolean>('open', { required: true })
@@ -63,7 +64,7 @@ async function submit() {
       <div class="grid gap-1 text-sm">
         <p>Some items can’t be mixed and were left out:</p>
         <ul class="list-disc pl-5">
-          <li v-for="playlist in state.skipped" :key="playlist.name">
+          <li v-for="playlist in state.skipped" :key="playlist.playlistId">
             {{ playlist.name }}: {{ describeSkipped(playlist.skipped) }}
           </li>
         </ul>

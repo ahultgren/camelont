@@ -1,9 +1,11 @@
 # Camelont
 
-Browser-only Vue 3 + TypeScript SPA that reorders a Spotify playlist into a harmonic
-mix using the user's directional Camelot chart, compares alternative mixes on a
-BPM/key chart, and saves the chosen mix as a new Spotify playlist. No backend: Spotify
-PKCE login, and key/BPM come from ReccoBeats.
+Browser-only Vue 3 + TypeScript SPA that builds a harmonically mixed *set* from one or
+more Spotify playlists, using the user's directional Camelot chart. The user chooses
+which tracks each playlist contributes (BPM range, marks, a limit with picks), compares
+alternative mixes on a BPM/key chart in one workspace, and saves the chosen mix as a new
+Spotify playlist. Sets live in the browser. No backend: Spotify PKCE login, and key/BPM
+come from ReccoBeats.
 
 ## Read first
 
@@ -37,7 +39,7 @@ else. If the spec seems wrong, ask; don't silently diverge.
 ## Architecture rules (summary; details in docs/architecture.md)
 
 - Layers: `app → pages → features → shared`. Features: `auth`, `playlists`,
-  `track-features`, `mixing`, `mix-view`.
+  `track-features`, `mixing`, `mix-view`, `sets` (the set, and its workspace).
 - A feature is `domain/` (pure TS, no Vue, no I/O) · `api/` (I/O + zod) · `model/`
   (stores/composables) · `ui/` · `index.ts` (the only import surface).
 - Cross-feature imports only via `index.ts`. `shared` never imports upward. Enforced by
@@ -45,6 +47,7 @@ else. If the spec seems wrong, ask; don't silently diverge.
 - Validate every external payload with zod at the `api/` boundary. Domain code never
   sees DTOs.
 - `evaluateMix` is the single source of truth for scoring (solver and UI both use it).
+  `selectTracks` is the only place that decides which tracks are in a set.
 - Read `import.meta.env` only in `src/app/config.ts`.
 - DRY: shared concepts (Camelot key, key name, key hue, move metadata) have exactly one
   implementation.

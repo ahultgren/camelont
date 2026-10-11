@@ -43,9 +43,12 @@ export function linearY(frame: Frame, min: number, max: number) {
   return (v: number) => frame.top + ((max - v) * inner) / (max - min || 1)
 }
 
-/** Width that gives each track at least `perTrack` px, for horizontal scrolling. */
-export const chartWidth = (count: number, base = 640, perTrack = 34): number =>
-  Math.max(base, 60 + count * perTrack)
+/**
+ * The chart's width: as wide as its box, or wider when that would leave a track less
+ * than `perTrack` px (the chart then scrolls sideways).
+ */
+export const chartWidth = (count: number, box = 640, perTrack = 20): number =>
+  Math.max(box, 48 + count * perTrack)
 
 /** How many tracks use each key, e.g. 7B × 5. */
 export function keyCounts(keys: readonly CamelotKey[]): Map<CamelotKey, number> {
