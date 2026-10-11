@@ -52,6 +52,7 @@ export default defineConfig(
       'docs',
       'public',
       'node_modules',
+      '.claude/worktrees',
     ],
   },
   js.configs.recommended,

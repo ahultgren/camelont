@@ -7,3 +7,4 @@ src/test/fixtures
 playwright-report
 test-results
 *.md
+.claude/worktrees
