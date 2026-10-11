@@ -253,6 +253,12 @@ chart equals the JSON for all 576 pairs.
   the URIs in batches of 100, then links to it. The page is the glue: it maps the
   chosen mix's entry IDs to URIs.
 
+- `playlists/ui/PlaylistPicker` lists the user's playlists (searchable; followed ones
+  are shown but can't be used, with the reason) in two modes. With `linkTo` every
+  mixable playlist is a link (the old playlist page). Without it the picker selects:
+  each row is a checkbox and `v-model:selected` holds the chosen playlists in the
+  order they were ticked, named above the list so a search can't hide them.
+
 ## Sets (`features/sets`)
 
 The set is the unit of work (spec §8). The feature defines its own shapes and imports
