@@ -1,4 +1,4 @@
-import type { MixSet, MixSettings, SetPlaylist, TrackChoices } from './types'
+import type { ChosenMix, MixSet, MixSettings, SetPlaylist, TrackChoices } from './types'
 
 export const NO_MIX_SETTINGS: MixSettings = { opener: null, closer: null, follows: [], arc: 'none' }
 
@@ -54,10 +54,32 @@ export function duplicateSet(set: MixSet, init: { id: string; now: number }): Mi
   }
 }
 
+/** The mix rules of a set: its mix settings without the arc. */
+export type MixRules = Pick<MixSettings, 'opener' | 'closer' | 'follows'>
+
 /** The tracks named in a mix rule. They count as must-include (spec §5.4). */
-export function ruleTrackIds(mix: MixSettings): string[] {
+export function ruleTrackIds(mix: MixRules): string[] {
   const named = [mix.opener, mix.closer, ...mix.follows.flat()]
   return [...new Set(named.filter((id) => id !== null))]
+}
+
+/** Whether two mixes play the same tracks in the same order. */
+export const sameOrder = (a: readonly string[], b: readonly string[]): boolean =>
+  a.length === b.length && a.every((trackId, index) => trackId === b[index])
+
+/**
+ * Which of the alternatives is the stored mix (spec §8.5): the one with exactly its
+ * track order, or null. The stored mix is only ever used through this check, because
+ * the tracks in the set can change without the set changing (an override made in
+ * another set): a mix that is not among today's alternatives is not shown.
+ */
+export function chosenIndex(
+  chosen: ChosenMix | null,
+  alternatives: readonly (readonly string[])[],
+): number | null {
+  if (chosen === null) return null
+  const index = alternatives.findIndex((order) => sameOrder(order, chosen.order))
+  return index === -1 ? null : index
 }
 
 export type SaveState = 'never' | 'saved' | 'changed'
@@ -70,9 +92,5 @@ export function saveState(set: MixSet): SaveState {
   const { lastSave, chosenMix } = set
   if (lastSave === null) return 'never'
   const order = chosenMix?.order ?? []
-  const same =
-    lastSave.name === set.name &&
-    lastSave.order.length === order.length &&
-    lastSave.order.every((trackId, i) => trackId === order[i])
-  return same ? 'saved' : 'changed'
+  return lastSave.name === set.name && sameOrder(lastSave.order, order) ? 'saved' : 'changed'
 }

@@ -1,4 +1,4 @@
-import type { ArcConfig } from './arc'
+import { DEFAULT_ARC_WEIGHT, type ArcChoice, type ArcConfig } from './arc'
 import type { Move } from './chart'
 
 /**
@@ -45,4 +45,12 @@ export function profileById(id: string): MixProfile {
 
 export function withArc(profile: MixProfile, arc: ArcConfig | null): MixProfile {
   return { ...profile, arc }
+}
+
+/** The default profile with the user's arc choice: the preset on the BPM signal, or no arc. */
+export function profileForArc(choice: ArcChoice): MixProfile {
+  return withArc(
+    DEFAULT_PROFILE,
+    choice === 'none' ? null : { preset: choice, signal: 'bpm', weight: DEFAULT_ARC_WEIGHT },
+  )
 }

@@ -1,15 +1,13 @@
 import { computed, reactive, ref, toRaw, toValue, watch, type MaybeRefOrGetter } from 'vue'
 import type { TrackFeatures } from '@/features/track-features'
-import { DEFAULT_ARC_WEIGHT, type ArcPresetId } from '../domain/arc'
+import type { ArcChoice } from '../domain/arc'
 import { validateConstraints, type MixConstraints } from '../domain/constraints'
-import { DEFAULT_PROFILE, withArc } from '../domain/profile'
+import { profileForArc } from '../domain/profile'
 import { DEFAULT_K, DEFAULT_SEED } from '../domain/solver/solve'
 import { toMixInput, type PlannerEntry } from './mix-input'
 import { useSolverClient, type SolverClient } from './solver-client'
 import type { WorkerSolveRequest } from './solver.worker'
 import { useMixer } from './useMixer'
-
-export type ArcChoice = ArcPresetId | 'none'
 
 export interface EditableConstraints {
   start: string | null
@@ -58,16 +56,10 @@ export function useMixPlanner(
   const request = computed((): WorkerSolveRequest | null => {
     if (blockers.value.length > 0 || constraintErrors.value.length > 0) return null
     if (includedCount.value === 0) return null
-    const profile = withArc(
-      DEFAULT_PROFILE,
-      arc.value === 'none'
-        ? null
-        : { preset: arc.value, signal: 'bpm', weight: DEFAULT_ARC_WEIGHT },
-    )
     return {
       tracks: toRaw(input.value.tracks).map((t) => ({ ...t })),
       constraints: snapshot(),
-      profile,
+      profile: profileForArc(arc.value),
       k: DEFAULT_K,
       seed: DEFAULT_SEED,
     }

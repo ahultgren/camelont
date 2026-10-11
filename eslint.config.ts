@@ -19,8 +19,8 @@ const FEATURE_EDGES: Record<string, string[]> = {
   playlists: ['auth'],
   mixing: ['track-features'],
   'mix-view': ['mixing', 'track-features'],
-  // Planned: playlists, track-features, mixing. Add each edge with the code that needs it.
-  sets: [],
+  // The set workspace: reads playlists, looks up key and BPM, picks and mixes.
+  sets: ['playlists', 'track-features', 'mixing'],
 }
 
 const SEGMENTS = ['domain', 'api', 'model', 'ui'] as const

@@ -75,9 +75,10 @@ app → pages → features → shared
 - `shared/*` imports nothing from `features`, `pages` or `app`.
 - A feature imports `shared/*` and **other features only via their `index.ts`**. No
   circular feature dependencies. Allowed edges today: `playlists → auth`,
-  `mixing → track-features`, `mix-view → mixing, track-features`. `sets` has none yet
-  (planned: `playlists`, `track-features`, `mixing`, each added with the code that
-  needs it). Adding an edge is a design decision: record it here.
+  `mixing → track-features`, `mix-view → mixing, track-features`,
+  `sets → playlists, track-features, mixing` (the set workspace reads playlists, looks
+  up key and BPM, picks and mixes; `mixing` never imports `sets`). Adding an edge is a
+  design decision: record it here.
 - Inside a feature: `ui → (model, domain)`, `model → (api, domain)`, `api → domain`;
   `domain` imports only `shared/music` and `shared/lib`. `ui` may use domain types and
   pure helpers (e.g. move metadata), never `api`.
@@ -111,6 +112,31 @@ mixing/model ── MixRequest {tracks, constraints, profileId, k, seed} ──�
                           mix-view (charts)  ◀┘ ──▶ playlists/api: save as new playlist
 ```
 
+The same flow for a set (the workspace, `sets/model/useSetWorkspace`):
+
+```
+sets store (IndexedDB) ──▶ MixSet: playlist copies, track choices, marks, mix rules, arc
+        │                        ▲ every edit, as it is made
+        │ pool track IDs         │
+        ▼                        │
+track-features/model ──▶ key + BPM per track (overrides applied)
+        │
+        ▼
+sets/domain selectTracks ◀── best-fit answers ◀── Worker(pickBestFit), one playlist at a time
+        │ Selection: status per track, counts, tracks in the set, blockers
+        ▼
+problems found without the solver (rule errors, must-include without data, empty set)
+        │ none
+        ▼
+MixRequest {tracks in the set + left-out tracks as excluded, rules, arc} ──▶ Worker(solver)
+        │
+        ▼
+view: mix (alternatives, the shown one) | problems, kept until the next one is ready
+        + what the update changed (ChangeSummary)
+
+Spotify ──(playlists/api readPlaylist)──▶ change notice per playlist ──(Update)──▶ MixSet
+```
+
 - Domain types never carry DTO shapes. `api/` maps DTOs to domain types.
 - Track identity everywhere is the Spotify track ID (22-char base62). Duplicates of the
   same track in one playlist are treated as distinct *entries* (`entryId` = the track ID
@@ -138,7 +164,10 @@ mixing/model ── MixRequest {tracks, constraints, profileId, k, seed} ──�
 - `model/`: `installTrackFeatures(app)` wires storage and the provider;
   `useOverridesStore` (Pinia); `useTrackFeatures(trackIds)` reads the cache, fetches
   the rest per batch (a failed batch degrades to missing data plus a message), and
-  merges with overrides.
+  merges with overrides. `isLoading` is true from the moment the list of track IDs
+  changes until the answer for that list is there (an answer says which list it is
+  for), so a caller can hold what it showed instead of treating new tracks as lacking
+  data.
 - `ui/`: `TrackTable` (key in both notations, BPM, source badge per value, Fix/Edit
   per row, an `actions` slot for the page), `OverrideDialog`, `OverridesTransfer`.
 
@@ -218,9 +247,19 @@ The heart of the app, pure TS and fully unit tested.
   a scan per pick: about 0.1 s for 45 fixed tracks and 100 candidates, 0.3 s for 100
   and 315 with 10 picks, 2.4 s for 50 picks from 1,000, so it belongs in the worker
   next to the solve.
-- `model/solver.worker.ts` exposes `solve(request)` via Comlink; `model/solver-client.ts`
-  starts one worker per run (cancel = terminate). `model/useMixer` wraps it and cancels
-  the run in flight when inputs change or the component unmounts.
+- `model/solver.worker.ts` exposes `solve(request)` and `fit(request)` (best fit holds a
+  solver run of its own, so it never runs on the main thread) via Comlink;
+  `model/solver-client.ts` starts one worker per run (cancel = terminate) and has a
+  client for each: `SolverClient` and `FitClient`, both injectable through
+  `installMixing`, both falling back to an in-process client where there is no
+  `Worker`. `model/useLatestRun` runs one piece of work at a time and drops a result
+  that was superseded; `useMixer` (solve) and `useFitter` (best fit) are that, with
+  their client. The worker imports `domain/` only, never a feature's `index.ts`, so no
+  UI code ends up in its bundle.
+- `profile.ts` `profileForArc(choice)` is the default profile with the user's arc
+  choice (`ArcChoice`: a preset or none). `describeDiagnostic(d, name, wording?)` can
+  call the tracks kept out of the mix something other than "excluded" and stop naming
+  them after a few; a set can leave hundreds out.
 
 **Required tests using the WCS fixture:** the `hand_tuned` and `script_greedy` orders
 evaluate as clash-free with the documented move counts (hand-tuned: 9 perfect, 7 boost,
@@ -252,11 +291,19 @@ chart equals the JSON for all 576 pairs.
   characters); `playlists/ui/SavePlaylistButton` creates the private playlist and adds
   the URIs in batches of 100, then links to it. The page is the glue: it maps the
   chosen mix's entry IDs to URIs.
+- The playlist page and `useMixPlanner` mix one playlist whole. They stay until the
+  workspace page replaces them; the model that page sits on is `useSetWorkspace`
+  (below), which uses the same solver client, `useMixer`, `validateConstraints` and
+  diagnostics, and takes its tracks, rules and arc from a set.
 
 ## Sets (`features/sets`)
 
-The set is the unit of work (spec §8). The feature defines its own shapes and imports
-no other feature; pages map playlists, track features and mix results to and from them.
+The set is the unit of work (spec §8). Its `domain/` and `api/` use the feature's own
+shapes and import no other feature. `model/` is where a set meets the rest of the app:
+it reads playlists (`playlists`), looks up key and BPM (`track-features`) and picks and
+mixes (`mixing`), mapping to and from those features' types in `model/mix-request.ts`.
+A set names a track by its track ID (it holds a track once), and that ID is the mixer's
+entry ID.
 
 - `domain/types.ts`: `MixSet { id, name, createdAt, editedAt, playlists, marks, mix,
   chosenMix, lastSave }`. A `SetPlaylist` is the stored copy of a Spotify playlist (its
@@ -307,6 +354,32 @@ no other feature; pages map playlists, track features and mix results to and fro
   function, so what is announced is what is dropped. The chosen mix is not touched
   here: it is checked against the current selection when it is read (track data can
   change outside the set too).
+- `domain/select-set.ts`: `selectForSet(input, bestFitAnswers)` is `selectTracks` with
+  the real pick methods: the random draw, and best fit from the answers at hand. Best
+  fit runs in a worker, so an answer may not be there yet: the first pick without one
+  comes back as `missing` and the selection is then a draft, in which every status
+  that needs no pick (and so the blockers) is final.
+- `domain/edits.ts`: every edit the workspace makes, as a function for the store's
+  `update`: `withBpmRange`, `withLimit`, `withPickMethod`, `withMark`, `withOpener`,
+  `withCloser`, `withFollow`, `withoutFollow`, `withArc`, `withChosenMix`, and
+  `roleOf` / `withRole` for the row's toggle group (spec §9.1: at most one of opener,
+  closer, must-include, exclude). An edit returns the same set when nothing changes
+  and replaces only the part it changes; the workspace relies on that to know what to
+  redo.
+- `domain/mix-problems.ts`: what stops a mix before the solver is asked, in the set's
+  words: `excludedInRules` (a mix rule naming an excluded track is an error that names
+  the rule, spec §5.4), `describeBlocker` (a must-include track without key or BPM,
+  with the mark or rule that keeps it in), `describeEmptySet`. The rules themselves
+  (cycles, branches, clashing pairs) are checked by `mixing`'s `validateConstraints`.
+- `domain/change-summary.ts`: `summariseChange(before, after)` (spec W4) compares two
+  settled states (tracks in the set, picks per playlist, the shown mix): tracks that
+  joined and left, picks that went out and came in per playlist, tracks and cost
+  before and after, whether the order changed. A pick change is a track that came or
+  went through a pick: a locked pick, or a track that stays when a limit arrives, is
+  none.
+- `domain/set.ts` also has `chosenIndex(chosen, alternatives)`: the stored mix is used
+  only if it is one of the alternatives as they are now (track data can change
+  outside the set). `playlist-diff.ts` has `describeChange` → "3 new, 1 removed".
 - `api/repository.ts`: `createSetsRepo(store)` on the `KeyValueStore` port (IndexedDB
   database `camelont-sets`), one record per set, keyed by set ID and shaped
   `{ v: 1, data }`. `all()` returns `{ sets, unreadable }`: a record that fails the zod
@@ -326,6 +399,87 @@ no other feature; pages map playlists, track features and mix results to and fro
   quick successive edits can't overtake each other. Waiting changes are flushed when
   the page is hidden or left. A failed write shows in `saveError` and is tried again
   with the next change; a failed load shows in `loadError`.
+
+### The set workspace (`sets/model/useSetWorkspace.ts`)
+
+`useSetWorkspace(setId)` is everything the workspace page of one set sits on. It
+belongs to one set for as long as it lives: the page gives its component the set ID as
+`key`. What it returns:
+
+| | |
+|---|---|
+| `status`, `statusMessage`, `set` | the set, live from the store; an ID that isn't on this device is `missing`, a stored set that fails validation `unreadable` (reported, never thrown) |
+| `tracks`, `features`, `featuresLoading`, `providerError`, `retryFeatures` | the pool by track ID, and key/BPM with sources for each (overrides applied) |
+| `selection`, `picking` | `Selection`: status and reason per track, counts and `limitFilled` per playlist, the tracks in the set, blockers |
+| `view`, `updating`, `summary`, `retry` | the mix (alternatives, the shown one, whether it is the stored choice) or the problems in its place; what the last update changed |
+| `notices`, `checkPlaylists`, `updatePlaylist` | the change check against Spotify |
+| `pointedTrackId` | one shared ref for cross-highlighting (W6) |
+| `setBpmRange`, `setLimit`, `setPickMethod`, `reshuffle`, `setMark`, `setRole`, `setOpener`, `setCloser`, `addFollow`, `removeFollow`, `setArc`, `chooseAlternative` | edits, each written through the store at once |
+
+How it works:
+
+- **Steps, each a computed over the part of the set it needs.** The set is an
+  immutable value, nothing is deeply reactive (`shallowRef` and `computed` only), and
+  edits keep the identity of what they don't touch. So the pool is rebuilt only when a
+  playlist's track list changes, tracks are selected again only when playlists, marks,
+  rule tracks or track data change, and the arc or a chosen alternative re-selects
+  nothing. With 1,000 tracks in the pool an edit costs about a millisecond on the main
+  thread.
+- **Best fit and the synchronous selection.** `selectTracks` takes a synchronous pick
+  function, and best fit must run in the worker. The selection therefore runs on the
+  main thread with the best-fit answers at hand (`selectForSet`); a pick without an
+  answer is worked out in the worker and the selection is made again. An answer is
+  kept under everything it depends on (the candidates and the tracks in the set with
+  their key and BPM, the count, the mix rules, the order handed on), so only a change
+  to one of those asks again. **Why not select and solve together in the worker:** the
+  track list wants every status at once, also when the mix takes a second; a range
+  that has no best-fit playlist behind it then never waits for a worker; and the
+  worker would have to import the sets feature, while `mixing` (which owns the worker)
+  must not. The cost is one worker round trip per best-fit playlist that has to pick
+  again, in the order the playlists were added. Each answer's `order` is handed to the
+  next request (decision 31), so playlists picking in turn share one solver run.
+- **Problems that need no solver** are found on whatever selection is at hand, also a
+  draft: a rule naming an excluded track, a must-include track without key or BPM, the
+  rules themselves (`validateConstraints` on the tracks in the set), an empty set.
+  They replace the result at once (W9).
+- **The solver's request** is the tracks in the set plus every mixable left-out track
+  as `excluded`, so the existing diagnostics name left-out tracks that would unblock an
+  impossible mix (U7); at most five are named per message, all are in the diagnostic.
+  Outcomes are kept by request (the last eight, like the fit answers), so going back
+  to a state needs no solve.
+- **One piece of work at a time**: the fit a selection waits for, then the solve. Edits
+  are gathered for 150 ms; the first result after opening and the solve that follows a
+  fit start at once. A result that was superseded is dropped (`useLatestRun`).
+- **Settling (W3).** `view` is the last settled result: a mix or problems. While a
+  newer one is worked out it stays and `updating` is true; it is `opening` only before
+  the first. `selection` likewise keeps its last value while picks are worked out
+  (`picking`) or new tracks' data is loading. A failed worker is a `failed` problem,
+  not retried until the input changes or `retry` is called.
+- **Change summary (W4).** Each settled result is compared with the one before it. The
+  first has no summary, and an update that changes nothing that is shown leaves the
+  last summary standing. Choosing another alternative is not an update, but the next
+  summary's "cost before" is the cost of the mix that was on screen.
+- **The chosen alternative (spec §8.5).** `chooseAlternative` stores the order in the
+  set. The first mix after opening shows the stored one if `chosenIndex` finds it among
+  the alternatives; after a change that gives other alternatives the best one is
+  shown; an update that leaves the alternatives as they are keeps the shown one. A
+  stored mix that is not what is shown is removed from the set, so `saveState` stays
+  true to what a save would write. That is the one edit the workspace makes by itself
+  (it stamps the set's edit time, also when it happens on opening).
+- **Playlist change check (`usePlaylistChanges`, spec §8.2).** When the set is there,
+  each playlist is read with `playlists`' `readPlaylist(id, storedSnapshotId)`:
+  `GET /playlists/{id}`, and its items only when the `snapshot_id` differs from the
+  stored one (or Spotify gives none). The notice per playlist is `checking`,
+  `unchanged`, `changed` (added and removed tracks from `diffPlaylist`, and the label)
+  or `cantCheck` (`gone`: 404/403; `notYours`: only followed, for which Spotify gives
+  no tracks; `failed`: Spotify couldn't be reached). The same tracks in another order
+  or under another name are no change. `updatePlaylist(id)` applies the copy that was
+  read through `updatePlaylist` and returns what was dropped. Nothing is ever written
+  to Spotify here.
+
+Tests drive the composable through `src/test/set-app.ts` (the app's plugins without a
+page): an in-memory store, MSW for Spotify, a fake feature provider, and in-process or
+gated solver and fit clients.
 
 ## Auth (`features/auth`)
 

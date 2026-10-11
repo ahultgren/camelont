@@ -220,11 +220,11 @@ Three sessions, the first two in parallel:
   Spotify from the set, removing the playlist page, e2e and docs.
 
 ### Step 4 — wire sets into mixing
-- [ ] The planner takes its tracks, rules and arc from the set; left-out tracks go in as
+- [x] The planner takes its tracks, rules and arc from the set; left-out tracks go in as
   `excluded` so diagnostics can name ones that would unblock a mix (U7)
-- [ ] Keep the previous result while a new one is worked out (W3); change summary (W4)
-- [ ] Playlist change check on open (`snapshot_id`), notice, Update (U16)
-- [ ] Remember the chosen alternative (A9)
+- [x] Keep the previous result while a new one is worked out (W3); change summary (W4)
+- [x] Playlist change check on open (`snapshot_id`), notice, Update (U16)
+- [x] Remember the chosen alternative (A9)
 
 ### Step 5 — workspace UI (after the layout is picked)
 - [ ] Home = sets list + New set; routes `/sets/:id`; remove `PlaylistPage` and the

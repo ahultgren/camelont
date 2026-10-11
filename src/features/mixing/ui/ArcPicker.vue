@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ARC_PRESETS } from '../domain/arc'
-import type { ArcChoice } from '../model/useMixPlanner'
+import type { ArcChoice } from '../domain/arc'
 
 const model = defineModel<ArcChoice>({ required: true })
 

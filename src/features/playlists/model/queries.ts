@@ -25,6 +25,16 @@ export function usePlaylistContents(id: MaybeRefOrGetter<string>) {
   })
 }
 
+/**
+ * Reads a playlist as it is in Spotify now (see `PlaylistReading`): for the copy a set
+ * stores and for checking that copy later. Not a query: a set decides when to look.
+ */
+export function usePlaylistReader() {
+  const api = useSpotifyApi()
+  return (playlistId: string, knownSnapshotId: string | null = null) =>
+    api.readPlaylist(playlistId, knownSnapshotId)
+}
+
 export interface SaveMixInput {
   name: string
   description: string

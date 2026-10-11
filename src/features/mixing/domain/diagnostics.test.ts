@@ -104,4 +104,25 @@ describe('describeDiagnostic', () => {
   ])('%j', (diagnostic, expected) => {
     expect(describeDiagnostic(diagnostic, plain)).toContain(expected)
   })
+
+  const crowded: Diagnostic = {
+    kind: 'no-predecessor',
+    id: 'A',
+    keys: ['1B'],
+    excludedOptions: ['P', 'Q', 'R', 'S'],
+  }
+
+  it('names every excluded track that would fit', () => {
+    expect(describeDiagnostic(crowded, plain)).toContain(
+      'Excluded tracks that would fit: P, Q, R and S.',
+    )
+  })
+
+  it('can call them something else and stop naming after a few', () => {
+    const wording = { leftOut: 'Left-out tracks', maxOptions: 2 }
+    expect(describeDiagnostic(crowded, plain, wording)).toContain(
+      'Left-out tracks that would fit: P, Q and 2 more.',
+    )
+    expect(describeDiagnostic(crowded, plain, { maxOptions: 4 })).toContain('P, Q, R and S.')
+  })
 })

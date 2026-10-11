@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  describeChange,
   diffPlaylist,
   playlistRemoval,
   removePlaylist,
@@ -129,6 +130,21 @@ describe('diffPlaylist', () => {
     expect(ids(diff.added)).toEqual(['t1', 't2'])
     expect(diff.removed).toEqual([])
     expect(diff.dropped).toEqual(NOTHING)
+  })
+})
+
+describe('describeChange (the change notice, §8.2)', () => {
+  const change = (added: string[], removed: string[]) =>
+    describeChange({ added: tracks(...added), removed: tracks(...removed) })
+
+  it('counts new and removed tracks', () => {
+    expect(change(['n1', 'n2', 'n3'], ['t1'])).toBe('3 new, 1 removed')
+    expect(change(['n1'], [])).toBe('1 new')
+    expect(change([], ['t1', 't2'])).toBe('2 removed')
+  })
+
+  it('has nothing to say when the tracks are the same', () => {
+    expect(change([], [])).toBeNull()
   })
 })
 

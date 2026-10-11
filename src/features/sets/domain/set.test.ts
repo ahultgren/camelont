@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   addPlaylist,
+  chosenIndex,
   defaultChoices,
   duplicateSet,
   newSet,
@@ -118,7 +119,6 @@ describe('ruleTrackIds', () => {
           ['a', 'c'],
           ['c', 'd'],
         ],
-        arc: 'none',
       }),
     ).toEqual(['a', 'b', 'c', 'd'])
     expect(ruleTrackIds(NO_MIX_SETTINGS)).toEqual([])
@@ -152,5 +152,29 @@ describe('saveState', () => {
     expect(saveState({ ...saved, chosenMix: { order: ['a', 'b'] } })).toBe('changed')
     expect(saveState({ ...saved, chosenMix: null })).toBe('changed')
     expect(saveState({ ...saved, name: 'Saturday social' })).toBe('changed')
+  })
+})
+
+describe('chosenIndex (spec §8.5)', () => {
+  const alternatives = [
+    ['a', 'b', 'c'],
+    ['c', 'b', 'a'],
+  ]
+
+  it('finds the alternative with the stored order', () => {
+    expect(chosenIndex({ order: ['c', 'b', 'a'] }, alternatives)).toBe(1)
+    expect(chosenIndex({ order: ['a', 'b', 'c'] }, alternatives)).toBe(0)
+  })
+
+  it('finds nothing when no mix was chosen', () => {
+    expect(chosenIndex(null, alternatives)).toBeNull()
+  })
+
+  it('finds nothing when the stored mix is not one of the alternatives any more', () => {
+    // Another order, a track that left the set, a track that joined it.
+    expect(chosenIndex({ order: ['b', 'a', 'c'] }, alternatives)).toBeNull()
+    expect(chosenIndex({ order: ['a', 'b', 'c', 'd'] }, alternatives)).toBeNull()
+    expect(chosenIndex({ order: ['a', 'b'] }, alternatives)).toBeNull()
+    expect(chosenIndex({ order: [] }, [])).toBeNull()
   })
 })

@@ -108,6 +108,126 @@ describe('getPlaylistContents', () => {
   })
 })
 
+describe('readPlaylist', () => {
+  const me = () => http.get(`${SPOTIFY_API}/me`, () => HttpResponse.json({ id: 'me' }))
+  const items = (id: string, onRead: () => void = () => undefined) =>
+    http.get(`${SPOTIFY_API}/playlists/${id}/items`, () => {
+      onRead()
+      return HttpResponse.json({ items: [track('t1', 'One'), track('t2', 'Two')], next: null })
+    })
+
+  it('reads the name, image, snapshot and tracks of a playlist of mine', async () => {
+    server.use(
+      me(),
+      http.get(`${SPOTIFY_API}/playlists/p1`, () =>
+        HttpResponse.json(playlist('p1', 'me', { snapshot_id: 'snap-2' })),
+      ),
+      items('p1'),
+    )
+    const reading = await createSpotifyApi(auth).readPlaylist('p1', 'snap-1')
+    expect(reading).toMatchObject({
+      kind: 'read',
+      name: 'List p1',
+      imageUrl: 'https://img/p1',
+      snapshotId: 'snap-2',
+      skipped: { localFiles: 0, episodes: 0, unavailable: 0 },
+    })
+    expect(reading.kind === 'read' && reading.entries.map((e) => e.trackId)).toEqual(['t1', 't2'])
+  })
+
+  it('does not read the tracks again while the snapshot is the one it knows', async () => {
+    let reads = 0
+    server.use(
+      me(),
+      http.get(`${SPOTIFY_API}/playlists/p1`, () =>
+        HttpResponse.json(playlist('p1', 'me', { snapshot_id: 'snap-1' })),
+      ),
+      items('p1', () => reads++),
+    )
+    await expect(createSpotifyApi(auth).readPlaylist('p1', 'snap-1')).resolves.toEqual({
+      kind: 'unchanged',
+    })
+    expect(reads).toBe(0)
+  })
+
+  it('reads the tracks when Spotify gives no snapshot', async () => {
+    server.use(
+      me(),
+      http.get(`${SPOTIFY_API}/playlists/p1`, () => HttpResponse.json(playlist('p1', 'me'))),
+      items('p1'),
+    )
+    const reading = await createSpotifyApi(auth).readPlaylist('p1', null)
+    expect(reading).toMatchObject({ kind: 'read', snapshotId: null })
+  })
+
+  it('reads a collaborative playlist someone else owns', async () => {
+    server.use(
+      me(),
+      http.get(`${SPOTIFY_API}/playlists/p1`, () =>
+        HttpResponse.json(playlist('p1', 'friend', { collaborative: true, snapshot_id: 's' })),
+      ),
+      items('p1'),
+    )
+    await expect(createSpotifyApi(auth).readPlaylist('p1', null)).resolves.toMatchObject({
+      kind: 'read',
+    })
+  })
+
+  it('says a playlist I only follow is not mine, without asking for its tracks', async () => {
+    let reads = 0
+    server.use(
+      me(),
+      http.get(`${SPOTIFY_API}/playlists/p1`, () => HttpResponse.json(playlist('p1', 'someone'))),
+      items('p1', () => reads++),
+    )
+    await expect(createSpotifyApi(auth).readPlaylist('p1', 'snap-1')).resolves.toEqual({
+      kind: 'unreadable',
+      reason: 'notYours',
+    })
+    expect(reads).toBe(0)
+  })
+
+  it.each([404, 403])('says a playlist answered with %i is gone', async (status) => {
+    server.use(
+      me(),
+      http.get(`${SPOTIFY_API}/playlists/p1`, () =>
+        HttpResponse.json({ error: { status, message: 'Nope' } }, { status }),
+      ),
+    )
+    await expect(createSpotifyApi(auth).readPlaylist('p1', 'snap-1')).resolves.toEqual({
+      kind: 'unreadable',
+      reason: 'gone',
+    })
+  })
+
+  it('throws when Spotify fails for another reason', async () => {
+    server.use(
+      me(),
+      http.get(`${SPOTIFY_API}/playlists/p1`, () => HttpResponse.json({}, { status: 500 })),
+    )
+    await expect(createSpotifyApi(auth).readPlaylist('p1', null)).rejects.toMatchObject({
+      kind: 'http',
+      status: 500,
+    })
+  })
+
+  it('asks who I am once for several playlists', async () => {
+    let asked = 0
+    server.use(
+      http.get(`${SPOTIFY_API}/me`, () => {
+        asked++
+        return HttpResponse.json({ id: 'me' })
+      }),
+      http.get(`${SPOTIFY_API}/playlists/:id`, ({ params }) =>
+        HttpResponse.json(playlist(String(params.id), 'me', { snapshot_id: 'same' })),
+      ),
+    )
+    const client = createSpotifyApi(auth)
+    await Promise.all([client.readPlaylist('p1', 'same'), client.readPlaylist('p2', 'same')])
+    expect(asked).toBe(1)
+  })
+})
+
 describe('saving', () => {
   it('creates a private playlist', async () => {
     let body: unknown = null
