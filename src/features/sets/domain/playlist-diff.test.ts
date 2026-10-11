@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   describeChange,
+  describeDropped,
   diffPlaylist,
   playlistRemoval,
   removePlaylist,
@@ -256,5 +257,41 @@ describe('removing a playlist from a set (§8.2)', () => {
   it('finds nothing to remove for a playlist that is not in the set', () => {
     expect(playlistRemoval(set, 'nope')).toEqual(NOTHING)
     expect(removePlaylist(set, 'nope')).toBe(set)
+  })
+})
+
+describe('describeDropped', () => {
+  const name = (trackId: string) => `“${trackId}”`
+
+  it('has nothing to say when nothing goes', () => {
+    expect(describeDropped(NOTHING, name)).toEqual([])
+  })
+
+  it('names the tracks, their marks and the rules, a line each', () => {
+    const set = setOf(
+      { a: ['open', 'x', 'y'], b: ['other'] },
+      { x: 'mustInclude', y: 'exclude' },
+      { opener: 'open', closer: 'y', follows: [['x', 'other']] },
+    )
+    expect(describeDropped(playlistRemoval(set, 'a'), name)).toEqual([
+      '3 tracks leave the set: OPEN, X, Y.',
+      '2 marks: “x” (always include), “y” (excluded).',
+      '3 mix rules: “open” as the opener, “y” as the closer, the pair “x” → “other”.',
+    ])
+  })
+
+  it('stops naming after a few', () => {
+    const many = ['t1', 't2', 't3', 't4', 't5', 't6']
+    const [line] = describeDropped(playlistRemoval(setOf({ a: many }), 'a'), name)
+    expect(line).toBe('6 tracks leave the set: T1, T2, T3, T4 and 2 more.')
+  })
+
+  it('uses the singular for one of each', () => {
+    const set = setOf({ a: ['only'] }, { only: 'exclude' }, { opener: 'only' })
+    expect(describeDropped(playlistRemoval(set, 'a'), name)).toEqual([
+      '1 track leaves the set: ONLY.',
+      '1 mark: “only” (excluded).',
+      '1 mix rule: “only” as the opener.',
+    ])
   })
 })

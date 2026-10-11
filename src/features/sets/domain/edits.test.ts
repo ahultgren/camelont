@@ -12,7 +12,9 @@ import {
   withoutFollow,
   withPickMethod,
   withRole,
+  withSave,
 } from './edits'
+import { saveState } from './set'
 import { addPlaylist, newSet, type PlaylistCopy } from './set'
 import type { MixSet } from './types'
 
@@ -139,6 +141,18 @@ describe('chosen mix', () => {
     expect(withChosenMix(chosen, ['t2', 't1'])).toBe(chosen)
     expect(withChosenMix(chosen, null).chosenMix).toBeNull()
     expect(withChosenMix(base, null)).toBe(base)
+  })
+
+  it('records a save, with the saved mix as the chosen one', () => {
+    const order = ['t2', 't1']
+    const saved = withSave(base, { url: 'https://x/y', savedAt: 9, name: base.name, order })
+    expect(saved.lastSave).toEqual({ url: 'https://x/y', savedAt: 9, name: base.name, order })
+    expect(saved.chosenMix).toEqual({ order })
+    expect(saveState(saved)).toBe('saved')
+    // The stored order is the set's own copy.
+    order.push('t3')
+    expect(saved.lastSave?.order).toEqual(['t2', 't1'])
+    expect(saveState(withChosenMix(saved, ['t1', 't2']))).toBe('changed')
   })
 })
 

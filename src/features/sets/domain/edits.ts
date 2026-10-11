@@ -1,5 +1,5 @@
 import { sameOrder } from './set'
-import type { MixSet, PickMethod, SetArc, TrackChoices, TrackMark } from './types'
+import type { LastSave, MixSet, PickMethod, SetArc, TrackChoices, TrackMark } from './types'
 
 /**
  * Every edit the workspace makes to a set, as pure functions for the store's `update`.
@@ -92,6 +92,15 @@ export function withChosenMix(set: MixSet, order: readonly string[] | null): Mix
   if (set.chosenMix && sameOrder(set.chosenMix.order, order)) return set
   return { ...set, chosenMix: { order: [...order] } }
 }
+
+/**
+ * A save to Spotify (spec §8.5): what was written, where and when. The saved mix is
+ * from then on the chosen one, so reopening the set shows what was saved.
+ */
+export const withSave = (set: MixSet, save: LastSave): MixSet => ({
+  ...withChosenMix(set, save.order),
+  lastSave: { ...save, order: [...save.order] },
+})
 
 /** The toggles on a track row, of which at most one is on (spec §9.1). */
 export type TrackRole = 'opener' | 'closer' | TrackMark

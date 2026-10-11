@@ -1102,3 +1102,178 @@ describe('a large pool', () => {
     expect(workspace.features.value).toBe(features)
   })
 })
+
+describe('follow pairs from a row (§9.1)', () => {
+  it('gives a track its follower, replacing the one it had', async () => {
+    const [a, b, c] = EASY
+    const { workspace, stored } = await open({ playlists: [copy('a', EASY.slice(0, 6))] })
+    workspace.setFollower(a ?? '', b ?? '')
+    workspace.setFollower(b ?? '', c ?? '')
+    expect(stored()?.mix.follows).toEqual([
+      [a, b],
+      [b, c],
+    ])
+    workspace.setFollower(a ?? '', c ?? '')
+    expect(stored()?.mix.follows).toEqual([
+      [b, c],
+      [a, c],
+    ])
+  })
+})
+
+describe('the set’s playlists (U13)', () => {
+  it('adds playlists as they are in Spotify now, and their tracks join the pool', async () => {
+    server.use(
+      http.get(`${SPOTIFY}/playlists/b/items`, () => HttpResponse.json(items(EASY.slice(5, 8)))),
+    )
+    const { workspace, stored } = await open({ playlists: [copy('a', EASY.slice(0, 5))] })
+    await settled(workspace)
+
+    expect(await workspace.addPlaylists([{ id: 'b', name: 'Playlist b' }])).toBe(true)
+    expect(stored()?.playlists.map((p) => [p.playlistId, p.snapshotId])).toEqual([
+      ['a', 'snap-1'],
+      ['b', 'snap-1'],
+    ])
+    expect(workspace.tracks.value.size).toBe(8)
+
+    const view = mixOf(await settled(workspace))
+    expect(view.shown.order).toHaveLength(8)
+    expect(workspace.summary.value).toMatchObject({ joined: EASY.slice(5, 8), left: [] })
+  })
+
+  it('adds nothing when a playlist can’t be read, and says which', async () => {
+    server.use(
+      http.get(`${SPOTIFY}/playlists/b/items`, () => HttpResponse.json(items(EASY.slice(5, 8)))),
+      http.get(`${SPOTIFY}/playlists/c`, () => HttpResponse.json({}, { status: 404 })),
+    )
+    const { workspace, stored } = await open({ playlists: [copy('a', EASY.slice(0, 5))] })
+    await settled(workspace)
+
+    const added = await workspace.addPlaylists([
+      { id: 'b', name: 'Playlist b' },
+      { id: 'c', name: 'Gone' },
+    ])
+    expect(added).toBe(false)
+    expect(workspace.adding.value).toMatchObject({ status: 'failed', playlist: 'Gone' })
+    expect(stored()?.playlists.map((p) => p.playlistId)).toEqual(['a'])
+    workspace.cancelAdd()
+    expect(workspace.adding.value).toEqual({ status: 'idle' })
+  })
+
+  it('says what goes with a playlist, and removes exactly that', async () => {
+    const [shared, own, other] = [EASY[0] ?? '', EASY[1] ?? '', EASY[6] ?? '']
+    const { workspace, stored } = await open({
+      playlists: [copy('a', EASY.slice(0, 5)), copy('b', [shared, ...EASY.slice(5, 10)])],
+      prepare: (set) => ({
+        ...set,
+        marks: { [own]: 'exclude', [shared]: 'mustInclude' },
+        mix: { ...set.mix, closer: own, follows: [[own, other]] },
+      }),
+    })
+    await settled(workspace)
+
+    const announced = workspace.removalOf('a')
+    // The shared track stays: the other playlist still has it.
+    expect(announced?.tracks.map((t) => t.trackId)).toEqual(EASY.slice(1, 5))
+    expect(announced?.marks).toEqual([{ trackId: own, mark: 'exclude' }])
+    expect(announced?.rules).toEqual([
+      { kind: 'closer', trackId: own },
+      { kind: 'follow', from: own, to: other },
+    ])
+    expect(stored()?.playlists).toHaveLength(2)
+
+    expect(workspace.removePlaylist('a')).toEqual(announced)
+    expect(stored()?.playlists.map((p) => p.playlistId)).toEqual(['b'])
+    expect(stored()?.marks).toEqual({ [shared]: 'mustInclude' })
+    expect(stored()?.mix).toMatchObject({ closer: null, follows: [] })
+    const view = mixOf(await settled(workspace))
+    expect(view.shown.order).toHaveLength(6)
+    expect(workspace.removalOf('a')).toBeNull()
+    expect(workspace.removePlaylist('a')).toBeNull()
+  })
+})
+
+describe('the set’s name and its save to Spotify (§8.5)', () => {
+  it('renames the set; a blank name is ignored', async () => {
+    const { workspace, stored } = await open({ playlists: [copy('a', EASY.slice(0, 5))] })
+    workspace.rename('  Saturday social ')
+    expect(stored()?.name).toBe('Saturday social')
+    workspace.rename('   ')
+    expect(stored()?.name).toBe('Saturday social')
+  })
+
+  it('has nothing to save until there is a mix', async () => {
+    const solver = gatedSolver()
+    const { workspace } = await open({
+      playlists: [copy('a', EASY.slice(0, 5))],
+      solverClient: solver.client,
+    })
+    expect(workspace.saveInput.value).toBeNull()
+    expect(workspace.recordSave('https://open.spotify.com/playlist/x')).toBe(false)
+    solver.release()
+  })
+
+  it('offers the shown mix under the set’s name, with a description', async () => {
+    const { workspace } = await open({ playlists: [copy('a', EASY.slice(0, 5))] })
+    const view = mixOf(await settled(workspace))
+    const input = workspace.saveInput.value
+    expect(input?.name).toBe('Friday social')
+    expect(input?.uris).toEqual(shownOrder(view).map((id) => `spotify:track:${id}`))
+    expect(input?.description).toMatch(/^Harmonic mix of “Friday social” made with Camelont: /)
+    expect(input?.description).toMatch(/arc: none\.$/)
+    workspace.setArc('twoWaves')
+    await settled(workspace)
+    expect(workspace.saveInput.value?.description).toMatch(/arc: Two waves\.$/)
+  })
+
+  it('remembers the save, and says when the set has changed since', async () => {
+    let now = 1000
+    const setsStore = createMemoryStore()
+    const { workspace, stored, sets, setId } = await open({
+      setsStore,
+      playlists: [copy('a', EASY)],
+      now: () => now,
+    })
+    const view = mixOf(await settled(workspace))
+    expect(workspace.saveState.value).toBe('never')
+
+    now = 5000
+    expect(workspace.recordSave('https://open.spotify.com/playlist/new-mix')).toBe(true)
+    expect(stored()?.lastSave).toEqual({
+      url: 'https://open.spotify.com/playlist/new-mix',
+      savedAt: 5000,
+      name: 'Friday social',
+      order: shownOrder(view),
+    })
+    // The saved mix is the chosen one: reopening the set shows it.
+    expect(stored()?.chosenMix).toEqual({ order: shownOrder(view) })
+    expect(workspace.saveState.value).toBe('saved')
+
+    workspace.chooseAlternative(1)
+    expect(workspace.saveState.value).toBe('changed')
+    workspace.chooseAlternative(0)
+    expect(workspace.saveState.value).toBe('saved')
+    workspace.rename('Saturday social')
+    expect(workspace.saveState.value).toBe('changed')
+    workspace.rename('Friday social')
+
+    // A change to the set gives another mix: changed, until it is saved again.
+    workspace.setMark(EASY[3] ?? '', 'exclude')
+    await settled(workspace)
+    expect(workspace.saveState.value).toBe('changed')
+    now = 9000
+    workspace.recordSave('https://open.spotify.com/playlist/second')
+    expect(stored()?.lastSave).toMatchObject({
+      savedAt: 9000,
+      url: 'https://open.spotify.com/playlist/second',
+    })
+    expect(workspace.saveState.value).toBe('saved')
+
+    // As left, after a reload.
+    const saved = shownOrder(workspace.view.value)
+    await sets.flush()
+    const again = await open({ setsStore, setId })
+    expect(shownOrder(await settled(again.workspace))).toEqual(saved)
+    expect(again.workspace.saveState.value).toBe('saved')
+  })
+})

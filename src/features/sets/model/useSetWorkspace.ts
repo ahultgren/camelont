@@ -1,7 +1,9 @@
 import { computed, onScopeDispose, shallowRef, watch } from 'vue'
 import {
+  DEFAULT_PROFILE,
   describeConstraintError,
   describeDiagnostic,
+  mixDescription,
   trackNamer,
   useFitClient,
   useFitter,
@@ -36,8 +38,10 @@ import {
   withoutFollow,
   withPickMethod,
   withRole,
+  withSave,
   type TrackRole,
 } from '../domain/edits'
+import { withFollower } from '../domain/follow'
 import {
   describeBlocker,
   describeEmptySet,
@@ -45,9 +49,10 @@ import {
   excludedInRules,
   type MixRule,
 } from '../domain/mix-problems'
+import { playlistRemoval, removePlaylist, type Dropped } from '../domain/playlist-diff'
 import type { PickRequest, Selection } from '../domain/select'
 import { selectForSet } from '../domain/select-set'
-import { chosenIndex, ruleTrackIds, sameOrder, type MixRules } from '../domain/set'
+import { chosenIndex, ruleTrackIds, sameOrder, saveState, type MixRules } from '../domain/set'
 import type { MixSet, PickMethod, SetArc, SetTrack, TrackMark } from '../domain/types'
 import {
   fitKey,
@@ -58,9 +63,11 @@ import {
   trackFacts,
   type TrackFacts,
 } from './mix-request'
+import { useSetsDeps } from './deps'
 import { useRecent } from './recent'
 import { useSetsStore } from './sets-store'
 import { usePlaylistChanges } from './usePlaylistChanges'
+import { useReadPlaylists } from './useReadPlaylists'
 
 /** Why there is no mix. Each one is in plain language and names the tracks it is about. */
 export type WorkspaceProblem =
@@ -152,6 +159,7 @@ interface MixResult {
  */
 export function useSetWorkspace(setId: string, options: SetWorkspaceOptions = {}) {
   const sets = useSetsStore()
+  const deps = useSetsDeps()
 
   // ── The set ──────────────────────────────────────────────────────────────────────
   const set = computed(() => sets.get(setId) ?? null)
@@ -577,6 +585,41 @@ export function useSetWorkspace(setId: string, options: SetWorkspaceOptions = {}
     sets.update(setId, change)
   }
 
+  // ── The set's playlists (U13) ────────────────────────────────────────────────────
+  const reads = useReadPlaylists()
+  /**
+   * Reads the playlists as they are in Spotify now and adds them to the set, all or
+   * none: false when one couldn't be read (`adding` says which; calling again reads
+   * only what is still missing) or the set is gone. A playlist the set has is skipped.
+   */
+  async function addPlaylists(chosen: readonly { id: string; name: string }[]): Promise<boolean> {
+    const copies = await reads.readAll(chosen)
+    if (!copies || !sets.get(setId)) return false
+    for (const copy of copies) sets.addPlaylist(setId, copy)
+    return true
+  }
+  /** What removing a playlist takes with it (§8.2); null when the set doesn't have it. */
+  function removalOf(playlistId: string): Dropped | null {
+    const current = set.value
+    if (!current?.playlists.some((playlist) => playlist.playlistId === playlistId)) return null
+    return playlistRemoval(current, playlistId)
+  }
+
+  // ── Saving to Spotify (§8.5) ─────────────────────────────────────────────────────
+  /** What a save would write now: a new playlist named after the set, in mix order. */
+  const saveInput = computed(() => {
+    const current = set.value
+    const shown = view.value.kind === 'mix' ? view.value.shown : null
+    if (!current || !shown) return null
+    const arcChoice = current.mix.arc === 'none' ? null : current.mix.arc
+    return {
+      name: current.name,
+      description: mixDescription(shown, DEFAULT_PROFILE, arcChoice, current.name),
+      uris: shown.order.flatMap((track) => tracks.value.get(track.id)?.uri ?? []),
+      order: orderOf(shown),
+    }
+  })
+
   return {
     status,
     statusMessage,
@@ -608,6 +651,41 @@ export function useSetWorkspace(setId: string, options: SetWorkspaceOptions = {}
     checkPlaylists: () => changes.check(),
     /** Applies a `changed` notice; returns the marks and rules that went with removed tracks. */
     updatePlaylist: (playlistId: string) => changes.update(playlistId),
+
+    /** Reading the playlists being added: idle, which one is read, or which one failed. */
+    adding: reads.state,
+    addPlaylists,
+    /** Abandons an add in flight and forgets a failed one. */
+    cancelAdd: () => {
+      reads.reset()
+    },
+    removalOf,
+    /** Removes a playlist with what `removalOf` announced; returns that. */
+    removePlaylist: (playlistId: string): Dropped | null => {
+      const dropped = removalOf(playlistId)
+      if (dropped) edit((current) => removePlaylist(current, playlistId))
+      return dropped
+    },
+
+    /** A blank name is ignored. */
+    rename: (name: string) => {
+      sets.rename(setId, name)
+    },
+
+    saveInput,
+    /** Never saved, saved as it is now, or changed since the last save. */
+    saveState: computed(() => (set.value ? saveState(set.value) : 'never')),
+    /**
+     * Records that the shown mix was just saved to Spotify as a new playlist at `url`.
+     * False when there is no mix to have saved.
+     */
+    recordSave: (url: string): boolean => {
+      const saved = saveInput.value
+      if (!saved) return false
+      const save = { url, savedAt: deps.now(), name: saved.name, order: saved.order }
+      edit((current) => withSave(current, save))
+      return true
+    },
 
     /** The track being pointed at in any view, for highlighting it in the others (W6). */
     pointedTrackId: shallowRef<string | null>(null),
@@ -641,6 +719,10 @@ export function useSetWorkspace(setId: string, options: SetWorkspaceOptions = {}
     },
     addFollow: (from: string, to: string) => {
       edit((current) => withFollow(current, from, to))
+    },
+    /** "`from` is followed by `to`", in place of whatever followed `from` before (§9.1). */
+    setFollower: (from: string, to: string) => {
+      edit((current) => withFollower(current, from, to))
     },
     removeFollow: (from: string, to: string) => {
       edit((current) => withoutFollow(current, from, to))
