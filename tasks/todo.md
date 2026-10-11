@@ -174,13 +174,15 @@ Proposed by the agent and written into the spec; the owner approved them as a wh
   header bars on the track list, the mix on the right. Recorded in spec §9.1. It is
   guidance for layout only; the owner finds the prototype's look ugly, so the visual
   design follows spec §7 and the existing components
-- [ ] Component split in `architecture.md` (with Step 5)
+- [x] Component split in `architecture.md` (with Step 5)
 - [x] Follow pairs: a pin on running-order connectors plus a two-click "Followed by…"
   from a row; no drag-and-drop (owner, 2026-10-10; spec §9.1)
 - [x] "Remove from set" lives in a menu on the playlist header bar (spec §9.1)
 - [x] Only hand-set values are marked on rows; the edit dialog, opened from the key or
   BPM, shows the full source (decision 29)
-- [ ] The prototype's phone board is out of date; redo it with Step 5
+- [x] The prototype's phone board is out of date; redo it with Step 5
+  → not redrawn on the canvas: the phone layout was built (tabs under the chart) and its
+  screenshots are in `docs/reference/workspace/`
 
 ### Step 2 — sets domain and storage (parallel with 1 and 3; new files only)
 New feature `features/sets`. Proposed edges: `sets → playlists, track-features, mixing`
@@ -237,10 +239,10 @@ Three sessions, the first two in parallel:
     skipped items; edge `sets → playlists`
   - [x] E2E for the sets flow; the old mixer's e2e opens `/playlists/wcs` directly
   - [x] Docs: `architecture.md`, `README.md`
-- [ ] Remove `PlaylistPage` and the `/playlists/:id` route (5b)
-- [ ] The chosen layout: playlists panel with track choices and the BPM range control
+- [x] Remove `PlaylistPage` and the `/playlists/:id` route (5b)
+- [x] The chosen layout: playlists panel with track choices and the BPM range control
   (W8), one track list (W7), mix rules, arc, alternatives, mix views, cross-highlight (W6)
-- [ ] Phone variant (W10)
+- [x] Phone variant (W10)
 
 #### Review of 5a (2026-10-11)
 `VITE_SPOTIFY_CLIENT_ID=ci-placeholder-client-id pnpm check` exits 0: 41 test files /
@@ -266,28 +268,68 @@ For 5b to pick up:
 Where the code goes: the workspace UI is `sets/ui/workspace/` (new edge `sets → mix-view`;
 `mixing` and `mix-view` never import `sets`), on `useSetWorkspace`. `SetPage.vue` only
 keys it by set ID. The app shell gives the route the full window.
-- [ ] 5a leftovers: `useCreateSet` → `model/`, `set-summary` → `domain/`, New set stores
+- [x] 5a leftovers: `useCreateSet` → `model/`, `set-summary` → `domain/`, New set stores
   `snapshot_id` (reads through `usePlaylistReader`), intro text
-- [ ] Model: `addPlaylists` / `removePlaylist` / `removalOf`, `rename`, `recordSave` on
+- [x] Model: `addPlaylists` / `removePlaylist` / `removalOf`, `rename`, `recordSave` on
   `useSetWorkspace` (tests first); pure helpers in `domain/` (track list filter and sort,
   BPM histogram, follow-pair checks)
-- [ ] `mix-view`: highlight prop + event on chart, wheel and running order; pins on the
+- [x] `mix-view`: highlight prop + event on chart, wheel and running order; pins on the
   running order's connectors; dense forms for the mix column
-- [ ] `mixing/ui`: dense alternatives and arc picker; remove `ConstraintsPanel`,
+- [x] `mixing/ui`: dense alternatives and arc picker; remove `ConstraintsPanel`,
   `MixProblems`, `useMixPlanner`
-- [ ] Workspace: top bar, track column (playlist header bars, BPM range control, rows,
+- [x] Workspace: top bar, track column (playlist header bars, BPM range control, rows,
   toggle group, filter and sort, armed "Followed by…"), mix column (summary, headline,
   chart, alternatives, arc, pairs, wheel, running order, problems in place)
-- [ ] Add playlists, Remove from set with what goes with it, Update with what was dropped
-- [ ] Save to Spotify from the set; link, time, changed since
-- [ ] Phone: tabs under a compact chart
-- [ ] Remove `PlaylistPage`, `/playlists/:id`, `TrackTable`, what only they used
-- [ ] E2E as set flows; no-page-scroll test at 1280 × 720 and 1440 × 900
-- [ ] Screenshots in `docs/reference/workspace/`; docs; `pnpm check`
+- [x] Add playlists, Remove from set with what goes with it, Update with what was dropped
+- [x] Save to Spotify from the set; link, time, changed since
+- [x] Phone: tabs under a compact chart
+- [x] Remove `PlaylistPage`, `/playlists/:id`, `TrackTable`, what only they used
+- [x] E2E as set flows; no-page-scroll test at 1280 × 720 and 1440 × 900
+- [x] Screenshots in `docs/reference/workspace/`; docs; `pnpm check`
+
+#### Review of 5b + 6 (2026-10-11)
+`VITE_SPOTIFY_CLIENT_ID=ci-placeholder-client-id pnpm check` exits 0 (numbers in the
+last commit of the step). Nothing was run against real Spotify.
+
+What was built is described in `docs/architecture.md` ("The workspace page"); the
+screenshots are in `docs/reference/workspace/`.
+
+Measured in Chromium against the built app, a pool of 1,000 tracks with 100 in the set:
+the workspace opens in 1.6 s; typing a filter, marking a row, setting a range and arming
+"Followed by…" each land in 0.1–0.3 s; one task over 50 ms (101 ms) in the whole run.
+
+Choices where the spec left room (for the owner to confirm):
+- Giving a track that already has a follower another one replaces the first; a track
+  can't be chosen as a follower when it would clash, has a leader already, would close
+  the chain, is the opener, is excluded or has no key. The closer, an excluded track
+  and a track without a key can't be armed.
+- Saving makes the saved mix the chosen one (so "saved" holds until the set gives
+  another mix or gets another name).
+- The BPM range's handles snap to whole BPM; the end of the scale means "open".
+- Range and limit fields commit on Enter or when left, not per keystroke.
+- The status filter and the sort apply inside every playlist; a click on a track in the
+  chart, the running order or a pair clears a filter that hides its row.
+- The workspace has no Log out button; it is on the sets list.
+- Export and import of corrections moved to the home page.
+- The headline also shows the mix's length in minutes.
+- Two columns from 1024 px; below that the phone layout.
+
+Left open:
+- An edit made in the last ~0.4 s before a reload can be lost: the sets store writes
+  400 ms after an edit and its write on `pagehide` does not complete in Chromium (found
+  by the e2e, which now waits for the write). Belongs to the store (Step 2).
+- Keyboard: every row control, chart point and running-order row is a tab stop. It all
+  works, but a pool of 1,000 is a long way to tab; arrow-key navigation inside the list
+  would be the fix.
+- Sorting is ascending only.
+- After deleting a set on the home page, focus still falls back to the page (from the
+  review of 5a).
+- The app's JavaScript is one 530 kB chunk (the workspace is imported by the home
+  page's feature index); splitting it is a build concern, not done.
 
 ### Step 6 — save and ship
-- [ ] Save to Spotify from the set (name = set name); link, time, "changed since" (§8.5)
-- [ ] E2E: create a set from two playlists, range + marks + limit, mix, reopen, save;
+- [x] Save to Spotify from the set (name = set name); link, time, "changed since" (§8.5)
+- [x] E2E: create a set from two playlists, range + marks + limit, mix, reopen, save;
   playlist-changed notice; infeasible path. All mocked
-- [ ] Docs: `architecture.md`, `CLAUDE.md` intro, `setup.md`; `pnpm check` green
+- [x] Docs: `architecture.md`, `CLAUDE.md` intro, `setup.md`; `pnpm check` green
 - [ ] Owner verifies against real Spotify (agent can't log in)

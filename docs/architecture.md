@@ -11,7 +11,7 @@ How the app is built. The *what* is in [`spec.md`](spec.md) and the *why* is in
 | Build | Vite |
 | UI | Vue 3 (`<script setup lang="ts">`, Composition API only) |
 | Language | TypeScript 6.0 (typescript-eslint does not support 7 yet), `strict` + `noUncheckedIndexedAccess` + `exactOptionalPropertyTypes`; `vue-tsc` for type checks |
-| Routing | vue-router, history mode, base `/camelont/`; `404.html` copy of `index.html` for GitHub Pages deep links. Routes: `/` (intro and login, or the sets list), `/callback`, `/sets/:id` (a set's workspace) |
+| Routing | vue-router, history mode, base `/camelont/`; `404.html` copy of `index.html` for GitHub Pages deep links. Routes: `/` (intro and login, or the sets list, with export and import of corrections), `/callback`, `/sets/:id` (a set's workspace; `meta.fullScreen`: it lays out the whole window itself) |
 | Client state | Pinia (setup stores) |
 | Server state | TanStack Vue Query (Spotify + ReccoBeats reads; caching, retries, dedupe) |
 | Validation | zod, at every boundary: Spotify, ReccoBeats, IndexedDB reads, JSON import |
@@ -651,8 +651,8 @@ real component tree (MSW for Spotify and ReccoBeats, the solver in-process) and 
 |---|---|---|
 | domain | Vitest | Exhaustive: chart (576 pairs), camelot conversion anchors, tempo, evaluator, constraints, solver properties, diagnostics |
 | api | Vitest + MSW | Request shape, pagination, 429 handling, DTO mapping, zod rejection of bad payloads |
-| model/ui | Vitest + Testing Library | Behaviour through the DOM, not implementation details |
-| app | Playwright | Login (stubbed token); sets: create one from two playlists, reopen after a reload, rename, duplicate, delete, a failed read and its retry, phone width; the old mixer by its address: fill a missing key, generate, compare, explore, save. All network mocked. |
+| model/ui | Vitest + Testing Library | Behaviour through the DOM, not implementation details. The workspace is tested as a whole tree on a stored set (`src/test/workspace.ts`) |
+| app | Playwright | Login (stubbed token); sets: create one from two playlists, reopen after a reload, rename, duplicate, delete, a failed read and its retry, phone width; the workspace: fix a missing key from a row, a range, a mark, a limit with picks, the change summary, a follow pair both ways, an alternative, reload and find it as left, save; a playlist changed in Spotify and Update; "no mix possible" and its fix; no page scroll at 1280 × 720 and 1440 × 900 with the mix in view; phone tabs. All network mocked. `e2e/workspace-shots.spec.ts` takes the screenshots in `docs/reference/workspace/` and runs only with `SHOTS=1`. |
 
 Coverage thresholds apply to `domain/` (≥ 90% lines). The rest is judged by behaviour
 coverage, not a number.

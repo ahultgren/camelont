@@ -85,6 +85,13 @@ const playlist = (id: string, name: string, owner: string, total: number) => ({
   external_urls: { spotify: `https://open.spotify.com/playlist/${id}` },
 })
 
+/** The WCS playlist's items as Spotify lists them, for a test that changes the playlist. */
+export const wcsPlaylistItems = () =>
+  wcs.orders.original.ids.flatMap((id) => {
+    const track = wcs.tracks.find((candidate) => candidate.id === id)
+    return track ? [item(track)] : []
+  })
+
 export interface SpotifyLog {
   created: unknown[]
   added: string[][]

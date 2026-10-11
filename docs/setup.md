@@ -39,6 +39,7 @@ matches. Common scripts (defined during scaffolding; keep this list in sync):
 | `pnpm test:coverage` | Vitest with coverage; fails below 90% lines in `**/domain/**` |
 | `pnpm test:e2e` | Playwright against `pnpm preview` (build first; first run: `pnpm exec playwright install --with-deps chromium`) |
 | `pnpm check` | everything CI runs: lint + format check + typecheck + unit with coverage + build + e2e |
+| `SHOTS=1 pnpm exec playwright test workspace-shots` | retake the workspace screenshots in `docs/reference/workspace/` (build first; skipped in every other run) |
 
 `pnpm install` runs `prepare`, which installs the lefthook git hooks (pre-commit: Prettier
 and ESLint on staged files; pre-push: typecheck and unit tests).

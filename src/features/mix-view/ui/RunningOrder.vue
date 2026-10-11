@@ -116,7 +116,7 @@ function point(trackId: string | null) {
       >
         <span class="num text-right text-[11px] text-muted">{{ i + 1 }}</span>
         <span class="min-w-0 truncate">
-          <span class="font-medium">{{ step.track.label }}</span>
+          <span class="font-medium" data-testid="order-title">{{ step.track.label }}</span>
           <span class="ml-1.5 text-muted">{{ info.get(step.track.id)?.artists.join(', ') }}</span>
         </span>
         <KeyChip :camelot="step.track.camelot" size="sm" />
