@@ -44,6 +44,7 @@ const copy = (playlistId: string, trackIds: string[], snapshotId = 'snap-1'): Pl
   tracks: trackIds.map(track),
   snapshotId,
   readAt: 1,
+  skipped: { localFiles: 0, episodes: 0, unavailable: 0 },
 })
 const wcs = (...names: string[]) => names.map((name) => wcsId(name))
 const ALL = WCS_TRACKS.map((t) => t.id)

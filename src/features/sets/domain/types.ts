@@ -15,6 +15,15 @@ export interface SetTrack {
 
 export type PickMethod = 'random' | 'bestFit'
 
+/** Playlist items that can't be mixed and were left out when the copy was read. */
+export interface SkippedItems {
+  localFiles: number
+  episodes: number
+  unavailable: number
+}
+
+export const NOTHING_SKIPPED: SkippedItems = { localFiles: 0, episodes: 0, unavailable: 0 }
+
 /** What one playlist contributes (spec §8.3–8.4). */
 export interface TrackChoices {
   /** Inclusive, on the saved BPM. Null leaves that end open. */
@@ -37,6 +46,8 @@ export interface SetPlaylist {
   /** Spotify's `snapshot_id` when the copy was read; null if it wasn't given. */
   snapshotId: string | null
   readAt: number
+  /** What the copy leaves out: items Spotify lists that aren't tracks to mix. */
+  skipped: SkippedItems
   choices: TrackChoices
 }
 

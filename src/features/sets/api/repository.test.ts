@@ -21,6 +21,7 @@ const fullSet = (id: string, name = 'Friday social'): MixSet => ({
       })),
       snapshotId: 'snap-1',
       readAt: 90,
+      skipped: { localFiles: 0, episodes: 0, unavailable: 0 },
     },
     42,
   ),

@@ -30,6 +30,7 @@ const copy = (playlistId: string, trackIds: string[]): PlaylistCopy => ({
   })),
   snapshotId: null,
   readAt: 50,
+  skipped: { localFiles: 0, episodes: 0, unavailable: 0 },
 })
 
 const base: MixSet = [copy('a', ['t1', 't2', 't3']), copy('b', ['t4'])].reduce(

@@ -269,6 +269,45 @@ describe('home page (logged in): a new set', () => {
     ])
   })
 
+  it('stores each playlist’s Spotify version and what its copy leaves out', async () => {
+    server.use(...spotifyHandlers())
+    const storage = setsStorage([])
+    const { dialog } = await openDialog(storage)
+    await userEvent.click(dialog.getByRole('checkbox', { name: /Slow ones/ }))
+    await userEvent.click(dialog.getByRole('checkbox', { name: /WCS/ }))
+    await userEvent.click(dialog.getByRole('button', { name: 'Create set' }))
+    await dialog.findByText('“Slow ones” is ready.')
+
+    const [record] = await storage.entries()
+    const stored = (record?.[1] as { data: MixSet }).data
+    // The change check compares against this version instead of reading the tracks again.
+    expect(stored.playlists.map((playlist) => [playlist.playlistId, playlist.snapshotId])).toEqual([
+      ['slow', 'slow-1'],
+      ['wcs', 'wcs-1'],
+    ])
+    expect(stored.playlists.map((playlist) => playlist.skipped)).toEqual([
+      { localFiles: 1, episodes: 1, unavailable: 0 },
+      { localFiles: 0, episodes: 0, unavailable: 0 },
+    ])
+  })
+
+  it('says why a playlist that is no longer mine can’t be read', async () => {
+    server.use(
+      http.get(`${SPOTIFY}/playlists/wcs`, () =>
+        HttpResponse.json({ id: 'wcs', name: 'WCS', images: [], owner: { id: 'someone-else' } }),
+      ),
+      ...spotifyHandlers(),
+    )
+    const storage = setsStorage([])
+    const { dialog } = await openDialog(storage)
+    await userEvent.click(dialog.getByRole('checkbox', { name: /WCS/ }))
+    await userEvent.click(dialog.getByRole('button', { name: 'Create set' }))
+    expect(await dialog.findByRole('alert')).toHaveTextContent(
+      /Couldn’t read “WCS”: it isn’t yours, .* No set was created\./,
+    )
+    expect(await storedNames(storage)).toEqual([])
+  })
+
   it('can’t take a followed playlist', async () => {
     server.use(...spotifyHandlers())
     const { dialog } = await openDialog()

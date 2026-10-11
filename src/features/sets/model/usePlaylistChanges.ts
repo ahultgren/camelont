@@ -53,6 +53,7 @@ export function toPlaylistCopy(
     tracks: reading.entries.map(toSetTrack),
     snapshotId: reading.snapshotId,
     readAt,
+    skipped: reading.skipped,
   }
 }
 

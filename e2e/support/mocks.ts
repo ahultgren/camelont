@@ -138,6 +138,13 @@ export async function mockApis(page: Page): Promise<SpotifyLog> {
         next: null,
       })
     }
+    // A playlist as a set reads it: with the version Spotify has now.
+    if (method === 'GET' && path === '/playlists/wcs') {
+      return json(route, { ...playlist('wcs', 'WCS', 'me', 20), snapshot_id: 'wcs-1' })
+    }
+    if (method === 'GET' && path === '/playlists/slow') {
+      return json(route, { ...playlist('slow', 'Slow ones', 'me', 6), snapshot_id: 'slow-1' })
+    }
     if (method === 'GET' && path === '/playlists/wcs/items') {
       return json(route, { items: tracks.map(item), next: null })
     }

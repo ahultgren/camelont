@@ -67,5 +67,5 @@ export {
 } from './model/useSetWorkspace'
 
 // The home page (step 5a).
-export { poolSize } from './ui/set-summary'
+export { poolSize } from './domain/set-summary'
 export { default as SetsList } from './ui/SetsList.vue'

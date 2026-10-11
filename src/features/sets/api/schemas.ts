@@ -30,6 +30,10 @@ const SetPlaylistSchema = z.object({
   tracks: z.array(SetTrackSchema),
   snapshotId: z.string().nullable(),
   readAt: z.number(),
+  // Added after the first stored sets; a set stored without it skipped nothing we know of.
+  skipped: z
+    .object({ localFiles: z.number(), episodes: z.number(), unavailable: z.number() })
+    .default({ localFiles: 0, episodes: 0, unavailable: 0 }),
   choices: TrackChoicesSchema,
 })
 

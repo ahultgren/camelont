@@ -81,6 +81,13 @@ export const spotifyHandlers = () => [
       next: null,
     }),
   ),
+  // The playlists themselves, as a set reads them: with the version Spotify has now.
+  http.get(`${SPOTIFY}/playlists/wcs`, () =>
+    HttpResponse.json({ ...playlistDto('wcs', 'WCS', 'me'), snapshot_id: 'wcs-1' }),
+  ),
+  http.get(`${SPOTIFY}/playlists/slow`, () =>
+    HttpResponse.json({ ...playlistDto('slow', 'Slow ones', 'me', 6), snapshot_id: 'slow-1' }),
+  ),
   http.get(`${SPOTIFY}/playlists/wcs/items`, () =>
     HttpResponse.json({ items: wcsItems(), next: null }),
   ),

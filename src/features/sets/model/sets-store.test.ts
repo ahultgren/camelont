@@ -23,6 +23,7 @@ const copy = (playlistId: string, trackIds: string[] = ['t1', 't2']): PlaylistCo
   })),
   snapshotId: `snap-${playlistId}`,
   readAt: 500,
+  skipped: { localFiles: 0, episodes: 0, unavailable: 0 },
 })
 
 /** The app's sets store on a given storage, as after a page load. */

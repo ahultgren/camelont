@@ -27,6 +27,7 @@ const copy = (playlistId: string, trackIds: string[], over: Partial<PlaylistCopy
   tracks: tracks(...trackIds),
   snapshotId: `snap-${playlistId}-1`,
   readAt: 10,
+  skipped: { localFiles: 0, episodes: 0, unavailable: 0 },
   ...over,
 })
 

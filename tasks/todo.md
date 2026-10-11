@@ -262,6 +262,29 @@ For 5b to pick up:
 - The logged-out intro and `PlaylistPage`'s "← Your playlists" link still describe the
   single-playlist app.
 
+#### Plan for 5b + 6 (2026-10-11)
+Where the code goes: the workspace UI is `sets/ui/workspace/` (new edge `sets → mix-view`;
+`mixing` and `mix-view` never import `sets`), on `useSetWorkspace`. `SetPage.vue` only
+keys it by set ID. The app shell gives the route the full window.
+- [ ] 5a leftovers: `useCreateSet` → `model/`, `set-summary` → `domain/`, New set stores
+  `snapshot_id` (reads through `usePlaylistReader`), intro text
+- [ ] Model: `addPlaylists` / `removePlaylist` / `removalOf`, `rename`, `recordSave` on
+  `useSetWorkspace` (tests first); pure helpers in `domain/` (track list filter and sort,
+  BPM histogram, follow-pair checks)
+- [ ] `mix-view`: highlight prop + event on chart, wheel and running order; pins on the
+  running order's connectors; dense forms for the mix column
+- [ ] `mixing/ui`: dense alternatives and arc picker; remove `ConstraintsPanel`,
+  `MixProblems`, `useMixPlanner`
+- [ ] Workspace: top bar, track column (playlist header bars, BPM range control, rows,
+  toggle group, filter and sort, armed "Followed by…"), mix column (summary, headline,
+  chart, alternatives, arc, pairs, wheel, running order, problems in place)
+- [ ] Add playlists, Remove from set with what goes with it, Update with what was dropped
+- [ ] Save to Spotify from the set; link, time, changed since
+- [ ] Phone: tabs under a compact chart
+- [ ] Remove `PlaylistPage`, `/playlists/:id`, `TrackTable`, what only they used
+- [ ] E2E as set flows; no-page-scroll test at 1280 × 720 and 1440 × 900
+- [ ] Screenshots in `docs/reference/workspace/`; docs; `pnpm check`
+
 ### Step 6 — save and ship
 - [ ] Save to Spotify from the set (name = set name); link, time, "changed since" (§8.5)
 - [ ] E2E: create a set from two playlists, range + marks + limit, mix, reopen, save;
