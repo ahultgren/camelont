@@ -37,6 +37,7 @@ import {
   withOpener,
   withoutFollow,
   withPickMethod,
+  withIncompleteSave,
   withRole,
   withSave,
   type TrackRole,
@@ -606,14 +607,16 @@ export function useSetWorkspace(setId: string, options: SetWorkspaceOptions = {}
   }
 
   // ── Saving to Spotify (§8.5) ─────────────────────────────────────────────────────
-  /** What a save would write now: a new playlist named after the set, in mix order. */
+  /**
+   * What a save would write now: the shown mix, in order, with a description of it. The
+   * playlist's name is the user's to choose when saving (`useSaveSet`).
+   */
   const saveInput = computed(() => {
     const current = set.value
     const shown = view.value.kind === 'mix' ? view.value.shown : null
     if (!current || !shown) return null
     const arcChoice = current.mix.arc === 'none' ? null : current.mix.arc
     return {
-      name: current.name,
       description: mixDescription(shown, DEFAULT_PROFILE, arcChoice, current.name),
       uris: shown.order.flatMap((track) => tracks.value.get(track.id)?.uri ?? []),
       order: orderOf(shown),
@@ -673,18 +676,27 @@ export function useSetWorkspace(setId: string, options: SetWorkspaceOptions = {}
     },
 
     saveInput,
-    /** Never saved, saved as it is now, or changed since the last save. */
+    /** Never saved, saved as the mix is now, or the mix changed since the last save. */
     saveState: computed(() => (set.value ? saveState(set.value) : 'never')),
     /**
-     * Records that the shown mix was just saved to Spotify as a new playlist at `url`.
-     * False when there is no mix to have saved.
+     * Records that `order` was just written to this Spotify playlist, under this name.
+     * The saved mix is from then on the chosen one. Called by `useSaveSet` only.
      */
-    recordSave: (url: string): boolean => {
-      const saved = saveInput.value
-      if (!saved) return false
-      const save = { url, savedAt: deps.now(), name: saved.name, order: saved.order }
+    recordSave: (saved: {
+      playlistId: string
+      url: string
+      name: string
+      order: readonly string[]
+    }) => {
+      const save = { ...saved, order: [...saved.order], savedAt: deps.now() }
       edit((current) => withSave(current, save))
-      return true
+    },
+    /**
+     * Records a save that reached its playlist but didn't get every track in: the
+     * playlist is remembered (the next save can replace it), no mix counts as saved.
+     */
+    recordIncompleteSave: (saved: { playlistId: string; url: string; name: string }) => {
+      edit((current) => withIncompleteSave(current, { ...saved, savedAt: deps.now() }))
     },
 
     /** The track being pointed at in any view, for highlighting it in the others (W6). */

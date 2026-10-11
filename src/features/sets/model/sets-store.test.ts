@@ -168,6 +168,7 @@ describe('sets store: create, rename, duplicate, delete', () => {
       ...set,
       marks: { t1: 'mustInclude' },
       lastSave: {
+        playlistId: 'x',
         url: 'https://open.spotify.com/playlist/x',
         savedAt: 1,
         name: set.name,

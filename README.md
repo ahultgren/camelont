@@ -12,8 +12,10 @@ optional energy arc.
 Everything happens in one workspace: the tracks on the left, the mix always in view on
 the right (tempo chart, alternatives, key wheel, running order), updating in place with
 a line that says what each change did. Opener, closer and "followed by" pairs are set
-from the track rows or by pinning a transition. Save the mix you like as a new private
-playlist; your own playlists are never touched, and sets are kept in this browser.
+from the track rows or by pinning a transition. Saving asks for the playlist's name
+first and creates a new private playlist; saving the same set again can replace that
+playlist or create another. Playlists Camelont didn't create are never touched, and sets
+are kept in this browser.
 
 - Vue 3 + TypeScript + Vite, no backend (Spotify PKCE login)
 - Key and BPM from [ReccoBeats](https://reccobeats.com), with manual corrections stored

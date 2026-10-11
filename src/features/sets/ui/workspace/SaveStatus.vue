@@ -3,7 +3,7 @@ import { computed } from 'vue'
 import { formatDateTime } from '@/shared/lib'
 import { useWorkspaceUi } from './context'
 
-/** Where and when the set was last saved to Spotify, and whether it changed since (§8.5). */
+/** Where and when the mix was last saved to Spotify, and whether it changed since (§8.5). */
 const { ws } = useWorkspaceUi()
 const last = computed(() => ws.set.value?.lastSave ?? null)
 </script>
@@ -24,6 +24,7 @@ const last = computed(() => ws.set.value?.lastSave ?? null)
       target="_blank"
       rel="noopener"
       class="font-medium whitespace-nowrap text-accent underline"
+      :title="`Open “${last.name}” in Spotify`"
       >Open in Spotify</a
     >
   </span>

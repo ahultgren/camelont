@@ -301,11 +301,14 @@ workspace (below) composes them.
     `ResizeObserver`) and the `height` it is given; once a track would get less than
     20 px it grows wider than the box and scrolls sideways inside it. Position numbers
     thin out to every fifth when they no longer fit.
-- Saving: `mixing/domain/describe.ts` builds the new playlist's description (moves,
-  BPM range, profile, arc; ≤ 300 characters); `playlists/ui/SavePlaylistButton` creates
-  the private playlist, adds the URIs in batches of 100 and emits `saved` with the link.
-  What is saved (the set's name, the shown mix's order) and what is remembered of it is
-  the workspace's business (`saveInput`, `recordSave`).
+- Saving: `mixing/domain/describe.ts` builds the playlist's description (moves, BPM
+  range, profile, arc; ≤ 300 characters). `playlists` writes: `api/save.ts` has
+  `createPlaylist` and `replacePlaylist`, each returning its outcome as a value, and
+  `api/spotify-api.ts` the calls under them (`createPrivatePlaylist`, `addItems`,
+  `setItems`, `updateDetails`) and `playlistAccess` (whose a playlist is now: mine,
+  not mine, gone). `model/usePlaylistSaver` hands them out and refreshes the list of
+  playlists after a write. Which playlist may be written to is not decided there: see
+  "Save" under the workspace page.
 - `playlists/ui/PlaylistPicker` lists the user's playlists (searchable; followed ones
   are shown but can't be used, with the reason). Each row is a checkbox and
   `v-model:selected` holds the chosen playlists in the order they were ticked, named
@@ -471,7 +474,7 @@ belongs to one set for as long as it lives: the page gives its component the set
 | `view`, `updating`, `summary`, `retry` | the mix (alternatives, the shown one, whether it is the stored choice) or the problems in its place; what the last update changed |
 | `notices`, `checkPlaylists`, `updatePlaylist` | the change check against Spotify |
 | `adding`, `addPlaylists`, `cancelAdd`, `removalOf`, `removePlaylist` | the set's playlists (U13): add (read first, all or none), what a removal takes with it, and the removal |
-| `rename`, `saveInput`, `saveState`, `recordSave` | the name; what a save to Spotify would write now (the set's name, a description, the shown mix's URIs); never / saved / changed; recording a save |
+| `rename`, `saveInput`, `saveState`, `recordSave`, `recordIncompleteSave` | the set's name; what a save to Spotify would write now (a description, the shown mix's URIs and order); never / saved / changed; recording a save, or one that reached its playlist but fell short |
 | `pointedTrackId` | one shared ref for cross-highlighting (W6) |
 | `setBpmRange`, `setLimit`, `setPickMethod`, `reshuffle`, `setMark`, `setRole`, `setOpener`, `setCloser`, `addFollow`, `setFollower`, `removeFollow`, `setArc`, `chooseAlternative` | edits, each written through the store at once |
 
@@ -536,10 +539,12 @@ How it works:
   read through `updatePlaylist` and returns what was dropped. Nothing is ever written
   to Spotify here.
 
-- **Saving (spec §8.5).** The workspace never talks to Spotify to write: the page's
-  save button does, and tells the workspace the link. `recordSave` stores the link, the
-  time, the name and the order, and makes the saved mix the chosen one, so the set
-  reads as `saved` until it gives another mix or gets another name.
+- **Saving (spec §8.5).** The workspace never talks to Spotify to write: `useSaveSet`
+  does, for the save dialog, and tells the workspace what was written. `recordSave`
+  stores the playlist ID, the link, the time, the name and the order, and makes the
+  saved mix the chosen one, so the set reads as `saved` until it gives another mix.
+  `LastSave.playlistId` came later than the first stored sets: reading one without it
+  takes the ID from the stored link, or leaves it null (then nothing can be replaced).
 
 Tests drive the composable through `src/test/set-app.ts` (the app's plugins without a
 page): an in-memory store, MSW for Spotify, a fake feature provider, and in-process or
@@ -562,7 +567,8 @@ WorkspaceScreen          useSetWorkspace + provideWorkspaceUi; top bar (back, na
 ├─ MixResult             headline + TempoArcChart, or the problems, or "working"
 ├─ MixControls           CandidateList, ArcPicker, the pairs
 ├─ MixOrder              KeyWheel + RunningOrder with pins
-└─ AddPlaylistsDialog
+├─ AddPlaylistsDialog
+└─ SaveDialog            SaveForm on useSaveSet: name, name clash, replace or create
 ```
 
 - **`context.ts`** is what these share besides the set (`provideWorkspaceUi` /
@@ -621,9 +627,41 @@ WorkspaceScreen          useSetWorkspace + provideWorkspaceUi; top bar (back, na
 - **Playlists (U13).** The header's menu (Reka `DropdownMenu`) has Update, Check again
   and Remove from set, and says what the copy skipped. Update shows `describeDropped`
   under the header until dismissed; Remove asks first, with the same words.
-- **Save (spec §8.5).** `SavePlaylistButton` gets `ws.saveInput`; on `saved` the page
-  calls `ws.recordSave(url)`. `SaveStatus` shows "Saved ‹time›" or "Changed since the
-  save of ‹time›" with the link.
+- **Save (spec §8.5, decision 41).** The top bar's button only opens `SaveDialog`;
+  `SaveForm` is made each time it opens and sits on `sets/model/useSaveSet`, which asks
+  Spotify how things are then. Nothing is written before the form is confirmed.
+  - *Name.* Starts from the last save's name, else the set's; blank can't be saved. The
+    set is not renamed. `nameCheck` compares it, trimmed and without case, with the
+    playlists the user owns (the whole list, refetched when the dialog opens): taken is
+    a warning, never a block, and a list that couldn't be read says "couldn't check".
+    The playlist being replaced doesn't count against its own name.
+  - *Replace or create.* `target` is `none` (never saved), `checking`, `allowed` or
+    `refused` with a one-line reason. Allowed needs all of: the last save has a playlist
+    ID; no set on this device has that playlist as a source (`replaceRefusal`, over
+    every set in the store); Spotify still has it; the logged-in user owns it
+    (`playlistAccess`; collaborating is not owning). Replace is the default when allowed
+    and the confirm button says which it is. The same checks run again inside `save`
+    right before the first write. A playlist that merely has the same name is never a
+    target.
+  - *Writing* is the playlists feature's (`api/save.ts`, through `usePlaylistSaver`).
+    Create: `POST /me/playlists`, then `POST …/items` in hundreds. Replace:
+    `PUT /playlists/{id}/items` with the first hundred, `POST …/items` for the rest,
+    then `PUT /playlists/{id}` for name and description. The two `PUT` routes are not
+    verified against the Feb 2026 API. Every failure is a value with a kind: the first
+    write answering 404/405 is `unavailable` (the dialog says replacing isn't available
+    and offers a new playlist; it isn't offered again in that dialog), 403 is
+    `forbidden`, a failure after the first write is `incomplete` (the playlist is
+    remembered with no mix counted as saved, and trying again starts the replace over;
+    a new playlist that was created but not filled is remembered the same way, so the
+    retry fills it instead of making another), and tracks in but name not taken counts
+    as saved with a note.
+  - *Afterwards* `recordSave` stores playlist ID, link, time, name and order, and the
+    saved mix becomes the chosen one. `saveState` compares orders only: the playlist's
+    name is its own. `SaveStatus` shows "Saved ‹time›" or "Changed since the save of
+    ‹time›" with the link.
+  - *The rule, with its tests:* apart from a playlist a save has just created, the only
+    playlist ever written to is the one the set's own last save created
+    (`useSaveSet.test.ts`, "the rule"; the e2e's `sourceWrites` stays empty).
 
 Tests: `src/test/workspace.ts` opens a stored set built from the WCS fixture in the
 real component tree (MSW for Spotify and ReccoBeats, the solver in-process) and the
@@ -662,7 +700,7 @@ real component tree (MSW for Spotify and ReccoBeats, the solver in-process) and 
 | domain | Vitest | Exhaustive: chart (576 pairs), camelot conversion anchors, tempo, evaluator, constraints, solver properties, diagnostics |
 | api | Vitest + MSW | Request shape, pagination, 429 handling, DTO mapping, zod rejection of bad payloads |
 | model/ui | Vitest + Testing Library | Behaviour through the DOM, not implementation details. The workspace is tested as a whole tree on a stored set (`src/test/workspace.ts`) |
-| app | Playwright | Login (stubbed token); sets: create one from two playlists, reopen after a reload, rename, duplicate, delete, a failed read and its retry, phone width; the workspace: fix a missing key from a row, a range, a mark, a limit with picks, the change summary, a follow pair both ways, an alternative, reload and find it as left, save; a playlist changed in Spotify and Update; "no mix possible" and its fix; no page scroll at 1280 × 720 and 1440 × 900 with the mix in view; phone tabs. All network mocked. `e2e/workspace-shots.spec.ts` takes the screenshots in `docs/reference/workspace/` and runs only with `SHOTS=1`. |
+| app | Playwright | Login (stubbed token); sets: create one from two playlists, reopen after a reload, rename, duplicate, delete, a failed read and its retry, phone width; the workspace: fix a missing key from a row, a range, a mark, a limit with picks, the change summary, a follow pair both ways, an alternative, reload and find it as left, save under a chosen name with the duplicate-name warning; saving again by replacing, by creating another, and replace refused once the saved playlist is a source; the header's controls staying put when a limit comes and goes; a playlist changed in Spotify and Update; "no mix possible" and its fix; no page scroll at 1280 × 720 and 1440 × 900 with the mix in view; phone tabs. All network mocked. `e2e/workspace-shots.spec.ts` takes the screenshots in `docs/reference/workspace/` and runs only with `SHOTS=1`. |
 
 Coverage thresholds apply to `domain/` (≥ 90% lines). The rest is judged by behaviour
 coverage, not a number.

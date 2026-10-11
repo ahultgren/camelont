@@ -1209,15 +1209,14 @@ describe('the set’s name and its save to Spotify (§8.5)', () => {
       solverClient: solver.client,
     })
     expect(workspace.saveInput.value).toBeNull()
-    expect(workspace.recordSave('https://open.spotify.com/playlist/x')).toBe(false)
     solver.release()
   })
 
-  it('offers the shown mix under the set’s name, with a description', async () => {
+  it('offers the shown mix in order, with a description that names the set', async () => {
     const { workspace } = await open({ playlists: [copy('a', EASY.slice(0, 5))] })
     const view = mixOf(await settled(workspace))
     const input = workspace.saveInput.value
-    expect(input?.name).toBe('Friday social')
+    expect(input?.order).toEqual(shownOrder(view))
     expect(input?.uris).toEqual(shownOrder(view).map((id) => `spotify:track:${id}`))
     expect(input?.description).toMatch(/^Harmonic mix of “Friday social” made with Camelont: /)
     expect(input?.description).toMatch(/arc: none\.$/)
@@ -1226,7 +1225,7 @@ describe('the set’s name and its save to Spotify (§8.5)', () => {
     expect(workspace.saveInput.value?.description).toMatch(/arc: Two waves\.$/)
   })
 
-  it('remembers the save, and says when the set has changed since', async () => {
+  it('remembers a save, and says when the mix has changed since', async () => {
     let now = 1000
     const setsStore = createMemoryStore()
     const { workspace, stored, sets, setId } = await open({
@@ -1236,44 +1235,62 @@ describe('the set’s name and its save to Spotify (§8.5)', () => {
     })
     const view = mixOf(await settled(workspace))
     expect(workspace.saveState.value).toBe('never')
+    const saved = (id: string, order: readonly string[]) => ({
+      playlistId: id,
+      url: `https://open.spotify.com/playlist/${id}`,
+      name: 'Friday mix',
+      order,
+    })
 
     now = 5000
-    expect(workspace.recordSave('https://open.spotify.com/playlist/new-mix')).toBe(true)
+    workspace.recordSave(saved('new-mix', shownOrder(view)))
     expect(stored()?.lastSave).toEqual({
+      playlistId: 'new-mix',
       url: 'https://open.spotify.com/playlist/new-mix',
       savedAt: 5000,
-      name: 'Friday social',
+      name: 'Friday mix',
       order: shownOrder(view),
     })
     // The saved mix is the chosen one: reopening the set shows it.
     expect(stored()?.chosenMix).toEqual({ order: shownOrder(view) })
     expect(workspace.saveState.value).toBe('saved')
+    // The set keeps its own name; the playlist's name is another matter.
+    expect(stored()?.name).toBe('Friday social')
 
     workspace.chooseAlternative(1)
     expect(workspace.saveState.value).toBe('changed')
     workspace.chooseAlternative(0)
     expect(workspace.saveState.value).toBe('saved')
+    // Renaming the set changes no mix.
     workspace.rename('Saturday social')
-    expect(workspace.saveState.value).toBe('changed')
-    workspace.rename('Friday social')
+    expect(workspace.saveState.value).toBe('saved')
 
     // A change to the set gives another mix: changed, until it is saved again.
     workspace.setMark(EASY[3] ?? '', 'exclude')
     await settled(workspace)
     expect(workspace.saveState.value).toBe('changed')
     now = 9000
-    workspace.recordSave('https://open.spotify.com/playlist/second')
-    expect(stored()?.lastSave).toMatchObject({
-      savedAt: 9000,
-      url: 'https://open.spotify.com/playlist/second',
-    })
+    workspace.recordSave(saved('second', shownOrder(workspace.view.value)))
+    expect(stored()?.lastSave).toMatchObject({ savedAt: 9000, playlistId: 'second' })
     expect(workspace.saveState.value).toBe('saved')
 
     // As left, after a reload.
-    const saved = shownOrder(workspace.view.value)
+    const order = shownOrder(workspace.view.value)
     await sets.flush()
     const again = await open({ setsStore, setId })
-    expect(shownOrder(await settled(again.workspace))).toEqual(saved)
+    expect(shownOrder(await settled(again.workspace))).toEqual(order)
     expect(again.workspace.saveState.value).toBe('saved')
+  })
+
+  it('remembers the playlist of a save that fell short, as changed since', async () => {
+    const { workspace, stored } = await open({ playlists: [copy('a', EASY.slice(0, 5))] })
+    await settled(workspace)
+    workspace.recordIncompleteSave({
+      playlistId: 'short',
+      url: 'https://open.spotify.com/playlist/short',
+      name: 'Friday mix',
+    })
+    expect(stored()?.lastSave).toMatchObject({ playlistId: 'short', order: [] })
+    expect(workspace.saveState.value).toBe('changed')
   })
 })

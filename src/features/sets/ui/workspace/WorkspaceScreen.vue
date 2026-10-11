@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import { RouterLink, type RouteLocationRaw } from 'vue-router'
-import { SavePlaylistButton } from '@/features/playlists'
-import { EmptyState } from '@/shared/ui'
+import { AppButton, EmptyState } from '@/shared/ui'
 import { useSetsStore } from '../../model/sets-store'
 import { useSetWorkspace } from '../../model/useSetWorkspace'
 import AddPlaylistsDialog from './AddPlaylistsDialog.vue'
@@ -11,6 +10,7 @@ import { provideWorkspaceUi } from './context'
 import MixControls from './MixControls.vue'
 import MixOrder from './MixOrder.vue'
 import MixResult from './MixResult.vue'
+import SaveDialog from './SaveDialog.vue'
 import SaveStatus from './SaveStatus.vue'
 import TrackColumn from './TrackColumn.vue'
 import { useWide } from './useWide'
@@ -45,6 +45,9 @@ function resetName(event: Event) {
   name.value = ws.set.value?.name ?? ''
   ;(event.target as HTMLElement).blur()
 }
+
+// ── Save to Spotify: a dialog asks first (spec §8.5) ───────────────────────────────
+const saveOpen = ref(false)
 
 // ── Phone: the same tools as tabs under the chart (W10) ────────────────────────────
 type Tab = 'tracks' | 'mix' | 'order'
@@ -97,22 +100,18 @@ watch(
             Not stored on this device
           </span>
           <SaveStatus class="max-lg:hidden" />
-          <SavePlaylistButton
-            v-if="ws.saveInput.value"
-            :name="ws.saveInput.value.name"
-            :description="ws.saveInput.value.description"
-            :uris="ws.saveInput.value.uris"
-            @saved="(playlist) => ws.recordSave(playlist.url)"
-          />
-          <button
-            v-else
-            type="button"
-            disabled
-            class="h-8 cursor-not-allowed rounded-lg bg-accent px-3.5 text-sm font-medium whitespace-nowrap text-surface opacity-50"
-            title="There is no mix to save yet"
+          <AppButton
+            class="h-8 whitespace-nowrap"
+            :disabled="!ws.saveInput.value"
+            :title="
+              ws.saveInput.value
+                ? 'Asks for the playlist’s name first. Nothing is written until you confirm.'
+                : 'There is no mix to save yet'
+            "
+            @click="saveOpen = true"
           >
             Save to Spotify
-          </button>
+          </AppButton>
         </span>
       </template>
     </header>
@@ -193,6 +192,7 @@ watch(
         </div>
       </main>
       <AddPlaylistsDialog />
+      <SaveDialog v-model:open="saveOpen" />
     </template>
 
     <p v-else-if="ws.status.value === 'loading'" class="p-6 text-muted" role="status">

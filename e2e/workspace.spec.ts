@@ -181,26 +181,132 @@ test('works on a set from two playlists, finds it as left, and saves it', async 
   await expect(alternatives(page).nth(1)).toBeChecked()
   expect(await runningOrder(page)).toEqual(chosen)
 
-  // Save: a new private playlist named after the set, in mix order, with the link.
+  // Save asks first: nothing is written until the name is confirmed.
   await page.getByRole('button', { name: 'Save to Spotify' }).click()
+  const save = page.getByRole('dialog', { name: 'Save to Spotify' })
+  const playlistName = save.getByRole('textbox', { name: 'Playlist name' })
+  await expect(playlistName).toHaveValue('Friday social')
+  await expect(playlistName).toBeFocused()
+  expect(log.created).toEqual([])
+  // A name one of my playlists has already: a warning, not a stop.
+  await playlistName.fill('  wcs ')
+  await expect(save.getByText(/You already have a playlist called “WCS”/)).toBeVisible()
+  await expect(save.getByRole('button', { name: 'Save as new playlist' })).toBeEnabled()
+  await playlistName.fill('Friday night mix')
+  await expect(save.getByText(/You already have a playlist/)).toHaveCount(0)
+  await playlistName.press('Enter')
+  await expect(save).toBeHidden()
+
+  // A new private playlist under that name, in mix order, with the link.
   const saved = page.getByTestId('save-status')
   await expect(saved).toContainText('Saved')
   await expect(saved.getByRole('link', { name: 'Open in Spotify' })).toHaveAttribute(
     'href',
     'https://open.spotify.com/playlist/new-mix',
   )
-  expect(log.created).toEqual([expect.objectContaining({ name: 'Friday social', public: false })])
+  expect(log.created).toEqual([
+    expect.objectContaining({ name: 'Friday night mix', public: false }),
+  ])
   const uris = log.added.flat()
   expect(uris).toHaveLength(11)
   expect(uris[uris.indexOf('spotify:track:76jtkq7829eEgEkoQrcjov') + 1]).toBe(
     'spotify:track:0bRs9U51McpqXynLOsg8yk', // Brother, then Love Is
   )
+  expect(log.replaced).toEqual([])
   expect(log.sourceWrites).toEqual([])
+  // The set keeps its own name.
+  await expect(page.getByRole('textbox', { name: 'Set name' })).toHaveValue('Friday social')
 
   // The sets list knows it too.
   await page.getByRole('link', { name: 'Back to your sets' }).click()
   await expect(page.getByRole('list', { name: 'Your sets' })).toContainText('Saved to Spotify')
   await expect(page.getByRole('list', { name: 'Your sets' })).toContainText('11 tracks in the mix')
+})
+
+test('saving again: replace the playlist saved before, or create another', async ({ page }) => {
+  const log = await openNewSet(page, { corrections: true })
+  const save = page.getByRole('dialog', { name: 'Save to Spotify' })
+  const playlistName = save.getByRole('textbox', { name: 'Playlist name' })
+  const status = page.getByTestId('save-status')
+  const link = status.getByRole('link', { name: 'Open in Spotify' })
+  const openSave = () => page.getByRole('button', { name: 'Save to Spotify' }).click()
+
+  // The first save: no earlier playlist, so no choice to make.
+  await openSave()
+  await expect(save.getByRole('radio')).toHaveCount(0)
+  await playlistName.fill('Friday mix')
+  await save.getByRole('button', { name: 'Save as new playlist' }).click()
+  await expect(save).toBeHidden()
+  await expect(status).toContainText('Saved')
+  const first = [...(log.added[0] ?? [])]
+  expect(first).toHaveLength(20)
+
+  // Another mix: changed since the save.
+  await alternatives(page).nth(1).click()
+  await expect(status).toContainText('Changed since the save of')
+  const second = (await runningOrder(page)).length
+  expect(second).toBe(20)
+
+  // Saving again offers to replace that playlist, by default, and says what goes.
+  await openSave()
+  await expect(playlistName).toHaveValue('Friday mix')
+  const replace = save.getByRole('radio', { name: /^Replace “Friday mix”/ })
+  await expect(replace).toBeChecked()
+  await expect(save.getByText(/Its current tracks go and this mix takes their place/)).toBeVisible()
+  // Its own name is no clash while replacing; it is when creating another.
+  await expect(save.getByText(/You already have a playlist/)).toHaveCount(0)
+  await save.getByRole('radio', { name: /^Create another playlist/ }).check()
+  await expect(save.getByText(/You already have a playlist called “Friday mix”/)).toBeVisible()
+  await expect(save.getByRole('button', { name: 'Save as new playlist' })).toBeVisible()
+  await replace.check()
+  await playlistName.fill('Friday mix, take two')
+  await save.getByRole('button', { name: 'Replace in Spotify' }).click()
+  await expect(save).toBeHidden()
+
+  // The same playlist, with the new order and the new name; no new playlist.
+  await expect(status).toContainText('Saved')
+  await expect(link).toHaveAttribute('href', 'https://open.spotify.com/playlist/new-mix')
+  expect(log.created).toHaveLength(1)
+  expect(log.replaced).toHaveLength(1)
+  expect(log.replaced[0]?.id).toBe('new-mix')
+  expect(log.replaced[0]?.uris).toHaveLength(20)
+  expect(log.replaced[0]?.uris).not.toEqual(first)
+  expect(log.renamed).toEqual([{ id: 'new-mix', name: 'Friday mix, take two' }])
+
+  // Saving once more, as another playlist: the first one is left as it is.
+  await openSave()
+  await expect(playlistName).toHaveValue('Friday mix, take two')
+  await save.getByRole('radio', { name: /^Create another playlist/ }).check()
+  await playlistName.fill('Friday mix, another')
+  await save.getByRole('button', { name: 'Save as new playlist' }).click()
+  await expect(save).toBeHidden()
+  await expect(link).toHaveAttribute('href', 'https://open.spotify.com/playlist/new-mix-2')
+  expect(log.created).toHaveLength(2)
+  expect(log.replaced).toHaveLength(1)
+
+  // The user now adds that saved playlist to the set as a source.
+  await page.getByRole('button', { name: 'Add playlists' }).click()
+  const add = page.getByRole('dialog', { name: 'Add playlists' })
+  await add.getByRole('checkbox', { name: /Friday mix, another/ }).check()
+  await add.getByRole('button', { name: 'Add to the set' }).click()
+  await expect(add).toBeHidden()
+  await expect(playlist(page, 'Friday mix, another')).toBeVisible()
+  await mixSettled(page)
+
+  // A source is never written to: replacing is not offered, and the dialog says why.
+  await openSave()
+  await expect(save.getByTestId('save-refused')).toHaveText(
+    'The playlist saved before is a source of the set “Friday social”, and a source playlist is never changed.',
+  )
+  await expect(save.getByRole('radio')).toHaveCount(0)
+  await expect(save.getByRole('button', { name: 'Replace in Spotify' })).toHaveCount(0)
+  await save.getByRole('button', { name: 'Save as new playlist' }).click()
+  await expect(save).toBeHidden()
+  await expect(link).toHaveAttribute('href', 'https://open.spotify.com/playlist/new-mix-3')
+  expect(log.created).toHaveLength(3)
+  // Across all of it: one replace, of the set's own playlist, and no write to a source.
+  expect(log.replaced.map((entry) => entry.id)).toEqual(['new-mix'])
+  expect(log.sourceWrites).toEqual([])
 })
 
 test('says when a playlist changed in Spotify, and updates on demand', async ({ page }) => {

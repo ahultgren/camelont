@@ -340,6 +340,34 @@ Left open:
 
 - [x] Key and BPM on a track row look clickable (pointer, hover, focus)
 - [x] Entering or clearing a limit moves no other control in the playlist header
-- [ ] Save to Spotify asks for the playlist's name, warns about an existing playlist
+- [x] Save to Spotify asks for the playlist's name, warns about an existing playlist
   with that name, and offers replace-or-create when the set saved before (spec §8.5,
   decision 41)
+
+### Review (2026-10-11)
+- **Key and BPM**: a pointer, a frame on hover, "Edit key and BPM" in the tooltip and the
+  accessible name; every button in the app now has a pointer (Tailwind 4 leaves them
+  without). The row keeps its height (checked in the e2e).
+- **Header**: every control right of the playlist's name has a fixed width and the pick
+  method a place that is kept when it isn't shown; notices went to a line of their own
+  under the controls. An e2e compares positions to the pixel at 1280, 1440 and 375 px.
+- **Save**: built as spec §8.5 and decision 41 say; the rules as built are in
+  `docs/architecture.md` ("Save" under the workspace page).
+
+Not verified: `PUT /playlists/{id}/items` and `PUT /playlists/{id}` against real Spotify
+(the Feb 2026 API is only known to have GET items, POST /me/playlists and POST items).
+If the first answers 404 or 405 the dialog says replacing isn't available and offers a
+new playlist. Nothing here was run against real Spotify.
+
+Choices made, for the owner:
+- A save that fails half-way is remembered: the playlist stays the set's own with no
+  mix counted as saved, so the next save replaces it from the start instead of leaving
+  a second half-filled playlist. This also covers a new playlist that was created but
+  not filled.
+- When the tracks were replaced but Spotify didn't take the new name, the save counts
+  and the dialog says so; the set remembers the name the playlist still has.
+- Only playlists the user owns count for the duplicate-name warning and for replacing;
+  a collaborative playlist of someone else's does neither.
+- After a 404/405 on replacing, that dialog offers only a new playlist; opening the
+  dialog again tries afresh.
+
