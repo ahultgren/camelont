@@ -206,10 +206,21 @@ A set with one playlist and no track choices behaves like mixing that playlist w
   naming them go too, and the app lists what was dropped.
 - **Unreachable playlist.** If a playlist can no longer be read (deleted, no longer
   owned), the set keeps its stored copy and says it can't be checked.
-- **A track is in a set at most once.** A track that sits in several of the set's
-  playlists, or several times in one, belongs to the first playlist that has it. The
-  other playlists show it as "already in ‹playlist›" and don't count it toward their
-  limit. Sameness is the Spotify track ID.
+- **A track is in a set at most once.** Sameness is the Spotify track ID. A playlist
+  *lets a track in* when the track is must-include, or has a key and a BPM inside that
+  playlist's range. When a track sits in several of the set's playlists, one of them
+  decides it:
+  - the first playlist that lets it in and has no limit: the track is in the set;
+  - failing that, the first playlist that lets it in: the track competes for that
+    playlist's limit, and if it isn't picked it is left out (it isn't passed on);
+  - if no playlist lets it in, it is left out.
+
+  So a track is in the set whenever some playlist would take it. The other playlists
+  that would let it in show it as "already in ‹playlist›" and don't count it toward
+  their limit; a playlist that wouldn't shows its own reason (outside its range, needs
+  key/BPM). A track listed several times in one playlist counts once.
+- **Marks belong to the track.** Exclude and must-include apply in every playlist of
+  the set that has the track: an excluded track is excluded everywhere.
 - **Adding and removing.** Playlists can be added or removed at any time. Removing one
   removes its tracks, their marks and the mix rules naming them, after a confirmation
   that says so.
@@ -220,8 +231,8 @@ For each playlist, a track's fate is decided by the first rule that applies:
 
 | Order | Rule | Result |
 |---|---|---|
-| 1 | The track already belongs to an earlier playlist (§8.2) | Not counted here. |
-| 2 | Marked **exclude** | Left out. Nothing overrides this. |
+| 1 | Marked **exclude** | Left out, in every playlist that has it. Nothing overrides this. |
+| 2 | Another playlist decides the track (§8.2) | Not counted here. |
 | 3 | Marked **must-include** (or named in a mix rule, §5.4) | In the set, whatever its BPM and whatever the limit. |
 | 4 | No key or no BPM | Left out, flagged "needs key/BPM". |
 | 5 | BPM outside the playlist's **BPM range** | Left out. |

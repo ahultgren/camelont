@@ -155,7 +155,7 @@ Proposed by the agent and written into the spec; the owner approved them as a wh
 
 | # | Assumption | Spec | Why |
 |---|---|---|---|
-| A1 | A track is in a set at most once; it belongs to the first playlist that has it, and doesn't count toward the others' limits | §8.2 | A set shouldn't play a song twice. Replaces today's "duplicates are separate entries". |
+| A1 | A track is in a set at most once. **Changed by the owner 2026-10-11:** it is decided by the first playlist that lets it in (unlimited ones first), so it is in the set whenever some playlist would take it; an exclude applies in every playlist (decision 32) | §8.2 | A set shouldn't play a song twice. Replaces today's "duplicates are separate entries". |
 | A2 | Tracks without key/BPM are left out and flagged; they no longer block the mix. Only a must-include track without data blocks | §4, §8.3 | With ~15% missing and several playlists, "fix or exclude each one first" would mean dozens of clicks before the first mix. **Changes today's behaviour.** |
 | A3 | A track named as opener, closer or in a follow pair counts as must-include | §5.4 | Otherwise narrowing a BPM range or a re-pick silently breaks a rule. |
 | A4 | Must-include tracks count toward the limit; if they exceed it they're all in and nothing more is picked | §8.4 | Matches the owner's example (limit 3, one must-include → that one plus two). |

@@ -260,3 +260,13 @@ another release of a song already in the set is picked first.
 and 100 candidates, 0.3 s for 100 and 315 with 10 picks, 0.6 s for 10 picks from 1,000
 and 2.4 s for 50. Run it in the worker with the solve. When several playlists pick in
 turn, passing the previous call's `order` skips the solver run.
+
+### 32. A shared track goes to a playlist that would take it; marks are set-wide (2026-10-11)
+**Context:** the first build gave a track to the first playlist that had it, even when
+that playlist's BPM range left it out, so a track another playlist would have taken
+stayed out of the set. **Decision (owner):** a track in several playlists is decided by
+the first playlist that lets it in and has no limit, else by the first that lets it in
+(it then competes for that playlist's limit), so it is in the set whenever some
+playlist would take it. Exclude and must-include belong to the track: an excluded track
+is excluded in every playlist. **Not built:** passing a track that wasn't picked on to
+a later limited playlist (picks would then depend on each other in both directions).
