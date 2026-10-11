@@ -66,8 +66,8 @@ function remove() {
       Couldn’t read your sets from this device: {{ sets.loadError }}
     </p>
     <p v-if="sets.saveError" role="alert" class="text-sm text-warn">
-      Your latest changes aren’t stored on this device yet: {{ sets.saveError }} They are tried
-      again with your next change.
+      Couldn’t store your latest changes on this device ({{ sets.saveError }}). They are tried again
+      with your next change.
     </p>
     <p class="sr-only" role="status">{{ announcement }}</p>
 
@@ -104,14 +104,14 @@ function remove() {
             </span>
             <span v-if="set.playlists.length === 0" class="text-muted">No playlists</span>
           </p>
-          <p class="flex flex-wrap gap-x-1.5 text-[13px] text-muted">
+          <p class="grid text-[13px] text-muted sm:flex sm:flex-wrap sm:gap-x-1.5">
             <span class="num">{{ trackCountLabel(set) }}</span>
-            <span aria-hidden="true">·</span>
+            <span class="hidden sm:inline" aria-hidden="true">·</span>
             <span>
               Edited
               <time :datetime="isoTime(set.editedAt)">{{ formatDateTime(set.editedAt) }}</time>
             </span>
-            <span aria-hidden="true">·</span>
+            <span class="hidden sm:inline" aria-hidden="true">·</span>
             <span v-if="!set.lastSave">Not saved to Spotify</span>
             <span v-else>
               <span :class="saveState(set) === 'saved' ? 'text-ok' : 'text-warn'">
@@ -189,6 +189,7 @@ function remove() {
           </div>
           <AppButton
             variant="danger"
+            class="justify-self-start"
             :aria-label="`Delete the unreadable set ${stored.name ?? stored.id}`"
             @click="
               deleting = {
@@ -208,6 +209,7 @@ function remove() {
     <AppDialog
       :open="renaming !== null"
       title="Rename set"
+      description="Sets are kept on this device. Renaming one changes nothing in Spotify."
       @update:open="(open) => open || (renaming = null)"
     >
       <form class="grid gap-4" @submit.prevent="rename">

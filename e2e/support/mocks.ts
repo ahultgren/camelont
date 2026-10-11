@@ -52,6 +52,29 @@ const item = (t: WcsTrack) => ({
   },
 })
 
+/**
+ * A second playlist of the user's: two tracks the WCS set also has, two of its own,
+ * and two items that can't be mixed (a local file and an episode).
+ */
+const slowItems = (wcsTracks: WcsTrack[]) => [
+  ...wcsTracks.slice(0, 2).map(item),
+  ...['Slow one', 'Slow two'].map((name, i) => ({
+    is_local: false,
+    item: {
+      type: 'track',
+      id: `slow${String(i + 1)}`,
+      uri: `spotify:track:slow${String(i + 1)}`,
+      name,
+      duration_ms: 200_000,
+      is_local: false,
+      artists: [{ name: 'Someone' }],
+      album: { images: [] },
+    },
+  })),
+  { is_local: true, item: null },
+  { is_local: false, item: { type: 'episode' } },
+]
+
 const playlist = (id: string, name: string, owner: string, total: number) => ({
   id,
   name,
@@ -65,7 +88,7 @@ const playlist = (id: string, name: string, owner: string, total: number) => ({
 export interface SpotifyLog {
   created: unknown[]
   added: string[][]
-  /** Any write to the source playlist (must stay empty). */
+  /** Any write to one of the user's own playlists (must stay empty). */
   sourceWrites: string[]
 }
 
@@ -87,7 +110,10 @@ export async function logIn(page: Page) {
   })
 }
 
-/** Mocks Spotify and ReccoBeats with the WCS set; every other external request fails. */
+/**
+ * Mocks Spotify and ReccoBeats: the user's playlists are the WCS set and "Slow ones",
+ * plus a followed one. Every other external request fails.
+ */
 export async function mockApis(page: Page): Promise<SpotifyLog> {
   const log: SpotifyLog = { created: [], added: [], sourceWrites: [] }
   const tracks = wcs.orders.original.ids.map((id) => {
@@ -104,12 +130,19 @@ export async function mockApis(page: Page): Promise<SpotifyLog> {
     if (method === 'GET' && path === '/me') return json(route, { id: 'me', display_name: 'Me' })
     if (method === 'GET' && path === '/me/playlists') {
       return json(route, {
-        items: [playlist('wcs', 'WCS', 'me', 20), playlist('top', 'Top Hits', 'spotify', 50)],
+        items: [
+          playlist('wcs', 'WCS', 'me', 20),
+          playlist('slow', 'Slow ones', 'me', 6),
+          playlist('top', 'Top Hits', 'spotify', 50),
+        ],
         next: null,
       })
     }
     if (method === 'GET' && path === '/playlists/wcs/items') {
       return json(route, { items: tracks.map(item), next: null })
+    }
+    if (method === 'GET' && path === '/playlists/slow/items') {
+      return json(route, { items: slowItems(tracks), next: null })
     }
     if (method === 'POST' && path === '/me/playlists') {
       log.created.push(route.request().postDataJSON())
@@ -123,7 +156,7 @@ export async function mockApis(page: Page): Promise<SpotifyLog> {
       log.added.push((route.request().postDataJSON() as { uris: string[] }).uris)
       return json(route, { snapshot_id: 'snap' }, 201)
     }
-    if (path.startsWith('/playlists/wcs') && method !== 'GET')
+    if (/^\/playlists\/(wcs|slow)/.test(path) && method !== 'GET')
       log.sourceWrites.push(`${method} ${path}`)
     return json(route, { error: { status: 404, message: 'Not mocked' } }, 404)
   })

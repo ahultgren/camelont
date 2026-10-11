@@ -235,7 +235,7 @@ Three sessions, the first two in parallel:
     save errors; the home page shows it when logged in
   - [x] `sets/ui/NewSetDialog`: name + playlists, reads the tracks, progress, retry,
     skipped items; edge `sets → playlists`
-  - [ ] E2E for the sets flow; the old mixer's e2e opens `/playlists/wcs` directly
+  - [x] E2E for the sets flow; the old mixer's e2e opens `/playlists/wcs` directly
   - [ ] Docs: `architecture.md`, `README.md`
 - [ ] Remove `PlaylistPage` and the `/playlists/:id` route (5b)
 - [ ] The chosen layout: playlists panel with track choices and the BPM range control

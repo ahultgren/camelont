@@ -81,7 +81,11 @@ const rowProps = (p: PlaylistSummary) => {
       {{ search ? 'Nothing matches that name.' : 'Create a playlist in Spotify first.' }}
     </EmptyState>
 
-    <ul v-else class="grid gap-2" :class="{ 'max-h-[42vh] overflow-y-auto p-0.5': !linkTo }">
+    <ul
+      v-else
+      class="grid gap-2"
+      :class="{ 'max-h-[34vh] overflow-y-auto p-0.5 sm:max-h-[42vh]': !linkTo }"
+    >
       <li v-for="p in filtered" :key="p.id">
         <component
           :is="rowTag(p)"

@@ -386,7 +386,7 @@ new set).
 | domain | Vitest | Exhaustive: chart (576 pairs), camelot conversion anchors, tempo, evaluator, constraints, solver properties, diagnostics |
 | api | Vitest + MSW | Request shape, pagination, 429 handling, DTO mapping, zod rejection of bad payloads |
 | model/ui | Vitest + Testing Library | Behaviour through the DOM, not implementation details |
-| app | Playwright | Login (stubbed token); the old mixer by its address: fill a missing key, generate, compare, explore, save. All network mocked. |
+| app | Playwright | Login (stubbed token); sets: create one from two playlists, reopen after a reload, rename, duplicate, delete, a failed read and its retry, phone width; the old mixer by its address: fill a missing key, generate, compare, explore, save. All network mocked. |
 
 Coverage thresholds apply to `domain/` (≥ 90% lines). The rest is judged by behaviour
 coverage, not a number.

@@ -213,7 +213,7 @@ describe('home page (logged in): the sets list', () => {
     await openHome(storage)
     await userEvent.click(await screen.findByRole('button', { name: 'Duplicate Friday social' }))
     expect(await screen.findByRole('alert')).toHaveTextContent(
-      /latest changes aren’t stored on this device yet: The disk is full/,
+      'Couldn’t store your latest changes on this device (The disk is full).',
     )
   })
 })
