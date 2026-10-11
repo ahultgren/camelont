@@ -17,6 +17,8 @@ export const PlaylistDto = z.object({
   items: Count,
   tracks: Count,
   external_urls: z.object({ spotify: z.string().optional() }).optional(),
+  // The version of the playlist. Not confirmed for the Feb 2026 API, so it may be absent.
+  snapshot_id: z.string().nullable().optional(),
 })
 
 export const PlaylistPageDto = z.object({

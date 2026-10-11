@@ -32,6 +32,22 @@ export interface PlaylistContents {
   skipped: SkippedItems
 }
 
+/**
+ * A playlist as it is in Spotify now, read for a set that keeps its own copy (spec §8.2).
+ * `unchanged`: still at the snapshot the caller knows, so its tracks were not read.
+ * `unreadable`: it is gone, or it is no longer mine (Spotify gives no tracks then).
+ */
+export type PlaylistReading =
+  | { kind: 'unchanged' }
+  | ({
+      kind: 'read'
+      name: string
+      imageUrl: string | null
+      /** Spotify's `snapshot_id`; null when it gave none. */
+      snapshotId: string | null
+    } & PlaylistContents)
+  | { kind: 'unreadable'; reason: 'gone' | 'notYours' }
+
 /** Why a playlist can't be mixed (followed, not owned). */
 export const FOLLOWED_REASON =
   'Spotify only shares the tracks of playlists you own or collaborate on. Copy this playlist into one of your own in Spotify first.'

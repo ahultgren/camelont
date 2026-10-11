@@ -2,12 +2,14 @@
 export {
   type PlaylistContents,
   type PlaylistEntry,
+  type PlaylistReading,
   type PlaylistSummary,
   type SkippedItems,
 } from './domain/types'
 export {
   usePlaylist,
   usePlaylistContents,
+  usePlaylistReader,
   usePlaylists,
   useSaveMix,
   type SaveMixInput,
