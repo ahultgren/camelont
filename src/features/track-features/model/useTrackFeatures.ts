@@ -11,6 +11,8 @@ import { useTrackFeatureDeps } from './deps'
 import { useOverridesStore } from './overrides-store'
 
 export interface FetchResult {
+  /** The track IDs this answers, joined: tells an answer for another list apart. */
+  idsKey: string
   fetched: Map<string, FetchedFeatures>
   /** Set when some batches failed; those tracks stay without data until a retry. */
   providerError: string | null
@@ -24,6 +26,7 @@ export function useTrackFeatures(trackIds: MaybeRefOrGetter<readonly string[]>) 
   const deps = useTrackFeatureDeps()
   const overrides = useOverridesStore()
   const ids = computed(() => [...new Set(toValue(trackIds))].sort())
+  const idsKey = computed(() => ids.value.join(','))
 
   const query = useQuery({
     queryKey: ['track-features', ids],
@@ -31,8 +34,10 @@ export function useTrackFeatures(trackIds: MaybeRefOrGetter<readonly string[]>) 
     enabled: computed(() => ids.value.length > 0),
     queryFn: async (): Promise<FetchResult> => {
       const now = deps.now()
-      const fetched = await deps.cache.getMany(ids.value)
-      const missing = ids.value.filter((id) => needsFetch(fetched.get(id), now))
+      const requested = ids.value
+      const requestedKey = idsKey.value
+      const fetched = await deps.cache.getMany(requested)
+      const missing = requested.filter((id) => needsFetch(fetched.get(id), now))
       let providerError: string | null = null
       for (let i = 0; i < missing.length; i += RECCOBEATS_BATCH) {
         try {
@@ -43,9 +48,12 @@ export function useTrackFeatures(trackIds: MaybeRefOrGetter<readonly string[]>) 
           providerError = e instanceof Error ? e.message : 'ReccoBeats is unavailable'
         }
       }
-      return { fetched, providerError }
+      return { idsKey: requestedKey, fetched, providerError }
     },
   })
+  // When the list changes, the query still holds the old list's answer until it has
+  // caught up. That answer is not an answer for the new tracks.
+  const answered = computed(() => query.data.value?.idsKey === idsKey.value)
 
   const features = computed(() => {
     const out = new Map<string, TrackFeatures>()
@@ -57,7 +65,8 @@ export function useTrackFeatures(trackIds: MaybeRefOrGetter<readonly string[]>) 
 
   return {
     features,
-    isLoading: computed(() => query.isPending.value && ids.value.length > 0),
+    /** True from the moment the list changes until the data for that list is there. */
+    isLoading: computed(() => ids.value.length > 0 && !answered.value && !query.isError.value),
     providerError: computed(() => query.data.value?.providerError ?? null),
     retry: () => query.refetch(),
   }
