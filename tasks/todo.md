@@ -198,14 +198,17 @@ New feature `features/sets`. Proposed edges: `sets → playlists, track-features
 - [x] `model/`: sets store (list, create, rename, duplicate, delete, save-as-you-go)
 
 ### Step 3 — best-fit ranking (parallel with 1 and 2; `mixing/domain`, new file)
-- [ ] `mixing/domain/fit.ts` (test first): rank candidate tracks against the tracks
+- [x] `mixing/domain/fit.ts` (test first): rank candidate tracks against the tracks
   already in the set, using `moveBetween`, `transitionCost` and `tempoGap` (no second
   scoring implementation). Start from cheapest legal insertion into the best order of
   the fixed tracks; compare with a plain "legal neighbours + tempo distance" score
-- [ ] Fixtures: the WCS set plus a real multi-playlist pool from the owner (lesson of
+  → `pickBestFit`; a hybrid won (decision 31)
+- [x] Fixtures: the WCS set plus a real multi-playlist pool from the owner (lesson of
   2026-09-28); a stability test (small edits don't reshuffle every pick); edge cases
   (no fixed tracks at all, every playlist limited, nothing insertable)
-- [ ] Adversarial review of the heuristic before it is wired in
+  → the pool is synthetic (`fit.pool.fixture.json`); **a real pool is still owed**
+- [x] Adversarial review of the heuristic before it is wired in
+  → five fixes and six known limits, recorded in decision 31
 
 ### Step 4 — wire sets into mixing
 - [ ] The planner takes its tracks, rules and arc from the set; left-out tracks go in as

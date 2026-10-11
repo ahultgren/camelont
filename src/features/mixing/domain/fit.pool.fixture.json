@@ -1,0 +1,781 @@
+{
+  "description": "SYNTHETIC multi-playlist pool for the best-fit tests (fit.test.ts), generated once with a seeded PRNG in October 2026. It stands in for a real pool from the owner, which is still owed (tasks/lessons.md, 2026-09-28). The shape is realistic: three playlists, 110 tracks, 78-184 BPM with a few tracks listed at double time, an uneven key distribution (mostly major keys around 8B-11B) and a few keys with little company (2A, 12A, 2B). Only the first 25 BPMs of 'main' are real: they are the owner's WCS playlist as listed. Keys, the other BPMs and all names are made up.",
+  "playlists": {
+    "main": [
+      {
+        "id": "main-01",
+        "label": "Main 1",
+        "camelot": "8B",
+        "bpm": 78,
+        "energy": null
+      },
+      {
+        "id": "main-02",
+        "label": "Main 2",
+        "camelot": "1A",
+        "bpm": 88,
+        "energy": null
+      },
+      {
+        "id": "main-03",
+        "label": "Main 3",
+        "camelot": "11B",
+        "bpm": 88,
+        "energy": null
+      },
+      {
+        "id": "main-04",
+        "label": "Main 4",
+        "camelot": "9A",
+        "bpm": 175,
+        "energy": null
+      },
+      {
+        "id": "main-05",
+        "label": "Main 5",
+        "camelot": "2A",
+        "bpm": 91,
+        "energy": null
+      },
+      {
+        "id": "main-06",
+        "label": "Main 6",
+        "camelot": "6B",
+        "bpm": 184.1,
+        "energy": null
+      },
+      {
+        "id": "main-07",
+        "label": "Main 7",
+        "camelot": "7B",
+        "bpm": 92.5,
+        "energy": null
+      },
+      {
+        "id": "main-08",
+        "label": "Main 8",
+        "camelot": "9B",
+        "bpm": 96,
+        "energy": null
+      },
+      {
+        "id": "main-09",
+        "label": "Main 9",
+        "camelot": "8B",
+        "bpm": 102.1,
+        "energy": null
+      },
+      {
+        "id": "main-10",
+        "label": "Main 10",
+        "camelot": "5A",
+        "bpm": 102.1,
+        "energy": null
+      },
+      {
+        "id": "main-11",
+        "label": "Main 11",
+        "camelot": "10B",
+        "bpm": 104,
+        "energy": null
+      },
+      {
+        "id": "main-12",
+        "label": "Main 12",
+        "camelot": "11A",
+        "bpm": 104,
+        "energy": null
+      },
+      {
+        "id": "main-13",
+        "label": "Main 13",
+        "camelot": "4A",
+        "bpm": 105,
+        "energy": null
+      },
+      {
+        "id": "main-14",
+        "label": "Main 14",
+        "camelot": "10B",
+        "bpm": 107,
+        "energy": null
+      },
+      {
+        "id": "main-15",
+        "label": "Main 15",
+        "camelot": "1B",
+        "bpm": 108.9,
+        "energy": null
+      },
+      {
+        "id": "main-16",
+        "label": "Main 16",
+        "camelot": "10B",
+        "bpm": 114,
+        "energy": null
+      },
+      {
+        "id": "main-17",
+        "label": "Main 17",
+        "camelot": "12B",
+        "bpm": 114,
+        "energy": null
+      },
+      {
+        "id": "main-18",
+        "label": "Main 18",
+        "camelot": "2A",
+        "bpm": 115.7,
+        "energy": null
+      },
+      {
+        "id": "main-19",
+        "label": "Main 19",
+        "camelot": "5A",
+        "bpm": 116,
+        "energy": null
+      },
+      {
+        "id": "main-20",
+        "label": "Main 20",
+        "camelot": "11B",
+        "bpm": 118,
+        "energy": null
+      },
+      {
+        "id": "main-21",
+        "label": "Main 21",
+        "camelot": "10B",
+        "bpm": 118.8,
+        "energy": null
+      },
+      {
+        "id": "main-22",
+        "label": "Main 22",
+        "camelot": "9A",
+        "bpm": 121,
+        "energy": null
+      },
+      {
+        "id": "main-23",
+        "label": "Main 23",
+        "camelot": "9B",
+        "bpm": 122,
+        "energy": null
+      },
+      {
+        "id": "main-24",
+        "label": "Main 24",
+        "camelot": "8B",
+        "bpm": 127.4,
+        "energy": null
+      },
+      {
+        "id": "main-25",
+        "label": "Main 25",
+        "camelot": "10A",
+        "bpm": 129.9,
+        "energy": null
+      },
+      {
+        "id": "main-26",
+        "label": "Main 26",
+        "camelot": "1A",
+        "bpm": 104.1,
+        "energy": null
+      },
+      {
+        "id": "main-27",
+        "label": "Main 27",
+        "camelot": "8A",
+        "bpm": 124.9,
+        "energy": null
+      },
+      {
+        "id": "main-28",
+        "label": "Main 28",
+        "camelot": "6A",
+        "bpm": 125.4,
+        "energy": null
+      },
+      {
+        "id": "main-29",
+        "label": "Main 29",
+        "camelot": "8B",
+        "bpm": 99.8,
+        "energy": null
+      },
+      {
+        "id": "main-30",
+        "label": "Main 30",
+        "camelot": "6B",
+        "bpm": 116.2,
+        "energy": null
+      },
+      {
+        "id": "main-31",
+        "label": "Main 31",
+        "camelot": "8A",
+        "bpm": 93.3,
+        "energy": null
+      },
+      {
+        "id": "main-32",
+        "label": "Main 32",
+        "camelot": "9B",
+        "bpm": 92.7,
+        "energy": null
+      },
+      {
+        "id": "main-33",
+        "label": "Main 33",
+        "camelot": "11B",
+        "bpm": 108.4,
+        "energy": null
+      },
+      {
+        "id": "main-34",
+        "label": "Main 34",
+        "camelot": "8B",
+        "bpm": 122.2,
+        "energy": null
+      },
+      {
+        "id": "main-35",
+        "label": "Main 35",
+        "camelot": "9B",
+        "bpm": 123.8,
+        "energy": null
+      },
+      {
+        "id": "main-36",
+        "label": "Main 36",
+        "camelot": "9B",
+        "bpm": 110,
+        "energy": null
+      },
+      {
+        "id": "main-37",
+        "label": "Main 37",
+        "camelot": "9B",
+        "bpm": 129.5,
+        "energy": null
+      },
+      {
+        "id": "main-38",
+        "label": "Main 38",
+        "camelot": "8A",
+        "bpm": 92.7,
+        "energy": null
+      },
+      {
+        "id": "main-39",
+        "label": "Main 39",
+        "camelot": "1B",
+        "bpm": 119.7,
+        "energy": null
+      },
+      {
+        "id": "main-40",
+        "label": "Main 40",
+        "camelot": "2A",
+        "bpm": 122.8,
+        "energy": null
+      },
+      {
+        "id": "main-41",
+        "label": "Main 41",
+        "camelot": "5A",
+        "bpm": 87.8,
+        "energy": null
+      },
+      {
+        "id": "main-42",
+        "label": "Main 42",
+        "camelot": "9A",
+        "bpm": 91.8,
+        "energy": null
+      },
+      {
+        "id": "main-43",
+        "label": "Main 43",
+        "camelot": "10A",
+        "bpm": 119.7,
+        "energy": null
+      },
+      {
+        "id": "main-44",
+        "label": "Main 44",
+        "camelot": "8B",
+        "bpm": 137,
+        "energy": null
+      },
+      {
+        "id": "main-45",
+        "label": "Main 45",
+        "camelot": "11B",
+        "bpm": 100.5,
+        "energy": null
+      }
+    ],
+    "sing": [
+      {
+        "id": "sing-01",
+        "label": "Singalongs 1",
+        "camelot": "7A",
+        "bpm": 114.8,
+        "energy": null
+      },
+      {
+        "id": "sing-02",
+        "label": "Singalongs 2",
+        "camelot": "7B",
+        "bpm": 96.2,
+        "energy": null
+      },
+      {
+        "id": "sing-03",
+        "label": "Singalongs 3",
+        "camelot": "11A",
+        "bpm": 94.4,
+        "energy": null
+      },
+      {
+        "id": "sing-04",
+        "label": "Singalongs 4",
+        "camelot": "8B",
+        "bpm": 178.8,
+        "energy": null
+      },
+      {
+        "id": "sing-05",
+        "label": "Singalongs 5",
+        "camelot": "10B",
+        "bpm": 146.1,
+        "energy": null
+      },
+      {
+        "id": "sing-06",
+        "label": "Singalongs 6",
+        "camelot": "6A",
+        "bpm": 105.1,
+        "energy": null
+      },
+      {
+        "id": "sing-07",
+        "label": "Singalongs 7",
+        "camelot": "7B",
+        "bpm": 139.8,
+        "energy": null
+      },
+      {
+        "id": "sing-08",
+        "label": "Singalongs 8",
+        "camelot": "4A",
+        "bpm": 80.1,
+        "energy": null
+      },
+      {
+        "id": "sing-09",
+        "label": "Singalongs 9",
+        "camelot": "8A",
+        "bpm": 167.8,
+        "energy": null
+      },
+      {
+        "id": "sing-10",
+        "label": "Singalongs 10",
+        "camelot": "10A",
+        "bpm": 102.4,
+        "energy": null
+      },
+      {
+        "id": "sing-11",
+        "label": "Singalongs 11",
+        "camelot": "4B",
+        "bpm": 182.2,
+        "energy": null
+      },
+      {
+        "id": "sing-12",
+        "label": "Singalongs 12",
+        "camelot": "3B",
+        "bpm": 93,
+        "energy": null
+      },
+      {
+        "id": "sing-13",
+        "label": "Singalongs 13",
+        "camelot": "8B",
+        "bpm": 143.6,
+        "energy": null
+      },
+      {
+        "id": "sing-14",
+        "label": "Singalongs 14",
+        "camelot": "8A",
+        "bpm": 109.8,
+        "energy": null
+      },
+      {
+        "id": "sing-15",
+        "label": "Singalongs 15",
+        "camelot": "8B",
+        "bpm": 131.8,
+        "energy": null
+      },
+      {
+        "id": "sing-16",
+        "label": "Singalongs 16",
+        "camelot": "8B",
+        "bpm": 103.2,
+        "energy": null
+      },
+      {
+        "id": "sing-17",
+        "label": "Singalongs 17",
+        "camelot": "10B",
+        "bpm": 88,
+        "energy": null
+      },
+      {
+        "id": "sing-18",
+        "label": "Singalongs 18",
+        "camelot": "8B",
+        "bpm": 92.5,
+        "energy": null
+      },
+      {
+        "id": "sing-19",
+        "label": "Singalongs 19",
+        "camelot": "4B",
+        "bpm": 103.4,
+        "energy": null
+      },
+      {
+        "id": "sing-20",
+        "label": "Singalongs 20",
+        "camelot": "9B",
+        "bpm": 126.6,
+        "energy": null
+      },
+      {
+        "id": "sing-21",
+        "label": "Singalongs 21",
+        "camelot": "1B",
+        "bpm": 79.6,
+        "energy": null
+      },
+      {
+        "id": "sing-22",
+        "label": "Singalongs 22",
+        "camelot": "10B",
+        "bpm": 142.1,
+        "energy": null
+      },
+      {
+        "id": "sing-23",
+        "label": "Singalongs 23",
+        "camelot": "8B",
+        "bpm": 78.3,
+        "energy": null
+      },
+      {
+        "id": "sing-24",
+        "label": "Singalongs 24",
+        "camelot": "8A",
+        "bpm": 119.9,
+        "energy": null
+      },
+      {
+        "id": "sing-25",
+        "label": "Singalongs 25",
+        "camelot": "8A",
+        "bpm": 88.9,
+        "energy": null
+      },
+      {
+        "id": "sing-26",
+        "label": "Singalongs 26",
+        "camelot": "6A",
+        "bpm": 179.8,
+        "energy": null
+      },
+      {
+        "id": "sing-27",
+        "label": "Singalongs 27",
+        "camelot": "3B",
+        "bpm": 92.3,
+        "energy": null
+      },
+      {
+        "id": "sing-28",
+        "label": "Singalongs 28",
+        "camelot": "5B",
+        "bpm": 88.6,
+        "energy": null
+      },
+      {
+        "id": "sing-29",
+        "label": "Singalongs 29",
+        "camelot": "3B",
+        "bpm": 122.4,
+        "energy": null
+      },
+      {
+        "id": "sing-30",
+        "label": "Singalongs 30",
+        "camelot": "5A",
+        "bpm": 82,
+        "energy": null
+      },
+      {
+        "id": "sing-31",
+        "label": "Singalongs 31",
+        "camelot": "10B",
+        "bpm": 119.2,
+        "energy": null
+      },
+      {
+        "id": "sing-32",
+        "label": "Singalongs 32",
+        "camelot": "5A",
+        "bpm": 89.3,
+        "energy": null
+      },
+      {
+        "id": "sing-33",
+        "label": "Singalongs 33",
+        "camelot": "12A",
+        "bpm": 124.4,
+        "energy": null
+      },
+      {
+        "id": "sing-34",
+        "label": "Singalongs 34",
+        "camelot": "2B",
+        "bpm": 111.9,
+        "energy": null
+      },
+      {
+        "id": "sing-35",
+        "label": "Singalongs 35",
+        "camelot": "10B",
+        "bpm": 148.6,
+        "energy": null
+      }
+    ],
+    "odd": [
+      {
+        "id": "odd-01",
+        "label": "Odd ones 1",
+        "camelot": "8B",
+        "bpm": 111.7,
+        "energy": null
+      },
+      {
+        "id": "odd-02",
+        "label": "Odd ones 2",
+        "camelot": "4A",
+        "bpm": 98.9,
+        "energy": null
+      },
+      {
+        "id": "odd-03",
+        "label": "Odd ones 3",
+        "camelot": "12A",
+        "bpm": 149.5,
+        "energy": null
+      },
+      {
+        "id": "odd-04",
+        "label": "Odd ones 4",
+        "camelot": "6B",
+        "bpm": 175.2,
+        "energy": null
+      },
+      {
+        "id": "odd-05",
+        "label": "Odd ones 5",
+        "camelot": "7B",
+        "bpm": 95.2,
+        "energy": null
+      },
+      {
+        "id": "odd-06",
+        "label": "Odd ones 6",
+        "camelot": "10A",
+        "bpm": 111.4,
+        "energy": null
+      },
+      {
+        "id": "odd-07",
+        "label": "Odd ones 7",
+        "camelot": "3B",
+        "bpm": 119.4,
+        "energy": null
+      },
+      {
+        "id": "odd-08",
+        "label": "Odd ones 8",
+        "camelot": "7B",
+        "bpm": 116.6,
+        "energy": null
+      },
+      {
+        "id": "odd-09",
+        "label": "Odd ones 9",
+        "camelot": "4A",
+        "bpm": 103.4,
+        "energy": null
+      },
+      {
+        "id": "odd-10",
+        "label": "Odd ones 10",
+        "camelot": "6B",
+        "bpm": 105.2,
+        "energy": null
+      },
+      {
+        "id": "odd-11",
+        "label": "Odd ones 11",
+        "camelot": "7B",
+        "bpm": 118.9,
+        "energy": null
+      },
+      {
+        "id": "odd-12",
+        "label": "Odd ones 12",
+        "camelot": "1A",
+        "bpm": 119.2,
+        "energy": null
+      },
+      {
+        "id": "odd-13",
+        "label": "Odd ones 13",
+        "camelot": "8A",
+        "bpm": 89.4,
+        "energy": null
+      },
+      {
+        "id": "odd-14",
+        "label": "Odd ones 14",
+        "camelot": "2A",
+        "bpm": 148.6,
+        "energy": null
+      },
+      {
+        "id": "odd-15",
+        "label": "Odd ones 15",
+        "camelot": "10A",
+        "bpm": 93.8,
+        "energy": null
+      },
+      {
+        "id": "odd-16",
+        "label": "Odd ones 16",
+        "camelot": "4A",
+        "bpm": 106.8,
+        "energy": null
+      },
+      {
+        "id": "odd-17",
+        "label": "Odd ones 17",
+        "camelot": "10A",
+        "bpm": 106.6,
+        "energy": null
+      },
+      {
+        "id": "odd-18",
+        "label": "Odd ones 18",
+        "camelot": "2A",
+        "bpm": 95.9,
+        "energy": null
+      },
+      {
+        "id": "odd-19",
+        "label": "Odd ones 19",
+        "camelot": "5B",
+        "bpm": 124.3,
+        "energy": null
+      },
+      {
+        "id": "odd-20",
+        "label": "Odd ones 20",
+        "camelot": "10B",
+        "bpm": 170.8,
+        "energy": null
+      },
+      {
+        "id": "odd-21",
+        "label": "Odd ones 21",
+        "camelot": "1A",
+        "bpm": 106.4,
+        "energy": null
+      },
+      {
+        "id": "odd-22",
+        "label": "Odd ones 22",
+        "camelot": "11B",
+        "bpm": 124.3,
+        "energy": null
+      },
+      {
+        "id": "odd-23",
+        "label": "Odd ones 23",
+        "camelot": "5A",
+        "bpm": 109.6,
+        "energy": null
+      },
+      {
+        "id": "odd-24",
+        "label": "Odd ones 24",
+        "camelot": "12B",
+        "bpm": 108.6,
+        "energy": null
+      },
+      {
+        "id": "odd-25",
+        "label": "Odd ones 25",
+        "camelot": "8B",
+        "bpm": 132.3,
+        "energy": null
+      },
+      {
+        "id": "odd-26",
+        "label": "Odd ones 26",
+        "camelot": "8B",
+        "bpm": 101.6,
+        "energy": null
+      },
+      {
+        "id": "odd-27",
+        "label": "Odd ones 27",
+        "camelot": "10B",
+        "bpm": 80.7,
+        "energy": null
+      },
+      {
+        "id": "odd-28",
+        "label": "Odd ones 28",
+        "camelot": "7A",
+        "bpm": 111.4,
+        "energy": null
+      },
+      {
+        "id": "odd-29",
+        "label": "Odd ones 29",
+        "camelot": "10A",
+        "bpm": 85.8,
+        "energy": null
+      },
+      {
+        "id": "odd-30",
+        "label": "Odd ones 30",
+        "camelot": "10B",
+        "bpm": 88.2,
+        "energy": null
+      }
+    ]
+  }
+}
