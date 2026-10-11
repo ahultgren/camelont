@@ -431,8 +431,9 @@ track-features feature (the edit dialog), `mixing`'s alternatives and arc picker
   first), `get`, `unreadable`, `create({ name, playlists })`, `rename`, `duplicate`,
   `remove`, `addPlaylist`, `reshuffle`, and `update(id, change)` for everything else,
   where `change` is a pure function such as `removePlaylist`. There is no save step
-  (spec §8.6): `update` stamps the edit time and the set is written about 400 ms later,
-  together with any other waiting changes; create, duplicate and delete are written at
+  (spec §8.6): `update` stamps the edit time and the set is written about 50 ms later,
+  together with any other waiting changes (short, because a write started while the
+  page is being left doesn't finish in Chromium); create, duplicate and delete are written at
   once. Writes run one at a time and store the set as it is when the write runs, so
   quick successive edits can't overtake each other. Waiting changes are flushed when
   the page is hidden or left. A failed write shows in `saveError` and is tried again

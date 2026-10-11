@@ -22,7 +22,10 @@ export interface SetsOptions {
   saveDelayMs?: number
 }
 
-const DEFAULT_SAVE_DELAY_MS = 400
+// Short on purpose: a write that starts while the page is being left (reload, closed
+// tab) doesn't finish in Chromium, so whatever is still waiting then is lost. 50 ms
+// gathers the edits of one gesture and is over before anyone can reload.
+const DEFAULT_SAVE_DELAY_MS = 50
 
 /** Wires storage (IndexedDB by default) for the sets store. */
 export function installSets(app: App, options: SetsOptions = {}): void {

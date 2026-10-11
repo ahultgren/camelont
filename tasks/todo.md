@@ -316,9 +316,10 @@ Choices where the spec left room (for the owner to confirm):
 - Two columns from 1024 px; below that the phone layout.
 
 Left open:
-- An edit made in the last ~0.4 s before a reload can be lost: the sets store writes
+- An edit made in the last ~0.4 s before a reload could be lost: the sets store wrote
   400 ms after an edit and its write on `pagehide` does not complete in Chromium (found
-  by the e2e, which now waits for the write). Belongs to the store (Step 2).
+  by the e2e, which waits for the write). Narrowed after the merge: the store now
+  writes 50 ms after an edit. A write cut off by leaving the page is still lost.
 - Keyboard: every row control, chart point and running-order row is a tab stop. It all
   works, but a pool of 1,000 is a long way to tab; arrow-key navigation inside the list
   would be the fix.

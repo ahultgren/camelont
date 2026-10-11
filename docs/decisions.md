@@ -289,3 +289,36 @@ if it is one of the alternatives worked out then; after a change the best mix is
 In both cases a stored mix that differs from the shown one is removed from the set, so
 "changed since the last save" reflects what a save would write. **Consequence:** opening
 a set whose stored mix went stale (an override made elsewhere) edits the set.
+
+### 35. The workspace UI belongs to the sets feature (2026-10-11)
+**Decision:** the workspace's components live in `features/sets/ui/workspace`, with the
+new edge `sets → mix-view`. The mix views stay ignorant of sets: they take the
+highlighted track and the pinned transitions as props and report clicks as events.
+The page only keys the workspace by set ID.
+
+### 36. "Followed by…" gives a track its one follower, and refuses what can't work (2026-10-11)
+**Decision:** choosing a follower for a track that already has one replaces it. While a
+track is armed, a row can't be chosen if it would clash, already has a leader, would
+close the chain, is the opener, is excluded or has no key; the closer, an excluded
+track and a track without a key can't be armed. **Why:** the mistake is stopped on the
+row instead of becoming a rule error to fix afterwards.
+
+### 37. Saving to Spotify makes the saved mix the chosen one (2026-10-11)
+So "changed since the last save" means exactly: a save now would write something else.
+
+### 38. The track list is not virtualised (2026-10-11)
+Rows stay in the DOM with `content-visibility: auto`. Measured once in Chromium with a
+pool of 1,000 tracks and 100 in the set: the set opens in 1.6 s, and filter, mark, range
+and arming each land in 0.1–0.3 s. **Rejected for now:** a virtual list (it complicates
+keyboard focus, find-in-page and scrolling to a track from the chart). Revisit if real
+pools feel slow.
+
+### 39. Corrections export/import lives on the home page (2026-10-11)
+Overrides belong to tracks, not to a set (spec §4), so their export and import sit with
+the sets list rather than in a set's workspace.
+
+### 40. Sets are written 50 ms after an edit (2026-10-11)
+**Context:** the store gathered changes for 400 ms, and a write started while the page
+is being left does not finish in Chromium, so an edit just before a reload was lost.
+**Decision:** gather for 50 ms. That still joins the edits of one gesture and is over
+before anyone can reload. **Not solved:** a write cut off mid-flight by leaving the page.
