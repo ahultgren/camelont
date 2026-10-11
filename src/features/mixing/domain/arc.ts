@@ -7,6 +7,8 @@ import type { MixTrack } from './types'
  */
 export type ArcPresetId = 'twoWaves' | 'steadyBuild'
 export type ArcSignalId = 'bpm'
+/** What the user picks: one of the presets, or no arc at all. */
+export type ArcChoice = ArcPresetId | 'none'
 
 export interface ArcPreset {
   id: ArcPresetId

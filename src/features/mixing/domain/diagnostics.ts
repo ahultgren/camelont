@@ -210,10 +210,25 @@ const orList = (items: readonly string[]): string =>
     ? (items[0] ?? '')
     : `${items.slice(0, -1).join(', ')} or ${items[items.length - 1] ?? ''}`
 
+export interface DiagnosticWording {
+  /** What the tracks kept out of the mix are called. Default: "Excluded tracks". */
+  leftOut?: string
+  /** How many of them to name before "and N more". Default: all. */
+  maxOptions?: number
+}
+
 /** Plain-English explanation of a diagnostic. */
-export function describeDiagnostic(d: Diagnostic, name: TrackNamer): string {
-  const excludedHint = (ids: string[]) =>
-    ids.length > 0 ? ` Excluded tracks that would fit: ${list(ids.map(name))}.` : ''
+export function describeDiagnostic(
+  d: Diagnostic,
+  name: TrackNamer,
+  { leftOut = 'Excluded tracks', maxOptions = Infinity }: DiagnosticWording = {},
+): string {
+  const excludedHint = (ids: string[]) => {
+    if (ids.length === 0) return ''
+    const named = ids.slice(0, maxOptions).map(name)
+    const more = ids.length - named.length
+    return ` ${leftOut} that would fit: ${list(more > 0 ? [...named, `${more} more`] : named)}.`
+  }
   switch (d.kind) {
     case 'isolated':
       return `${name(d.id)} can’t follow or precede any other included track, so it can’t be placed.${excludedHint(d.excludedOptions)} Exclude it, or include a track it connects to.`
