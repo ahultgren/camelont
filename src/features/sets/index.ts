@@ -74,3 +74,6 @@ export type { SkippedItems } from './domain/types'
 // The home page (step 5a).
 export { poolSize } from './domain/set-summary'
 export { default as SetsList } from './ui/SetsList.vue'
+
+// The workspace page (steps 5b and 6).
+export { default as WorkspaceScreen } from './ui/workspace/WorkspaceScreen.vue'

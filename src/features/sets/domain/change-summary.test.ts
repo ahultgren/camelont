@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { settledState, summariseChange, type SettledState } from './change-summary'
+import {
+  describeSummary,
+  settledState,
+  summariseChange,
+  type ChangeSummary,
+  type SettledState,
+} from './change-summary'
 import { selectTracks, type SelectPlaylist, type TrackData } from './select'
 import type { TrackChoices } from './types'
 
@@ -156,5 +162,69 @@ describe('settledState', () => {
 
   it('is empty before anything was selected', () => {
     expect(settledState(null, null)).toEqual({ inSet: [], picks: new Map(), mix: null })
+  })
+})
+
+describe('describeSummary', () => {
+  const title = (trackId: string) => trackId.toUpperCase()
+  const playlistName = (playlistId: string) => `“${playlistId}”`
+  const summary = (over: Partial<ChangeSummary>): ChangeSummary => ({
+    joined: [],
+    left: [],
+    picks: [],
+    tracks: { before: 10, after: 10 },
+    cost: { before: 30, after: 30 },
+    reordered: false,
+    changed: true,
+    ...over,
+  })
+  const texts = (over: Partial<ChangeSummary>) =>
+    describeSummary(summary(over), title, playlistName).map((part) => part.text)
+
+  it('says how many tracks, who joined and left, and the cost before and after', () => {
+    expect(
+      texts({
+        joined: ['a'],
+        left: ['b', 'c'],
+        tracks: { before: 15, after: 14 },
+        cost: { before: 34.31, after: 32.5 },
+      }),
+    ).toEqual(['15 → 14 tracks', '+ A', '− B, C', 'cost 34.3 → 32.5'])
+  })
+
+  it('names a track that came or went through a pick with the picks, not twice', () => {
+    const parts = describeSummary(
+      summary({
+        joined: ['new', 'pickedIn'],
+        left: ['pickedOut'],
+        picks: [{ playlistId: 'odd', out: ['pickedOut'], in: ['pickedIn'] }],
+        cost: { before: 30, after: 31 },
+      }),
+      title,
+      playlistName,
+    )
+    expect(parts.map((part) => part.text)).toEqual([
+      '+ NEW',
+      '“odd” picks: − PICKEDOUT + PICKEDIN',
+      'cost 30.0 → 31.0',
+    ])
+    expect(parts[1]?.full).toBe('Picks of “odd”; out: PICKEDOUT; in: PICKEDIN')
+  })
+
+  it('stops naming after a few, and keeps every name for the full text', () => {
+    const [part] = describeSummary(
+      summary({ joined: ['a', 'b', 'c', 'd'], cost: { before: 1, after: 1 } }),
+      title,
+      playlistName,
+    )
+    expect(part?.text).toBe('+ A, B +2 more')
+    expect(part?.full).toBe('Joined the set: A, B, C, D')
+  })
+
+  it('says when only the order changed, when a mix came back and when there is none', () => {
+    expect(texts({ reordered: true })).toEqual(['new order, cost 30.0'])
+    expect(texts({ cost: { before: null, after: 12 } })).toEqual(['mix found, cost 12.0'])
+    expect(texts({ cost: { before: 12, after: null } })).toEqual(['no mix'])
+    expect(texts({ cost: { before: null, after: null } })).toEqual([])
   })
 })

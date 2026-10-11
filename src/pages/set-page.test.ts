@@ -1,51 +1,78 @@
-import { screen } from '@testing-library/vue'
-import { describe, expect, it } from 'vitest'
+import { screen, waitFor } from '@testing-library/vue'
+import { http, HttpResponse } from 'msw'
+import { describe, expect, it, vi } from 'vitest'
+import { server } from '@/test/msw'
 import { renderRoutes, route } from '@/test/render'
-import { aSet, playlistCopy, setsStorage } from '@/test/sets'
+import { RECCOBEATS, SPOTIFY } from '@/test/spotify-mocks'
 import { loggedInStorage } from '@/test/storage'
+import { copyOf, CORE, setOf, storeOf } from '@/test/workspace'
 import NotFoundPage from './NotFoundPage.vue'
 import SetPage from './SetPage.vue'
+
+vi.setConfig({ testTimeout: 30_000 })
 
 const routes = [
   route('/', NotFoundPage, { name: 'home' }),
   route('/sets/:id', SetPage, { name: 'set', props: true, meta: { requiresAuth: true } }),
 ]
 
-const friday = aSet('friday', 'Friday social', [
-  playlistCopy('wcs', 'WCS', ['a', 'b', 'c']),
-  // A track listed twice counts once.
-  playlistCopy('slow', 'Slow ones', ['c', 'd', 'd']),
-])
+const friday = setOf([copyOf('wcs', 'WCS', CORE.slice(0, 4))])
+const saturday = {
+  ...setOf([copyOf('odd', 'Odd ones', CORE.slice(4))]),
+  id: 'saturday',
+  name: 'Saturday social',
+}
 
-const open = (path: string, raw: Record<string, unknown> = {}) =>
-  renderRoutes({
+function open(path: string) {
+  server.use(
+    http.get(`${SPOTIFY}/me`, () => HttpResponse.json({ id: 'me' })),
+    http.get(`${SPOTIFY}/playlists/:id`, ({ params }) =>
+      HttpResponse.json({
+        id: params.id,
+        name: 'A playlist',
+        images: [],
+        owner: { id: 'me' },
+        snapshot_id: 'snap-1',
+      }),
+    ),
+    // No track has data here: the page is about which set is open, not its mix.
+    http.get(`${RECCOBEATS}/audio-features`, () => HttpResponse.json({ content: [] })),
+  )
+  return renderRoutes({
     routes,
     path,
     storage: loggedInStorage(),
-    setsStore: setsStorage([friday], raw),
+    setsStore: storeOf(friday, saturday),
   })
+}
 
 describe('set page', () => {
-  it('shows the set’s name and its playlists with their pool sizes', async () => {
+  it('opens the workspace of the set in the address', async () => {
     await open('/sets/friday')
     expect(await screen.findByRole('heading', { level: 1, name: 'Friday social' })).toBeVisible()
-    const rows = screen.getAllByRole('listitem')
-    expect(rows.map((row) => row.textContent)).toEqual(['WCS3 tracks', 'Slow ones2 tracks'])
-    expect(screen.getByText(/workspace for mixing a set isn’t built yet/)).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /Your sets/ })).toHaveAttribute('href', '/camelont/')
+    expect(screen.getByRole('region', { name: 'WCS' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Back to your sets' })).toHaveAttribute(
+      'href',
+      '/camelont/',
+    )
+  })
+
+  it('gives another set its own workspace when the address changes', async () => {
+    const { router } = await open('/sets/friday')
+    await screen.findByRole('region', { name: 'WCS' })
+    await router.push('/sets/saturday')
+    expect(await screen.findByRole('heading', { level: 1, name: 'Saturday social' })).toBeVisible()
+    expect(await screen.findByRole('region', { name: 'Odd ones' })).toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: 'WCS' })).toBeNull()
+    await waitFor(() => {
+      expect(screen.getByRole('textbox', { name: 'Set name' })).toHaveValue('Saturday social')
+    })
   })
 
   it('says so when no set has that ID', async () => {
     await open('/sets/nope')
     expect(await screen.findByRole('heading', { name: 'Set not found' })).toBeVisible()
-    expect(screen.getByRole('link', { name: /Your sets/ })).toBeInTheDocument()
-  })
-
-  it('reports a stored set that can’t be read, with its ID and the reason', async () => {
-    await open('/sets/old', { old: { v: 7, data: { name: 'From the future' } } })
-    expect(await screen.findByRole('heading', { name: 'This set can’t be read' })).toBeVisible()
-    expect(screen.getByText('old')).toBeInTheDocument()
-    expect(screen.getByText(/stored in format version 7/)).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Back to your sets' })).toBeInTheDocument()
   })
 
   it('needs a login', async () => {

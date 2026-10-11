@@ -2,6 +2,7 @@
 import { ARC_PRESETS } from '../domain/arc'
 import type { ArcChoice } from '../domain/arc'
 
+/** The energy arc the mix is shaped to (by BPM): none, or one of the presets. */
 const model = defineModel<ArcChoice>({ required: true })
 
 const options: { value: ArcChoice; name: string; description: string }[] = [
@@ -15,19 +16,20 @@ const options: { value: ArcChoice; name: string; description: string }[] = [
 </script>
 
 <template>
-  <fieldset class="grid gap-2">
-    <legend class="mb-1 text-sm font-semibold">Energy arc (by BPM)</legend>
-    <label
-      v-for="o in options"
-      :key="o.value"
-      class="flex cursor-pointer items-start gap-2 rounded-lg border px-3 py-2"
-      :class="model === o.value ? 'border-accent' : 'border-rule'"
-    >
-      <input v-model="model" type="radio" name="arc" :value="o.value" class="mt-1" />
-      <span>
-        <span class="font-medium">{{ o.name }}</span>
-        <span class="block text-[13px] text-muted">{{ o.description }}</span>
-      </span>
-    </label>
+  <fieldset class="flex min-w-0 items-center gap-2">
+    <legend class="sr-only">Energy arc (by BPM)</legend>
+    <span class="text-xs text-muted" aria-hidden="true">Arc</span>
+    <div class="flex overflow-hidden rounded-md border border-rule text-xs">
+      <label
+        v-for="o in options"
+        :key="o.value"
+        class="cursor-pointer border-l border-rule px-2 py-1 first:border-l-0 has-focus-visible:outline-2 has-focus-visible:-outline-offset-2 has-focus-visible:outline-accent"
+        :class="model === o.value ? 'bg-accent font-medium text-surface' : 'text-ink hover:bg-band'"
+        :title="o.description"
+      >
+        <input v-model="model" type="radio" name="arc" :value="o.value" class="sr-only" />
+        {{ o.name }}
+      </label>
+    </div>
   </fieldset>
 </template>

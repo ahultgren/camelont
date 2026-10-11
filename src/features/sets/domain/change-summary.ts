@@ -85,3 +85,102 @@ export function summariseChange(before: SettledState, after: SettledState): Chan
     changed: joined.length > 0 || left.length > 0 || reordered || cost.before !== cost.after,
   }
 }
+
+/** One part of a change summary: a short text for the line and the whole of it. */
+export interface SummaryPart {
+  kind: 'tracks' | 'joined' | 'left' | 'picks' | 'cost'
+  text: string
+  /** Every name, where `text` stops after a few. */
+  full: string
+}
+
+const few = (names: readonly string[], named: number): string => {
+  const more = names.length - named
+  return more > 0 ? `${names.slice(0, named).join(', ')} +${more} more` : names.join(', ')
+}
+const cost = (value: number) => value.toFixed(1)
+
+/**
+ * A change summary in words (spec W4): how many tracks, which joined and left, which
+ * picks changed, and the cost before and after. A track that came or went through a
+ * pick is named with its playlist's picks, not twice.
+ */
+export function describeSummary(
+  summary: ChangeSummary,
+  title: (trackId: string) => string,
+  playlistName: (playlistId: string) => string,
+  named = 2,
+): SummaryPart[] {
+  const parts: SummaryPart[] = []
+  const { before, after } = summary.tracks
+  if (before !== after) {
+    const text = `${before} → ${after} tracks`
+    parts.push({ kind: 'tracks', text, full: `${before} tracks in the set before, ${after} now` })
+  }
+  const picked = new Set(summary.picks.flatMap((change) => [...change.in, ...change.out]))
+  const joined = summary.joined.filter((trackId) => !picked.has(trackId)).map(title)
+  const left = summary.left.filter((trackId) => !picked.has(trackId)).map(title)
+  if (joined.length > 0) {
+    parts.push({
+      kind: 'joined',
+      text: `+ ${few(joined, named)}`,
+      full: `Joined the set: ${joined.join(', ')}`,
+    })
+  }
+  if (left.length > 0) {
+    parts.push({
+      kind: 'left',
+      text: `− ${few(left, named)}`,
+      full: `Left the set: ${left.join(', ')}`,
+    })
+  }
+  for (const change of summary.picks) {
+    const out = change.out.map(title)
+    const into = change.in.map(title)
+    const name = playlistName(change.playlistId)
+    const sides = [
+      ...(out.length > 0 ? [`− ${few(out, named)}`] : []),
+      ...(into.length > 0 ? [`+ ${few(into, named)}`] : []),
+    ]
+    parts.push({
+      kind: 'picks',
+      text: `${name} picks: ${sides.join(' ')}`,
+      full: [
+        `Picks of ${name}`,
+        ...(out.length > 0 ? [`out: ${out.join(', ')}`] : []),
+        ...(into.length > 0 ? [`in: ${into.join(', ')}`] : []),
+      ].join('; '),
+    })
+  }
+  const was = summary.cost.before
+  const is = summary.cost.after
+  if (was !== null && is !== null) {
+    const same = cost(was) === cost(is)
+    if (!same) {
+      parts.push({
+        kind: 'cost',
+        text: `cost ${cost(was)} → ${cost(is)}`,
+        full: `The mix cost ${cost(was)} before and costs ${cost(is)} now`,
+      })
+    } else if (summary.reordered) {
+      parts.push({
+        kind: 'cost',
+        text: `new order, cost ${cost(is)}`,
+        full: `Another order at the same cost, ${cost(is)}`,
+      })
+    }
+  } else if (is !== null) {
+    parts.push({
+      kind: 'cost',
+      text: `mix found, cost ${cost(is)}`,
+      full: `There is a mix again, at cost ${cost(is)}`,
+    })
+  } else if (was !== null) {
+    parts.push({
+      kind: 'cost',
+      text: 'no mix',
+      full: `There was a mix at cost ${cost(was)}; now there is none`,
+    })
+  }
+  return parts
+}

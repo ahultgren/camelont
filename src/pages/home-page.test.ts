@@ -2,7 +2,8 @@ import { screen, within } from '@testing-library/vue'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { describe, expect, it } from 'vitest'
-import type { MixSet } from '@/features/sets'
+import { defineComponent, h } from 'vue'
+import { poolSize, useSetsStore, type MixSet } from '@/features/sets'
 import type { KeyValueStore } from '@/shared/storage'
 import { server } from '@/test/msw'
 import { renderRoutes, route } from '@/test/render'
@@ -10,11 +11,30 @@ import { aSet, playlistCopy, setsStorage } from '@/test/sets'
 import { slowItems, SPOTIFY, spotifyHandlers } from '@/test/spotify-mocks'
 import { loggedInStorage } from '@/test/storage'
 import HomePage from './HomePage.vue'
-import SetPage from './SetPage.vue'
+
+/** Where a set opens. The workspace has its own tests; here it is enough that it opens. */
+const SetStub = defineComponent({
+  props: { id: { type: String, required: true } },
+  setup(props) {
+    const sets = useSetsStore()
+    return () => {
+      const set = sets.get(props.id)
+      return [
+        h('h1', set?.name),
+        h(
+          'ul',
+          set?.playlists.map((playlist) =>
+            h('li', `${playlist.name}${String(poolSize([playlist]))} tracks`),
+          ),
+        ),
+      ]
+    }
+  },
+})
 
 const routes = [
   route('/', HomePage, { name: 'home' }),
-  route('/sets/:id', SetPage, { name: 'set', props: true, meta: { requiresAuth: true } }),
+  route('/sets/:id', SetStub, { name: 'set', props: true, meta: { requiresAuth: true } }),
 ]
 
 const wcs = playlistCopy('wcs', 'WCS', ['a', 'b', 'c'])
