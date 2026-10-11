@@ -288,7 +288,7 @@ export function useSetWorkspace(setId: string, options: SetWorkspaceOptions = {}
       leftOut: [...known.mixTracks.values()].filter((track) => !inSet.has(track.id)),
     }
   })
-  /** "Bloodstream (2A · E♭ minor)" where the key is known, else the title. */
+  /** "Bloodstream (2A)" where the key is known, else the title. */
   const nameOf = computed(() => {
     const known = facts.value?.mixTracks ?? new Map<string, MixTrack>()
     const withKey = trackNamer([...known.values()])

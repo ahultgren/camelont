@@ -1,10 +1,11 @@
 import { z } from 'zod'
 import { isCamelotKey, type CamelotKey } from '@/shared/music'
-import { MAX_BPM, MIN_BPM } from '../domain/features'
+import { isValidEnergy, MAX_BPM, MIN_BPM } from '../domain/features'
 import { EXPORT_APP, EXPORT_KIND, EXPORT_VERSION } from '../domain/overrides'
 
 const Camelot = z.custom<CamelotKey>(isCamelotKey, 'Not a Camelot key (1A–12B)')
 const Bpm = z.number().min(MIN_BPM).max(MAX_BPM)
+const Energy = z.number().refine(isValidEnergy, 'Energy must be between 0 and 1')
 
 /** Stored records carry a schema version; unknown versions read as missing. */
 export const STORAGE_VERSION = 1
@@ -24,10 +25,15 @@ export const StoredFetched = z.object({
   ]),
 })
 
+/**
+ * A stored or exported override. Energy came later: records and files written before
+ * it have no such field, and read as "energy not overridden".
+ */
 export const OverrideSchema = z.object({
   trackId: z.string().min(1),
   camelot: Camelot.nullable(),
   bpm: Bpm.nullable(),
+  energy: Energy.nullable().default(null),
   note: z.string().max(500).nullable(),
   label: z.string().nullable(),
   updatedAt: z.number(),

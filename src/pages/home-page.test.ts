@@ -80,7 +80,9 @@ describe('home page (logged in): the sets list', () => {
 
   it('offers export and import of the corrections made by hand (U4)', async () => {
     await openHome()
-    expect(await screen.findByRole('heading', { name: 'Key and BPM corrections' })).toBeVisible()
+    expect(
+      await screen.findByRole('heading', { name: 'Key, BPM and energy corrections' }),
+    ).toBeVisible()
     expect(screen.getByRole('button', { name: 'Export corrections' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Import corrections' })).toBeEnabled()
   })

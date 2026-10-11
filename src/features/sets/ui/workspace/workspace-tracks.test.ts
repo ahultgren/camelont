@@ -21,6 +21,11 @@ import {
 vi.setConfig({ testTimeout: 60_000 })
 
 const core = () => copyOf('wcs', 'WCS', CORE)
+/** The mix as shown: its numbers (tracks, minutes, moves, cost) and its running order. */
+const mixShown = () => [
+  headline().textContent,
+  ...screen.getAllByTestId('order-title').map((title) => title.textContent),
+]
 const pressed = (playlistName: string, title: string) =>
   inRow(playlistName, title)
     .queryAllByRole('button', { pressed: true })
@@ -49,15 +54,22 @@ describe('the workspace: opening a set', () => {
     )
   })
 
-  it('shows a track on one line: title, artist, key in both notations and BPM', async () => {
+  it('shows a track on one line: title, artist, key as its Camelot code, BPM and energy', async () => {
     await openWorkspace(setOf([core()]))
     await settled()
     const pompeii = inRow('WCS', 'Pompeii')
     expect(pompeii.getByText('Bastille')).toBeInTheDocument()
-    expect(pompeii.getByRole('button', { name: /^Key of Pompeii:/ })).toHaveTextContent(
-      '11B · A major',
+    const key = pompeii.getByRole('button', { name: /^Key of Pompeii:/ })
+    expect(key).toHaveTextContent('11B · A major')
+    // The key name is the tooltip, and is there for assistive tech only.
+    expect(within(key).getByText('· A major')).toHaveClass('sr-only')
+    expect(within(key).getByTestId('key')).toHaveAttribute(
+      'title',
+      'A major. Edit key, BPM and energy',
     )
     expect(pompeii.getByRole('button', { name: /^BPM of Pompeii:/ })).toHaveTextContent('127.4')
+    // ReccoBeats says 0.5: level 5 of 10.
+    expect(pompeii.getByTestId('energy')).toHaveTextContent(/^5Energy 5 of 10$/)
     // Every row says in words whether it is in the set.
     expect(row('WCS', 'Pompeii')).toHaveTextContent('in the set')
   })
@@ -65,6 +77,7 @@ describe('the workspace: opening a set', () => {
   it('marks only the values set by hand', async () => {
     const id = wcsId('Love Is')
     const overridesStore = createMemoryStore({
+      // As stored before energy could be set by hand: no energy field.
       [id]: {
         v: 1,
         data: { trackId: id, camelot: null, bpm: 90, note: null, label: 'Love Is', updatedAt: 1 },
@@ -80,6 +93,36 @@ describe('the workspace: opening a set', () => {
     expect(loveIs.getByRole('button', { name: /^Key of Love Is:/ })).not.toHaveTextContent(
       'set by hand',
     )
+    expect(loveIs.getByRole('button', { name: /^Love Is: Energy/ })).not.toHaveTextContent(
+      'set by hand',
+    )
+    expect(screen.getAllByTestId('by-hand')).toHaveLength(1)
+  })
+
+  it('marks an energy set by hand like a key or a BPM', async () => {
+    const id = wcsId('Love Is')
+    const overridesStore = createMemoryStore({
+      [id]: {
+        v: 1,
+        data: {
+          trackId: id,
+          camelot: null,
+          bpm: null,
+          energy: 0.8,
+          note: null,
+          label: 'Love Is',
+          updatedAt: 1,
+        },
+      },
+    })
+    await openWorkspace(setOf([core()]), { overridesStore })
+    await settled()
+    const energy = inRow('WCS', 'Love Is').getByRole('button', { name: /^Love Is: Energy/ })
+    expect(energy).toHaveAccessibleName(
+      'Love Is: Energy 8 of 10 set by hand . Edit key, BPM and energy',
+    )
+    expect(energy).toHaveAttribute('title', 'Energy 8 of 10, set by hand. Edit key, BPM and energy')
+    expect(within(energy).getByTestId('by-hand')).toBeInTheDocument()
     expect(screen.getAllByTestId('by-hand')).toHaveLength(1)
   })
 
@@ -257,7 +300,7 @@ describe('the workspace: why a track is left out', () => {
   })
 })
 
-describe('the workspace: key and BPM from the row', () => {
+describe('the workspace: key, BPM and energy from the row', () => {
   it('opens the edit dialog from the key, and a filled-in track joins the set', async () => {
     await openWorkspace(setOf([core(), copyOf('odd', 'Odd ones', ['Lemon Tree'])]), {
       unknown: ['Lemon Tree'],
@@ -266,9 +309,14 @@ describe('the workspace: key and BPM from the row', () => {
     expect(tracksInMix()).toBe(8)
     const key = inRow('Odd ones', 'Lemon Tree').getByRole('button', { name: /^Key of Lemon Tree/ })
     expect(key).toHaveTextContent('unknown key')
+    expect(inRow('Odd ones', 'Lemon Tree').getByTestId('energy')).toHaveTextContent(
+      'Energy unknown',
+    )
     await userEvent.click(key)
 
-    const dialog = within(await screen.findByRole('dialog', { name: /Key and BPM: Lemon Tree/ }))
+    const dialog = within(
+      await screen.findByRole('dialog', { name: /Key, BPM and energy: Lemon Tree/ }),
+    )
     expect(dialog.getByText('ReccoBeats has no data for this track.')).toBeInTheDocument()
     await userEvent.selectOptions(dialog.getByRole('combobox', { name: 'Key' }), '11B')
     await userEvent.type(dialog.getByRole('spinbutton', { name: 'BPM' }), '95')
@@ -291,29 +339,77 @@ describe('the workspace: key and BPM from the row', () => {
     expect(row('Odd ones', 'Lemon Tree')).toHaveTextContent('joined the set in the last change')
   })
 
-  it('says on the key and the BPM that they open the editor', async () => {
+  it('says on the key, the BPM and the energy that they open the editor', async () => {
     await openWorkspace(setOf([core(), copyOf('odd', 'Odd ones', ['Lemon Tree'])]), {
       unknown: ['Lemon Tree'],
     })
     await settled()
     const key = inRow('WCS', 'Pompeii').getByRole('button', { name: /^Key of Pompeii/ })
     const bpm = inRow('WCS', 'Pompeii').getByRole('button', { name: /^BPM of Pompeii/ })
-    expect(key).toHaveAccessibleName('Key of Pompeii: 11B · A major . Edit key and BPM')
-    expect(bpm).toHaveAccessibleName('BPM of Pompeii: 127.4 . Edit key and BPM')
-    expect(key).toHaveAttribute('title', 'Edit key and BPM')
-    expect(bpm).toHaveAttribute('title', 'Edit key and BPM')
+    const energy = inRow('WCS', 'Pompeii').getByRole('button', { name: /^Pompeii: Energy/ })
+    expect(key).toHaveAccessibleName('Key of Pompeii: 11B · A major . Edit key, BPM and energy')
+    expect(bpm).toHaveAccessibleName('BPM of Pompeii: 127.4 . Edit key, BPM and energy')
+    expect(energy).toHaveAccessibleName('Pompeii: Energy 5 of 10 . Edit key, BPM and energy')
+    expect(key).toHaveAttribute('title', 'A major. Edit key, BPM and energy')
+    expect(bpm).toHaveAttribute('title', 'Edit key, BPM and energy')
+    expect(energy).toHaveAttribute('title', 'Energy 5 of 10. Edit key, BPM and energy')
+    // The chip inside says the same, so the tooltip is one wherever the pointer is.
+    expect(within(energy).getByTestId('energy')).toHaveAttribute(
+      'title',
+      'Energy 5 of 10. Edit key, BPM and energy',
+    )
+    const lemonTree = inRow('Odd ones', 'Lemon Tree')
+    expect(lemonTree.getByRole('button', { name: /^Key of Lemon Tree/ })).toHaveAttribute(
+      'title',
+      'Unknown key. Edit key, BPM and energy',
+    )
     // A missing value is a way in too.
-    expect(
-      inRow('Odd ones', 'Lemon Tree').getByRole('button', { name: /^BPM of Lemon Tree/ }),
-    ).toHaveAccessibleName(/\? \. Edit key and BPM$/)
+    expect(lemonTree.getByRole('button', { name: /^BPM of Lemon Tree/ })).toHaveAccessibleName(
+      /\? \. Edit key, BPM and energy$/,
+    )
+    expect(lemonTree.getByRole('button', { name: /^Lemon Tree.*: Energy/ })).toHaveAccessibleName(
+      'Lemon Tree (feat. Will Jay): Energy unknown . Edit key, BPM and energy',
+    )
+  })
+
+  it('opens the dialog from the energy, and a level set there shows on the row', async () => {
+    await openWorkspace(setOf([core()]))
+    await settled()
+    const before = mixShown()
+    const energy = () => inRow('WCS', 'Pompeii').getByRole('button', { name: /^Pompeii: Energy/ })
+    await userEvent.click(energy())
+    const dialog = within(
+      await screen.findByRole('dialog', { name: 'Key, BPM and energy: Pompeii' }),
+    )
+    expect(dialog.getByText(/ReccoBeats says/)).toHaveTextContent('energy 5.')
+    const field = dialog.getByRole('spinbutton', { name: 'Energy' })
+    expect(field).toHaveValue(5)
+    await userEvent.clear(field)
+    await userEvent.type(field, '9')
+    await userEvent.click(dialog.getByRole('button', { name: 'Save' }))
+
+    await waitFor(() => {
+      expect(energy()).toHaveAccessibleName(
+        'Pompeii: Energy 9 of 10 set by hand . Edit key, BPM and energy',
+      )
+    })
+    expect(within(energy()).getByTestId('by-hand')).toBeInTheDocument()
+    // Key and BPM are untouched, and so is the mix: no mix uses energy.
+    expect(screen.getAllByTestId('by-hand')).toHaveLength(1)
+    await settled()
+    expect(mixShown()).toEqual(before)
   })
 
   it('opens the same dialog from the BPM, with where each value came from', async () => {
     await openWorkspace(setOf([core()]))
     await settled()
     await userEvent.click(inRow('WCS', 'Pompeii').getByRole('button', { name: /^BPM of Pompeii/ }))
-    const dialog = within(await screen.findByRole('dialog', { name: /Key and BPM: Pompeii/ }))
-    expect(dialog.getByText(/ReccoBeats says/)).toHaveTextContent('11B · A major, 127.4 BPM')
+    const dialog = within(
+      await screen.findByRole('dialog', { name: /Key, BPM and energy: Pompeii/ }),
+    )
+    expect(dialog.getByText(/ReccoBeats says/)).toHaveTextContent(
+      '11B · A major, 127.4 BPM, energy 5.',
+    )
     expect(dialog.getAllByText('ReccoBeats', { exact: false }).length).toBeGreaterThan(2)
   })
 })

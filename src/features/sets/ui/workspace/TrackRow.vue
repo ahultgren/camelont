@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { KeyChip, MoveBadge } from '@/shared/ui'
+import { describeEnergy, keyName } from '@/shared/music'
+import { EnergyChip, KeyChip, MoveBadge } from '@/shared/ui'
 import { roleOf, type TrackRole } from '../../domain/edits'
 import { statusLabel, type TrackStatus } from '../../domain/select'
 import type { TrackChoices } from '../../domain/types'
@@ -9,8 +10,8 @@ import WsIcon, { type IconName } from './WsIcon.vue'
 
 /**
  * One track of a playlist, on one line (spec §9.1): title and artist, why it is in or
- * out when the app decided, its pairs, key and BPM (the way into the edit dialog), the
- * one group of toggles, and "Followed by…".
+ * out when the app decided, its pairs, key, BPM and energy (each a way into the edit
+ * dialog), the one group of toggles, and "Followed by…".
  */
 const { trackId, playlistId, status, choices } = defineProps<{
   trackId: string
@@ -28,6 +29,7 @@ const title = computed(() => track.value?.title ?? trackId)
 const features = computed(() => ws.features.value.get(trackId))
 const camelot = computed(() => features.value?.camelot ?? null)
 const bpm = computed(() => features.value?.bpm ?? null)
+const energy = computed(() => features.value?.energy ?? null)
 
 const role = computed(() => (ws.set.value ? roleOf(ws.set.value, trackId) : null))
 const leftOut = computed(() => status?.inSet === false)
@@ -62,8 +64,17 @@ const changed = computed(() =>
   ui.joined.value.has(trackId) ? 'joined' : ui.left.value.has(trackId) ? 'left' : null,
 )
 
-/** What a click on the key or the BPM does: said in their tooltip and to assistive tech. */
-const EDIT = 'Edit key and BPM'
+/** What a click on a value does: said in its tooltip and to assistive tech. */
+const EDIT = 'Edit key, BPM and energy'
+const keyTitle = computed(() => {
+  const key = camelot.value
+  if (!key) return `Unknown key. ${EDIT}`
+  return `${keyName(key.value)}. ${key.source === 'manual' ? 'Key set by hand. ' : ''}${EDIT}`
+})
+const energyTitle = computed(
+  () =>
+    `${describeEnergy(energy.value?.value ?? null)}${energy.value?.source === 'manual' ? ', set by hand' : ''}. ${EDIT}`,
+)
 
 const ROLES: { role: TrackRole; icon: IconName; label: string }[] = [
   { role: 'opener', icon: 'opener', label: 'Opener' },
@@ -100,7 +111,7 @@ function onRowClick(event: MouseEvent) {
 
 <template>
   <li
-    class="track-row grid grid-cols-[10px_minmax(0,1fr)_auto_auto_auto] items-center gap-x-2 gap-y-0.5 border-b border-rule/60 py-[3px] pr-2 pl-1.5 text-[13px] sm:grid-cols-[10px_minmax(0,1fr)_auto_auto_auto_auto_auto]"
+    class="track-row grid grid-cols-[10px_minmax(0,1fr)_auto_auto_auto_auto] items-center gap-x-2 gap-y-0.5 border-b border-rule/60 py-[3px] pr-2 pl-1.5 text-[13px] sm:grid-cols-[10px_minmax(0,1fr)_auto_auto_auto_auto_auto_auto]"
     :class="[
       highlighted ? 'bg-band shadow-[inset_2px_0_0_var(--accent)]' : '',
       armedHere ? 'bg-ok-bg' : '',
@@ -133,7 +144,7 @@ function onRowClick(event: MouseEvent) {
 
     <!-- At phone width the title takes a line of its own, over the values and toggles. -->
     <span
-      class="fade col-span-2 min-w-0 truncate sm:col-span-1"
+      class="fade col-span-3 min-w-0 truncate sm:col-span-1"
       :title="`${title} · ${track?.artists.join(', ') ?? ''}`"
     >
       <span class="font-medium" data-testid="track-title">{{ title }}</span>
@@ -187,16 +198,22 @@ function onRowClick(event: MouseEvent) {
       </button>
     </span>
 
+    <!-- The key is its Camelot code; the tooltip names it, here and on the chip inside. -->
     <button
       type="button"
-      class="fade value-button col-start-2 w-[132px] justify-self-start sm:col-start-auto"
-      :title="`${camelot?.source === 'manual' ? 'Key set by hand. ' : ''}${EDIT}`"
+      class="fade value-button col-start-2 justify-self-start sm:col-start-auto"
+      :title="keyTitle"
       @click="ui.edit(trackId)"
     >
       <span class="sr-only">Key of {{ title }}: </span>
-      <KeyChip :camelot="camelot?.value ?? null" size="sm" />
-      <span v-if="camelot?.source === 'manual'" class="hand" data-testid="by-hand">
-        <WsIcon name="pencil" :size="10" /><span class="sr-only">set by hand</span>
+      <KeyChip :camelot="camelot?.value ?? null" size="sm" :title="keyTitle" />
+      <!-- A slot of its own, so the chips stay in a column. -->
+      <span class="hand w-2.5">
+        <template v-if="camelot?.source === 'manual'">
+          <WsIcon name="pencil" :size="10" data-testid="by-hand" /><span class="sr-only"
+            >set by hand</span
+          >
+        </template>
       </span>
       <span class="sr-only">. {{ EDIT }}</span>
     </button>
@@ -213,6 +230,20 @@ function onRowClick(event: MouseEvent) {
       <!-- A slot of its own, so the numbers stay in a column. -->
       <span class="hand w-2.5">
         <template v-if="bpm?.source === 'manual'">
+          <WsIcon name="pencil" :size="10" data-testid="by-hand" /><span class="sr-only"
+            >set by hand</span
+          >
+        </template>
+      </span>
+      <span class="sr-only">. {{ EDIT }}</span>
+    </button>
+
+    <!-- Shown to be judged, and corrected: no mix uses it. -->
+    <button type="button" class="fade value-button" :title="energyTitle" @click="ui.edit(trackId)">
+      <span class="sr-only">{{ title }}: </span>
+      <EnergyChip :energy="energy?.value ?? null" :title="energyTitle" />
+      <span class="hand w-2.5">
+        <template v-if="energy?.source === 'manual'">
           <WsIcon name="pencil" :size="10" data-testid="by-hand" /><span class="sr-only"
             >set by hand</span
           >
@@ -295,8 +326,8 @@ function onRowClick(event: MouseEvent) {
 .track-row[data-left-out] .fade {
   opacity: 0.5;
 }
-/* Key and BPM are the way into the edit dialog, and have to look it: a pointer, and a
-   frame on hover like the row's other controls. The frame takes no room, so the row
+/* Key, BPM and energy are the way into the edit dialog, and have to look it: a pointer,
+   and a frame on hover like the row's other controls. The frame takes no room, so the row
    keeps its height. */
 .value-button {
   @apply flex cursor-pointer items-center gap-1 rounded border border-transparent px-0.5 hover:border-accent hover:bg-band;

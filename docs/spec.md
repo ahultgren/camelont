@@ -31,8 +31,8 @@ Sets are specified in §8 and the workspace in §9.
 |---|---|---|
 | U1 | log in with Spotify and stay logged in across reloads; log out | PKCE with `state`; the token refreshes silently; logout clears all tokens. Sets and overrides stay on the device. |
 | U2 | see my sets and create a new one | The first page after login lists my sets (name, playlists, tracks in the set, last edited, saved to Spotify or not) and offers "New set". A new set gets a name and one or more playlists, chosen from a paginated, searchable list (name, image, track count, owner; followed playlists disabled with the reason). |
-| U3 | see every track's key and BPM, with where each value came from | Each track shows its Camelot code **and** key name ("11B · A major"), and its BPM. A value set by hand carries a mark; an unmarked value came from ReccoBeats. The edit dialog shows each value's full source. Tracks with no data are clearly marked. |
-| U4 | correct or fill in a track's key/BPM | Edit dialog: Camelot key, BPM, optional note or source. The override persists on this device, applies in every set, and always beats fetched data. Export/import all overrides as JSON. |
+| U3 | see every track's key, BPM and energy, with where each value came from | Each track shows its key as the Camelot code ("11B"), with the key name ("A major") in a tooltip, and its BPM. A value set by hand carries a mark; an unmarked value came from ReccoBeats. The edit dialog shows each value's full source. Tracks with no data are clearly marked. Each track also shows its energy as a level from 0 to 10 (ReccoBeats reports 0–1), on a chip whose colour runs with the level; the number is always shown. No mix uses energy. |
+| U4 | correct or fill in a track's key, BPM and energy | Edit dialog: Camelot key, BPM, energy (0–10), optional note or source. The override persists on this device, applies in every set, and always beats fetched data. Export/import all overrides as JSON. |
 | U5 | mix the set using the Camelot system | Generates mixes where **every** transition is a move in the chart (§5). Runs off the main thread, and the UI stays responsive at 100 tracks. |
 | U6 | set mix rules | Opening track, closing track, "track A must be followed by track B" (repeatable, forms chains). A pair can join tracks from different playlists and is made in two clicks (§9.1). |
 | U7 | understand why no mix is possible | If no clash-free order exists, the app names the blocking tracks or rules in plain language (e.g. "Bloodstream (2A) can only follow 12A and precede 1B; none are in the set"), and names left-out tracks that would unblock it. The user fixes it by changing which tracks are in the set or changing the rules. |
@@ -165,15 +165,21 @@ user already approved:
   (B) and minor (A) share the hue at two lightness levels.
 - **Move badges:** `=` perfect (green), `+ ++ +++` boost (accent), `− −− −−−` drop (muted),
   `~` mood (warn). A `✗` clash exists only when evaluating an imported or legacy order.
-- **Every key is shown in both notations** wherever it appears: `11B · A major`.
+- **A key is shown as its Camelot code** wherever it appears: `11B`. The key name
+  (`A major`) is the code's tooltip and is there for assistive tech. Only the list of
+  keys to choose from in the edit dialog spells out both (`11B · A major`).
 - **Tempo-arc chart** (the primary view): x = set position, y = BPM (auto-ranged), a line
   through the points coloured by key, a move badge above each segment, optional arc
-  target curve, hover/tap/focus card (position, title, artist, Camelot + key name, BPM,
+  target curve, hover/tap/focus card (position, title, artist, Camelot code, BPM, energy,
   the move into this track and where it came from).
 - **Key wheel:** two rings (outer major, inner minor); used keys filled with their
   colour and a count (`7B×5`).
-- **Running order:** track cards with a connector between each pair (from → to key,
-  move name, BPM delta), coloured like the badges.
+- **Running order:** track cards (title, artist, key, BPM, energy) with a connector
+  between each pair (from → to key, move name, BPM delta), coloured like the badges.
+- **Energy** is a level from 0 to 10, shown as the number on a chip. The chip's hue runs
+  with the level, from blue (calm) through green and yellow to red (intense), at the
+  tone of a key chip so the same ink reads on it in both themes. The colour is never
+  the only carrier: the number is always there.
 
 ## 8. Sets
 
@@ -334,16 +340,16 @@ Two columns at laptop width, under a top bar with the set's name and **Save to S
   BPM distribution (W8), the limit, the pick method (shown only when there is a limit),
   and the change notice (shown only when Spotify changed). A playlist's tracks can be
   folded away; any number of playlists can be open. The column scrolls by itself.
-- **Track rows.** One line per track: title and artist, key in both notations, BPM, and
-  one group of toggles of which at most one is on: opener, closer, always include,
+- **Track rows.** One line per track: title and artist, key (Camelot code), BPM,
+  energy (0–10), and one group of toggles of which at most one is on: opener, closer, always include,
   exclude. Left-out rows are dimmed. A short tag gives the reason only when the app
   made the call (outside range, not picked, picked, needs key/BPM, already in
   ‹playlist›); an excluded row needs none, its toggle says it. Locking a pick is turning
   on "always include" and rejecting it is turning on "exclude"; there are no separate
   controls. Rows that joined or left the set in the last change are marked.
-- **Key and BPM on the row.** Clicking a track's key or BPM opens the edit dialog (U4),
-  which shows where each value came from. On the row, only a value set by hand is
-  marked.
+- **Key, BPM and energy on the row.** Clicking a track's key, BPM or energy opens the
+  edit dialog (U4), which shows where each value came from. On the row, only a value
+  set by hand is marked. All three are on the row at phone width too.
 - **Playlist menu.** The header bar has a small menu with **Update** (when Spotify
   changed) and **Remove from set**.
 - **Follow pairs** are made in two ways, and both work across playlists:

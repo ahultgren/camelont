@@ -336,3 +336,48 @@ replacing any playlist with the same name (a collision with a hand-made playlist
 wipe it); never replacing (the duplicates were the complaint). Partly supersedes 17 and
 assumption A7. **Unverified:** that the Feb 2026 API still has the replace-items and
 change-details routes; if not, replacing is not offered.
+
+### 42. Energy is shown on tracks before anything uses it (2026-10-11)
+**Context:** ReccoBeats energy has been fetched since the start and was written off as
+unreliable on one example (Brother, 78 BPM, 0.929), which the owner says is right.
+Research (research.md §4) suggests energy as a second signal next to BPM. **Decision
+(owner):** show each track's energy, out of 100, on the track row and the chart's hover
+card, so its accuracy can be judged on real sets first. It can't be edited, and scoring,
+the arc and the solver are unchanged. Amends the "unreliable" in decision 9.
+
+### 43. A key is shown as its Camelot code; the key name is a tooltip (2026-10-11)
+**Context:** every key was shown in both notations (`11B · A major`), a hard rule since
+the first spec. On a track row and in the running order the name took more room than
+the title could spare, and the energy had nowhere to go. **Decision (owner):** wherever
+a key is shown, show only the Camelot code. The key name is the code's tooltip, and is
+in the text for assistive tech (accessible names, sr-only text), which a tooltip
+doesn't reach. The list of keys to choose from in the edit dialog still spells out both,
+and messages name a track as "Bloodstream (2A)". **Not reachable by tooltip:** the
+chart's hover card, which the pointer can't enter; its point's label, the track row and
+the running order carry the name. Reverses the "both notations" rule of the first spec
+and of CLAUDE.md.
+
+### 44. Energy is a level from 0 to 10, coloured, editable, and in the running order (2026-10-11)
+**Context:** decision 42 showed energy out of 100 with a small bar, read-only, on the
+track row and the hover card. The owner finds that ReccoBeats energy matches how the
+songs feel, and wants to read it at a glance and correct it. **Decision (owner):**
+- Energy is shown as a whole number from 0 to 10 (ReccoBeats' 0–1, rounded). It stays
+  0–1 in storage and in the code; `shared/music/energy.ts` is the one conversion.
+- No bar. The number sits on a chip whose hue runs with the level: blue at 0, through
+  green and yellow, to red at 10 (`hue = 220 − 22 × level`), at the saturation and
+  lightness of a major key's chip. The chip's ink has a contrast of 4.8 or more on
+  every level in both themes. The number is always shown, so colour is never the only
+  carrier.
+- Energy can be set by hand, in the same dialog as key and BPM ("Key, BPM and energy"),
+  with the same pencil mark, source badge and "ReccoBeats says". It is part of an
+  override, stored and exported as 0–1; overrides and files from before have no energy
+  and read as "not set by hand".
+- It is on every track line of the running order, in the hover card, and on the track
+  row at phone width too (the key name made room, decision 43).
+
+Scoring, the arc and the solver are unchanged: no mix uses energy, and a test holds
+that. An edited energy is part of a mix request's cache key, so it asks the solver
+again and gets the same mixes. **Chosen by the agent, for the owner to confirm:** whole
+numbers (no decimal); a level is a pill and a key a rounded rectangle, to tell the two
+coloured chips apart; an energy saved at the level ReccoBeats' value already shows is
+not stored as an override. Amends 42.

@@ -119,7 +119,7 @@ describe('describeConstraintError', () => {
     expect(
       describeConstraintError({ kind: 'clash-pair', from: bloodstream, to: dance }, name),
     ).toBe(
-      'Bloodstream (2A · E♭ minor) → I Wanna Dance with Somebody (Who Loves Me) (3B · D♭ major) is a clash on the chart, so it can’t be a required pair.',
+      'Bloodstream (2A) → I Wanna Dance with Somebody (Who Loves Me) (3B) is a clash on the chart, so it can’t be a required pair.',
     )
   })
 
