@@ -2,8 +2,17 @@ import type { CamelotKey } from '@/shared/music'
 import type { PickMethod, TrackChoices, TrackMark } from './types'
 
 /**
- * Which tracks are in a set (spec §8.2–8.4). The rule table of §8.3 lives here and
- * nowhere else: a track's fate is decided by the first rule that applies.
+ * Which tracks are in a set (spec §8.2–8.4). These rules live here and nowhere else.
+ *
+ * Marks belong to the track: an excluded track is left out in every playlist that has
+ * it, and a must-include track (marked, or named in a mix rule) is let in by every one.
+ * Otherwise a playlist lets a track in when the track has a key and a BPM and the BPM
+ * is inside that playlist's range.
+ *
+ * A track is in a set at most once, so one playlist decides it: the first that lets it
+ * in and has no limit, or failing that the first that lets it in, where it counts
+ * toward the limit or competes for a place. The other playlists that would take it
+ * show it as a duplicate; a playlist that would not take it shows its own reason.
  */
 
 /** A playlist as the selection sees it; `SetPlaylist` fits. */
@@ -32,7 +41,7 @@ export interface PickRequest {
   seed: number
   /** How many tracks to pick; always fewer than the candidates. */
   count: number
-  /** The tracks that passed rules 1–5, in playlist order. */
+  /** The tracks this playlist decides that compete for its places, in playlist order. */
   candidates: readonly PickTrack[]
   /**
    * The tracks already in the set, in pool order: the ones no pick decides, plus the
@@ -59,7 +68,7 @@ export interface SelectInput {
 export type TrackStatus =
   | { inSet: true; reason: 'in' | 'mustInclude' | 'picked' }
   | { inSet: false; reason: 'excluded' | 'outsideRange' | 'notPicked' | 'needsData' }
-  /** The track belongs to an earlier playlist; it is decided there. */
+  /** This playlist would take the track, but another one decides it. */
   | { inSet: false; reason: 'duplicate'; ownerPlaylistId: string }
 
 export type StatusReason = TrackStatus['reason']
@@ -82,9 +91,15 @@ export interface PlaylistSelection {
 
 export interface Selection {
   playlists: PlaylistSelection[]
-  /** Every pool track's status in the playlist it belongs to. */
+  /**
+   * Every pool track's status in the playlist that decides it. For a track no playlist
+   * lets in: the reason of the first playlist that has it.
+   */
   statusByTrack: ReadonlyMap<string, TrackStatus>
-  /** The tracks in the set, in pool order (playlists as added, tracks as listed). */
+  /**
+   * The tracks in the set, in pool order: playlists as added, tracks as listed, each
+   * track at its place in the playlist that decides it.
+   */
   inSet: string[]
   /** Must-include tracks without key or BPM: they block the mix until fixed (§8.3). */
   blockers: string[]
@@ -104,51 +119,80 @@ const inRange = (bpm: number, { bpmMin, bpmMax }: TrackChoices): boolean =>
   (bpmMin === null || bpm >= bpmMin) && (bpmMax === null || bpm <= bpmMax)
 
 export function selectTracks(input: SelectInput): Selection {
+  const { playlists } = input
   const required = new Set(input.ruleTrackIds)
   const mixable = (trackId: string): PickTrack | null => {
     const { camelot = null, bpm = null } = input.trackData.get(trackId) ?? {}
     return camelot !== null && bpm !== null ? { trackId, camelot, bpm } : null
   }
+  const mustInclude = (trackId: string): boolean =>
+    input.marks[trackId] === 'mustInclude' || required.has(trackId)
 
-  // Rules 2–5 and 7 for a track in the playlist it belongs to. Null: a pick decides.
-  const settle = (trackId: string, choices: TrackChoices): TrackStatus | null => {
-    const mark = input.marks[trackId]
-    if (mark === 'exclude') return EXCLUDED
-    if (mark === 'mustInclude' || required.has(trackId)) return MUST_INCLUDE
+  /** Why a playlist doesn't let a track in; null when it does. */
+  const refusal = (trackId: string, choices: TrackChoices): TrackStatus | null => {
+    if (mustInclude(trackId)) return null
     const track = mixable(trackId)
     if (!track) return NEEDS_DATA
-    if (!inRange(track.bpm, choices)) return OUTSIDE_RANGE
-    return choices.limit === null ? IN : null
+    return inRange(track.bpm, choices) ? null : OUTSIDE_RANGE
   }
 
-  // First pass: who owns each track (rule 1), and every status that needs no pick.
-  const owner = new Map<string, number>()
+  // Each playlist's tracks once, and for each track the playlists that have it.
+  const listed = playlists.map((playlist) => [
+    ...new Set(playlist.tracks.map((track) => track.trackId)),
+  ])
+  const holders = new Map<string, number[]>()
+  listed.forEach((trackIds, index) => {
+    for (const trackId of trackIds) holders.set(trackId, [...(holders.get(trackId) ?? []), index])
+  })
+
+  // Which playlist decides each track: the first without a limit that lets it in, else
+  // the first that lets it in. A track nobody decides sits with the first that has it.
+  const decider = new Map<string, number>()
+  const home = new Map<string, number>()
+  for (const [trackId, indexes] of holders) {
+    const willing =
+      input.marks[trackId] === 'exclude'
+        ? []
+        : indexes.filter((i) => {
+            const choices = playlists[i]?.choices
+            return choices !== undefined && refusal(trackId, choices) === null
+          })
+    const decides = willing.find((i) => playlists[i]?.choices.limit === null) ?? willing[0]
+    if (decides !== undefined) decider.set(trackId, decides)
+    home.set(trackId, decides ?? indexes[0] ?? 0)
+  }
+
+  // First pass: every status that needs no pick, in pool order.
   const statusByTrack = new Map<string, TrackStatus>()
   const poolOrder: string[] = []
-  const drafts = input.playlists.map((playlist, index) => {
-    const trackIds = [...new Set(playlist.tracks.map((track) => track.trackId))]
+  const drafts = playlists.map((playlist, index) => {
+    const { choices } = playlist
     const candidates: string[] = []
-    let mustInclude = 0
-    for (const trackId of trackIds) {
-      if (owner.has(trackId)) continue
-      owner.set(trackId, index)
+    let mustIncluded = 0
+    for (const trackId of listed[index] ?? []) {
+      if (home.get(trackId) !== index) continue
       poolOrder.push(trackId)
-      const status = settle(trackId, playlist.choices)
-      if (status === null) candidates.push(trackId)
-      else statusByTrack.set(trackId, status)
-      if (status === MUST_INCLUDE) mustInclude++
+      if (decider.get(trackId) !== index) {
+        const excluded = input.marks[trackId] === 'exclude'
+        statusByTrack.set(trackId, excluded ? EXCLUDED : (refusal(trackId, choices) ?? NEEDS_DATA))
+      } else if (mustInclude(trackId)) {
+        statusByTrack.set(trackId, MUST_INCLUDE)
+        mustIncluded++
+      } else if (choices.limit === null) statusByTrack.set(trackId, IN)
+      else candidates.push(trackId)
     }
     // Must-include tracks count toward the limit (§8.4). With room for every candidate
     // they are all in, and with room for none they are all out: no pick either way.
-    const places = (playlist.choices.limit ?? Infinity) - mustInclude
+    const places = (choices.limit ?? Infinity) - mustIncluded
     const needsPick = places > 0 && candidates.length > places
     if (!needsPick) {
       for (const trackId of candidates) statusByTrack.set(trackId, places > 0 ? IN : NOT_PICKED)
     }
-    return { playlist, trackIds, mustInclude, places, toPick: needsPick ? candidates : [] }
+    return { playlist, mustIncluded, places, toPick: needsPick ? candidates : [] }
   })
 
-  // Second pass: the other limited playlists pick, in the order they were added (rule 6).
+  // Second pass: the other limited playlists pick, in the order they were added. A
+  // track that isn't picked is not passed on to a later playlist.
   for (const { playlist, places, toPick } of drafts) {
     if (toPick.length === 0) continue
     const picked = sanitise(
@@ -171,23 +215,32 @@ export function selectTracks(input: SelectInput): Selection {
   }
 
   const statusOf = (trackId: string): TrackStatus => statusByTrack.get(trackId) ?? NEEDS_DATA
+  /** What a playlist's row shows for a track it has. */
+  const rowStatus = (trackId: string, index: number, choices: TrackChoices): TrackStatus => {
+    const decides = decider.get(trackId)
+    if (decides === index || input.marks[trackId] === 'exclude') return statusOf(trackId)
+    const owner = decides === undefined ? undefined : playlists[decides]
+    return (
+      refusal(trackId, choices) ??
+      (owner
+        ? { inSet: false, reason: 'duplicate', ownerPlaylistId: owner.playlistId }
+        : statusOf(trackId))
+    )
+  }
+
   const inSet = poolOrder.filter((trackId) => statusOf(trackId).inSet)
   return {
-    playlists: drafts.map(({ playlist, trackIds, mustInclude }, index) => {
-      const tracks = trackIds.map((trackId) => {
-        const first = input.playlists[owner.get(trackId) ?? index]
-        const status: TrackStatus =
-          first === undefined || first === playlist
-            ? statusOf(trackId)
-            : { inSet: false, reason: 'duplicate', ownerPlaylistId: first.playlistId }
-        return { trackId, status }
-      })
+    playlists: drafts.map(({ playlist, mustIncluded }, index) => {
+      const tracks = (listed[index] ?? []).map((trackId) => ({
+        trackId,
+        status: rowStatus(trackId, index, playlist.choices),
+      }))
       const { limit } = playlist.choices
       return {
         playlistId: playlist.playlistId,
         tracks,
         counts: countByReason(tracks.map((row) => row.status)),
-        limitFilled: limit !== null && mustInclude > 0 && mustInclude >= limit,
+        limitFilled: limit !== null && mustIncluded > 0 && mustIncluded >= limit,
       }
     }),
     statusByTrack,

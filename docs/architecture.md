@@ -244,29 +244,37 @@ no other feature; pages map playlists, track features and mix results to and fro
   chosenMix, lastSave }`. A `SetPlaylist` is the stored copy of a Spotify playlist (its
   tracks as read, `snapshotId`, `readAt`) plus its `TrackChoices { bpmMin, bpmMax, limit,
   pick: 'random' | 'bestFit', seed }`. `marks` (`mustInclude | exclude`) are keyed by
-  track ID on the set, since a track is in a set at most once. `MixSettings` holds
+  track ID on the set: a mark belongs to the track, in every playlist that has it. `MixSettings` holds
   opener, closer, follow pairs and the arc choice; `ChosenMix` the track order;
   `LastSave` the link, the time, and the name and order that were written.
 - `domain/set.ts`: `newSet`, `addPlaylist` (a playlist is in a set once), `duplicateSet`
   (a deep copy that hasn't been saved to Spotify), `ruleTrackIds` (the tracks named in a
   mix rule) and `saveState` → `never | saved | changed`: a set has changed since its
   save when saving now would write another name or track order.
-- `domain/select.ts`: `selectTracks(input) → Selection`, the rule table of spec §8.3 and
+- `domain/select.ts`: `selectTracks(input) → Selection`, the rules of spec §8.2–8.4 and
   **the only place that decides which tracks are in a set**. Input: the playlists with
   their choices, the marks, the rule track IDs (they count as must-include), key and BPM
-  per track, and a `PickFn`. Two passes: the first gives each track to the first
-  playlist that has it and settles every status that needs no pick; the second lets the
-  limited playlists that have more candidates than places pick, in the order they were
-  added. Each `PickRequest` carries the playlist's method and seed, how many to pick,
-  the candidates (rules 1–5 passed), and the tracks already in the set: everything
-  settled in the first pass, in any playlist, plus earlier picks. The answer is held to
-  its contract (candidates only, never more than asked). When no more tracks are
-  available than the limit leaves room for, they are all in, no pick is made, and
-  earlier picks see them as in the set. Output: a row per playlist track (`TrackStatus`:
-  `in | mustInclude | picked`, or `excluded | outsideRange | notPicked | needsData`, or
-  `duplicate` with the owning playlist), counts per playlist and reason, the tracks in
-  the set in pool order, and the blockers (must-include tracks without key or BPM).
-  `statusLabel` puts a status in the spec's words.
+  per track, and a `PickFn`. An excluded track is out in every playlist that has it. A
+  playlist *lets a track in* when the track is must-include, or has key and BPM with the
+  BPM inside that playlist's range. One playlist *decides* each track: the first that
+  lets it in and has no limit, else the first that lets it in (there it counts toward
+  the limit or competes for a place; a track that isn't picked is not passed on). The
+  first pass settles every status that needs no pick; the second lets the limited
+  playlists that have more candidates than places pick, in the order they were added.
+  Each `PickRequest` carries the playlist's method and seed, how many to pick, the
+  candidates (the tracks that playlist decides, minus must-includes), and the tracks
+  already in the set: everything settled in the first pass, in any playlist, plus
+  earlier picks. The answer is held to its contract (candidates only, never more than
+  asked). When no more tracks are available than the limit leaves room for, they are all
+  in, no pick is made, and earlier picks see them as in the set. Output: a row per
+  playlist track with the status that playlist shows: the deciding playlist the real one
+  (`in | mustInclude | picked | notPicked`), another playlist that would take the track
+  `duplicate` with the deciding playlist, and a playlist that wouldn't its own reason
+  (`outsideRange | needsData`); `excluded` shows in all. Also counts per playlist by the
+  status its rows show, `statusByTrack` (the deciding playlist's status), the tracks in
+  the set in pool order (a track sits where its deciding playlist lists it), and the
+  blockers (must-include tracks without key or BPM). `statusLabel` puts a status in the
+  spec's words.
 - `domain/random-pick.ts`: the random pick method. `randomRank(seed, trackId)` is a
   hash of both (`shared/lib` `hashString` seeding the PRNG), and `randomPick` takes the
   lowest ranks. A rank doesn't depend on the other candidates, so the same seed gives the
