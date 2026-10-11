@@ -39,7 +39,7 @@ Sets are specified in §8 and the workspace in §9.
 | U8 | choose between different possible mixes | Several distinct valid mixes of the same tracks, side by side, each with a tempo sparkline and stats: move distribution, peaks, opener and closer, BPM range, total cost. |
 | U9 | explore a mix | Tempo-arc chart with a move badge between points and a hover/tap card per track; a key wheel; a running order with transition connectors (§7). |
 | U10 | choose a mixing profile, optionally with an energy arc | Default profile = the reference weights (§5.3). Arc presets: none, two waves, steady build. |
-| U11 | save a set's mix as a new playlist in my account | Only when I press the button: creates a **new private** playlist named after the set, with the tracks in mix order, and links to it. No source playlist is ever modified. |
+| U11 | save a set's mix as a playlist in my account | Only when I press the button, and after I confirm the playlist's name: creates a **new private** playlist with the tracks in mix order and links to it. I'm warned when I already have a playlist with that name. Saving again, I choose between replacing the playlist this set saved before and creating another (§8.5). No source playlist is ever modified. |
 | U12 | manage my sets | Rename, duplicate, delete (with confirmation). Everything about a set is saved on this device as I change it; reopening a set shows it as I left it, including the chosen mix. Deleting a set touches nothing in Spotify. |
 | U13 | change a set's playlists | Add or remove playlists at any time. Removing one says what goes with it (its tracks, their marks, rules that name them) before it happens. |
 | U14 | choose which tracks each playlist contributes | Per playlist: a BPM range, must-include and exclude marks on single tracks, and an optional limit with a pick method (§8.3–8.4). Every track shows whether it is in the set and why or why not. |
@@ -282,10 +282,21 @@ playlist of odd tracks from which the set should have just one or two.
 - The set remembers which alternative the user chose. Reopening the set shows that mix.
 - When the tracks or settings change, the alternatives are worked out again and the
   best one is shown.
-- **Save to Spotify** is the only thing that writes to Spotify. It creates a new private
-  playlist named after the set, in mix order. The set then shows the link and the time
-  of the save, and whether the set has changed since. Saving again creates another new
-  playlist; nothing is ever updated in place.
+- **Save to Spotify** is the only thing that writes to Spotify, and it always asks
+  first. The dialog has:
+  - the **playlist's name**, filled in with the name used last time, or the set's name
+    on the first save. The user confirms or changes it before anything is written;
+  - a **warning** when one of the user's own playlists already has that name. Spotify
+    allows two playlists with one name, so this never blocks the save;
+  - when this set has saved a playlist before, a **choice**: replace that playlist's
+    tracks (and name) with this mix, or create another playlist. The dialog says which
+    playlist would be replaced and that its current tracks go.
+- **What can be replaced.** Only the playlist this set created with its last save, and
+  only while it still exists, is still the user's, and is not one of the playlists any
+  set on this device draws from. Otherwise the save creates a new playlist. A playlist
+  the user made by hand, or one that merely has the same name, is never touched.
+- A new playlist is private and holds the tracks in mix order. Afterwards the set shows
+  the link and the time of the save, and whether the mix has changed since.
 
 ### 8.6 Storage
 
@@ -360,7 +371,7 @@ The prototype this came from settles the layout only. The look follows §7.
 Hand-editing a generated mix (drag/reorder); a set-wide target size or duration;
 letting each alternative mix use different tracks; moving sets between devices
 (export/import or sync); treating different releases of the same song as one track;
-multiple languages; a backend or shared storage; modifying existing playlists; playback;
+multiple languages; a backend or shared storage; modifying playlists the app didn't create; playback;
 automatic BPM halving; a second data provider or in-browser audio analysis; public
 (non-allowlisted) access.
 

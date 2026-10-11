@@ -54,7 +54,9 @@ else. If the spec seems wrong, ask; don't silently diverge.
 
 ## Hard constraints
 
-- **Never modify the source playlist.** Saving always creates a new private playlist.
+- **Never modify a source playlist**, or any playlist the app didn't create. Saving
+  creates a new private playlist, or, when the user chooses it in the save dialog,
+  replaces the tracks of the playlist that same set saved before (spec §8.5).
 - **Clashes are forbidden** in generated mixes. The chart is directional and
   deliberately non-textbook (e.g. `2A → 3B` is a clash, `nA → nB` is `+`). Don't
   "correct" it.

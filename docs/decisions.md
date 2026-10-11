@@ -82,6 +82,7 @@ features talk only via `index.ts`, each feature is split into `domain/api/model/
 and eslint-plugin-boundaries makes violations fail CI. See `architecture.md`.
 
 ### 17. Saving always creates a new private playlist (2026-09-27)
+*Partly superseded by #41: a set may replace the playlist it saved before.*
 The source playlist is never modified. Reordering in place isn't offered.
 
 ### 18. The chart image is not committed (2026-09-27)
@@ -322,3 +323,16 @@ the sets list rather than in a set's workspace.
 is being left does not finish in Chromium, so an edit just before a reload was lost.
 **Decision:** gather for 50 ms. That still joins the edits of one gesture and is over
 before anyone can reload. **Not solved:** a write cut off mid-flight by leaving the page.
+
+### 41. Saving asks for a name, and may replace the set's own earlier playlist (2026-10-11)
+**Context:** every save created another playlist named after the set. Spotify allows
+identical names, so nothing was overwritten, but saving a set several times left a row
+of look-alike playlists, and the name couldn't be chosen. **Decision (owner):** Save to
+Spotify opens a dialog with the playlist's name, warns when one of the user's playlists
+already has it, and, when this set saved a playlist before, offers to replace that
+playlist's tracks or create another. Only the playlist the set itself created can be
+replaced, while it still exists, is the user's, and is no set's source. **Rejected:**
+replacing any playlist with the same name (a collision with a hand-made playlist could
+wipe it); never replacing (the duplicates were the complaint). Partly supersedes 17 and
+assumption A7. **Unverified:** that the Feb 2026 API still has the replace-items and
+change-details routes; if not, replacing is not offered.
