@@ -52,8 +52,10 @@ GET https://api.reccobeats.com/v1/audio-features?ids=<comma-separated Spotify tr
   silently changes which moves are legal, so show provenance and make overrides easy.
 - **Double-time BPM:** Price Tag (175 → 87.5), We Are Young (184 → 92) and Lemon Tree
   (176 → 88) were reported at double the danced tempo and corrected by hand.
-- **Energy is unreliable:** Brother, a 78 BPM ballad, has energy 0.929. Don't drive an
-  arc from energy alone. BPM comes first.
+- **Energy is unverified, not known to be wrong.** Brother (78 BPM) has energy 0.929.
+  That was first read as an error; the owner says it is right: the song has a lot of
+  energy for its tempo (2026-10-11). So energy and tempo are separate, and how accurate
+  ReccoBeats energy is across a set is still to be spot-checked.
 - Manual values came from Chordify, Tunebat/SongBPM and Spotify's own key display. None
   of those is integrated. GetSongBPM (free, needs an attribution backlink), SoundStat and
   AcousticBrainz are candidates for a future second opinion.
@@ -110,7 +112,107 @@ GET https://api.reccobeats.com/v1/audio-features?ids=<comma-separated Spotify tr
   toggle.
 - The source playlist is never modified. Results always go to a new playlist.
 
-## 4. User preferences (evidenced; don't extrapolate)
+## 4. What "energy" means in the chart (researched 2026-10-11)
+
+Web research only; nothing here was built or tested by ear. Mixed In Key's (MIK) pages
+are marketing and workflow content, not evidence, and their DJ-set analyses (Armin van
+Buuren, Diplo) are videos that were not watched.
+
+### The symbols describe the key's direction, not the tracks' energy
+
+In semitones, the chart's columns are:
+
+| Chart | The key moves | MIK's name for it |
+|---|---|---|
+| `+` / `−` | a fifth up / down (also minor → relative major, and back) | the basic ±1 mix; no energy claim |
+| `++` / `−−` | 3 semitones up / down | "Pay Attention Mix" (up only) |
+| `+++` / `−−−` | 2 semitones up / down | "Energy Boost" (up only) |
+| `(+++)` / `(−−−)` | 1 semitone up / down | "Jaws Mix", "Armin van Buuren variation" (up only) |
+
+- `+++` is the pop "key change for the last chorus": the tonal centre steps up and the
+  *transition* feels like a lift. It says nothing about how intense the next song is.
+- MIK keeps intensity on a separate axis, its 1–10 **Energy Level** per track, and says
+  so: "A key change alone does not guarantee a rise in energy", and the wheel numbers
+  are "positions on the wheel, not semitones or energy ratings".
+- **MIK never names or recommends the drops.** `−−`, `−−−` and `(−−−)` look like the
+  chart-maker's mirror image of the boosts. The `+/++/+++` chart itself could not be
+  traced to MIK; MIK coined "Energy Boost", and the chart reads as a third-party
+  synthesis of their named moves.
+
+### How MIK says to use the moves
+
+- Learn and mostly use same key and ±1. Boosts are a spice: "every 20-30 minutes, but
+  not ALL the time", when the room needs a lift or the next section should feel bigger.
+  Jaws and Pay Attention are for peak moments, timed to a breakdown or build-up.
+- Energy Level: stay or move one step; a bigger jump (9 → 5) is a deliberate reset.
+  Their reading of Armin's Ultra 2017 set: 7 8 8 8 7 7 7 8 8 8 7 7 8 7 7. Skrillex drops
+  to a 4 after a run of anthems, on purpose.
+- The strong effect is both at once: Armin opens 12A → 7A (the semitone lift) while the
+  Energy Level goes 7 → 8.
+- Order of filters when picking the next track: key, then BPM, then Energy Level.
+
+### What it means for this app
+
+- A key lift and a tempo/intensity change are independent forces. Aligned, they hit
+  harder; opposed, they cancel and the transition sounds smooth. Higher Love (4B, 107) →
+  a slower 6B song is `+++` and is not a lift: the key steps up while the tempo falls.
+- A `−−−` during a BPM climb is the same cancellation in reverse: legal, but it blunts
+  the climb.
+- **The hand-tuned set already does this, unplanned.** Of its four `+++`, two sit on a
+  rise or level tempo (Try → I Want To Break Free +4.9; Stolen Dance → Stand By Me 0)
+  and two cushion a fall (Counting Stars → Bloodstream −31; Higher Love → We Are Young
+  −15). Its peak arrives on a `−` (I Want To Break Free → Pompeii, +18.5).
+- The solver can't tell these apart: `+++` and `−−−` cost the same and the arc reads
+  BPM only.
+- Ideas, not decisions: score a transition's key direction against the arc's slope at
+  that point; let a profile choose between aligning and cancelling; cap or space the
+  `++`/`+++`/`(+++)` moves so they stay rare.
+
+### Caveats
+
+- No study was found showing that a key step up raises perceived energy.
+- In 200,000 real DJ transitions (MixReady), two-step moves were under-represented:
+  6.0% against 8.3% by chance. Direction was not split. Only 22% of transitions were
+  Camelot-compatible at all (16.7% by chance).
+- All of it comes from club DJing with long blends. With a gap between songs, the key
+  lift is probably weaker than tempo and the song's own intensity.
+
+### Where a per-track energy value could come from
+
+| Source | Energy | Lookup | Cost | Fit |
+|---|---|---|---|---|
+| ReccoBeats | 0–1 | Spotify ID | free, no key | Already fetched with key and BPM. Accuracy not yet checked (§1). |
+| SoundStat | 0–1 | Spotify ID | API key; pay per newly analysed track | A possible second opinion. CORS not checked. |
+| Soundcharts | 0–1 | catalogue match | commercial | Too heavy for this app. |
+| Cyanite | low/medium/high/variable, or 0–1 (sources disagree) | upload the audio | 5 free analyses a month, then quoted | No: needs the audio file. |
+| Mixed In Key | 1–10 | none: written to the file's tags | desktop licence | No API. |
+| GetSongBPM | none (tempo, key, danceability, acousticness) | name or its own ID | free with a backlink | No. |
+
+- The Spotify-style `energy` is one model's guess at intensity, on its own scale. MIK's
+  Energy Level is a different measure (high-frequency content and how aggressive the
+  production is) and exists only in files the user owns.
+- Nothing found gives MIK-style levels by Spotify ID. The realistic options are
+  ReccoBeats energy as a hint, a second provider to cross-check it, or a value the user
+  sets by hand like a key override.
+
+### Sources
+
+- MIK: [Energy Boost tutorial](https://mixedinkey.com/harmonic-mixing-guide/energy-boost-dj-mixing-tutorial/),
+  [Camelot wheel](https://mixedinkey.com/camelot-wheel/),
+  [changing energy with the wheel](https://mixedinkey.com/workflows/change-energy-with-camelot-wheel/),
+  [Jaws Mix](https://mixedinkey.com/jaws-mix/),
+  [Pay Attention Mix](https://mixedinkey.com/pay-attention-mix/),
+  [Energy Level detection](https://mixedinkey.com/workflows/use-energy-level-detection/),
+  [sorting by Energy Level](https://mixedinkey.com/harmonic-mixing-guide/sorting-playlists-by-energy-level/),
+  [World's best DJs](https://mixedinkey.com/harmonic-mixing-guide/worlds-best-djs/)
+- [MixReady: does mixing in key matter?](https://mixready.art/research/does-mixing-in-key-matter)
+- [DJ.Studio: harmonic matches explained](https://help.dj.studio/en/articles/8118455-harmonic-matches-explained)
+- Energy data: [SoundStat](https://soundstat.info/),
+  [Soundcharts audio features](https://soundcharts.com/audio-features-api),
+  [Cyanite API docs](https://api-docs.cyanite.ai/docs/legacy/classifier-overview/),
+  [GetSongBPM API](https://getsongbpm.com/api)
+
+## 5. User preferences (evidenced; don't extrapolate)
 
 - The observed WCS set spans 78–127 BPM (most tracks 87–119). It's one set, not a rule.
 - Arc over local smoothness: slow opener OK, one slow breather mid-set, close near a

@@ -17,3 +17,8 @@ Patterns to avoid repeating. Add one after every correction from the owner.
   owner's playlist (78–184 BPM). When a rule chooses between interpretations (octave,
   reference, tie-break), add the real input as a fixture, plus a stability test that
   small edits don't flip the result, and get an adversarial review. (2026-09-28)
+- **A value that disagrees with another signal isn't thereby wrong.** Brother's energy
+  (0.929 at 78 BPM) was written up as proof that ReccoBeats energy is unreliable, and
+  repeated from the docs as fact; the owner knows the song and says the value is right.
+  Before calling data bad because it looks odd, ask the owner or show it to them. A
+  claim about data quality in the docs is a hypothesis until it was checked. (2026-10-11)
