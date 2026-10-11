@@ -1,8 +1,10 @@
 <script setup lang="ts">
+import { useRouter } from 'vue-router'
 import { LoginButton, useAuthStore } from '@/features/auth'
 import { SetsList } from '@/features/sets'
 
 const auth = useAuthStore()
+const router = useRouter()
 const linkTo = (setId: string) => ({ name: 'set', params: { id: setId } })
 </script>
 
@@ -21,5 +23,5 @@ const linkTo = (setId: string) => ({ name: 'set', params: { id: setId } })
       <LoginButton />
     </div>
   </template>
-  <SetsList v-else :link-to="linkTo" />
+  <SetsList v-else :link-to="linkTo" @created="(set) => router.push(linkTo(set.id))" />
 </template>

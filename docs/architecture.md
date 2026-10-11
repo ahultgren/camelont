@@ -75,9 +75,10 @@ app → pages → features → shared
 - `shared/*` imports nothing from `features`, `pages` or `app`.
 - A feature imports `shared/*` and **other features only via their `index.ts`**. No
   circular feature dependencies. Allowed edges today: `playlists → auth`,
-  `mixing → track-features`, `mix-view → mixing, track-features`. `sets` has none yet
-  (planned: `playlists`, `track-features`, `mixing`, each added with the code that
-  needs it). Adding an edge is a design decision: record it here.
+  `mixing → track-features`, `mix-view → mixing, track-features`, `sets → playlists`
+  (the New set dialog picks playlists and reads their tracks; planned as well:
+  `track-features`, `mixing`, each added with the code that needs it). Adding an edge
+  is a design decision: record it here.
 - Inside a feature: `ui → (model, domain)`, `model → (api, domain)`, `api → domain`;
   `domain` imports only `shared/music` and `shared/lib`. `ui` may use domain types and
   pure helpers (e.g. move metadata), never `api`.
@@ -261,8 +262,10 @@ chart equals the JSON for all 576 pairs.
 
 ## Sets (`features/sets`)
 
-The set is the unit of work (spec §8). The feature defines its own shapes and imports
-no other feature; pages map playlists, track features and mix results to and from them.
+The set is the unit of work (spec §8). The feature defines its own shapes: its domain,
+api and model import no other feature, and track features and mix results are mapped to
+and from them outside it. Only `ui` reaches into another feature (playlists, to make a
+new set).
 
 - `domain/types.ts`: `MixSet { id, name, createdAt, editedAt, playlists, marks, mix,
   chosenMix, lastSave }`. A `SetPlaylist` is the stored copy of a Spotify playlist (its
@@ -340,6 +343,15 @@ no other feature; pages map playlists, track features and mix results to and fro
   list doesn't load. Rename and delete are dialogs (the delete one says Spotify isn't
   touched), duplicate is immediate. Unreadable sets are listed below by ID with the
   reason and can be deleted; `loadError` and `saveError` are shown as alerts.
+  `NewSetDialog` (spec U2, §8.1–8.2) takes a name and one or more playlists
+  (`PlaylistPicker` in selection mode). `useCreateSet` then reads each playlist's
+  tracks through the playlists feature's Spotify client, one at a time with the
+  progress shown, and creates the set only when all are read: a failed read creates
+  nothing, names the playlist, and a retry reads only what is still missing. A blank
+  name becomes the first chosen playlist's name. Items that can't be mixed are skipped
+  as before; when there were any, the dialog names them per playlist before the set is
+  opened (the set itself doesn't store that count). The stored copy has no
+  `snapshotId` yet: the items route doesn't return one.
 
 ## Auth (`features/auth`)
 

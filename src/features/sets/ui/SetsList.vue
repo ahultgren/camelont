@@ -1,17 +1,21 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { RouterLink, type RouteLocationRaw } from 'vue-router'
 import { formatDateTime } from '@/shared/lib'
 import { AppButton, AppDialog, EmptyState } from '@/shared/ui'
 import { saveState } from '../domain/set'
 import type { MixSet } from '../domain/types'
 import { useSetsStore } from '../model/sets-store'
+import NewSetDialog from './NewSetDialog.vue'
 import { trackCountLabel } from './set-summary'
 
 /** The user's sets, newest edit first, with rename, duplicate and delete (spec U2, U12). */
 defineProps<{ linkTo: (setId: string) => RouteLocationRaw }>()
+defineEmits<{ created: [set: MixSet] }>()
 
 const sets = useSetsStore()
+const empty = computed(() => sets.loaded && sets.list.length === 0 && !sets.loadError)
+const creating = ref(false)
 
 const isoTime = (ms: number) => new Date(ms).toISOString()
 
@@ -50,9 +54,13 @@ function remove() {
 
 <template>
   <section class="grid gap-4" aria-labelledby="sets-heading">
-    <h1 id="sets-heading" class="text-[clamp(28px,5vw,40px)] leading-[1.05] font-bold">
-      Your sets
-    </h1>
+    <div class="flex flex-wrap items-end justify-between gap-3">
+      <h1 id="sets-heading" class="text-[clamp(28px,5vw,40px)] leading-[1.05] font-bold">
+        Your sets
+      </h1>
+      <!-- The empty state has its own. -->
+      <AppButton v-if="!empty" @click="creating = true">New set</AppButton>
+    </div>
 
     <p v-if="sets.loadError" role="alert" class="text-sm text-warn">
       Couldn’t read your sets from this device: {{ sets.loadError }}
@@ -146,9 +154,12 @@ function remove() {
       </li>
     </ul>
     <p v-else-if="!sets.loaded" class="text-muted" role="status">Loading your sets…</p>
-    <EmptyState v-else-if="!sets.loadError" title="No sets yet">
+    <EmptyState v-else-if="empty" title="No sets yet">
       A set is one or more of your playlists, mixed together. It is kept on this device; nothing in
       Spotify changes until you save a mix.
+      <template #actions>
+        <AppButton @click="creating = true">New set</AppButton>
+      </template>
     </EmptyState>
 
     <!-- Stored sets that failed validation are reported, never hidden (spec §6). -->
@@ -191,6 +202,8 @@ function remove() {
         </li>
       </ul>
     </section>
+
+    <NewSetDialog v-model:open="creating" @created="(set) => $emit('created', set)" />
 
     <AppDialog
       :open="renaming !== null"

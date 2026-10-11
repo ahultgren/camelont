@@ -233,7 +233,7 @@ Three sessions, the first two in parallel:
   - [x] `PlaylistPicker` selection mode (link mode kept for the old page)
   - [x] `sets/ui/SetsList`: rows, rename, duplicate, delete, unreadable sets, load and
     save errors; the home page shows it when logged in
-  - [ ] `sets/ui/NewSetDialog`: name + playlists, reads the tracks, progress, retry,
+  - [x] `sets/ui/NewSetDialog`: name + playlists, reads the tracks, progress, retry,
     skipped items; edge `sets → playlists`
   - [ ] E2E for the sets flow; the old mixer's e2e opens `/playlists/wcs` directly
   - [ ] Docs: `architecture.md`, `README.md`

@@ -1,10 +1,13 @@
 import { screen, within } from '@testing-library/vue'
 import userEvent from '@testing-library/user-event'
+import { http, HttpResponse } from 'msw'
 import { describe, expect, it } from 'vitest'
 import type { MixSet } from '@/features/sets'
 import type { KeyValueStore } from '@/shared/storage'
+import { server } from '@/test/msw'
 import { renderRoutes, route } from '@/test/render'
 import { aSet, playlistCopy, setsStorage } from '@/test/sets'
+import { slowItems, SPOTIFY, spotifyHandlers } from '@/test/spotify-mocks'
 import { loggedInStorage } from '@/test/storage'
 import HomePage from './HomePage.vue'
 import SetPage from './SetPage.vue'
@@ -212,5 +215,149 @@ describe('home page (logged in): the sets list', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(
       /latest changes aren’t stored on this device yet: The disk is full/,
     )
+  })
+})
+
+describe('home page (logged in): a new set', () => {
+  async function openDialog(setsStore: KeyValueStore = setsStorage([])) {
+    const page = await openHome(setsStore)
+    await userEvent.click(await screen.findByRole('button', { name: 'New set' }))
+    const dialog = within(await screen.findByRole('dialog', { name: 'New set' }))
+    await dialog.findByRole('checkbox', { name: /WCS/ })
+    return { ...page, dialog }
+  }
+  const storedNames = async (storage: KeyValueStore) =>
+    (await storage.entries()).map(([, record]) => (record as { data: MixSet }).data.name)
+
+  it('creates a set from one playlist, named after it, and opens it', async () => {
+    server.use(...spotifyHandlers())
+    const storage = setsStorage([])
+    const { dialog, router } = await openDialog(storage)
+    expect(dialog.getByRole('button', { name: 'Create set' })).toBeDisabled()
+
+    await userEvent.click(dialog.getByRole('checkbox', { name: /WCS/ }))
+    await userEvent.click(dialog.getByRole('button', { name: 'Create set' }))
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'WCS' })).toBeVisible()
+    expect(router.currentRoute.value.name).toBe('set')
+    expect(screen.getByRole('listitem')).toHaveTextContent('WCS20 tracks')
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(await storedNames(storage)).toEqual(['WCS'])
+  })
+
+  it('creates a set from several playlists and says which items were left out', async () => {
+    server.use(...spotifyHandlers())
+    const { dialog } = await openDialog()
+    await userEvent.type(dialog.getByRole('textbox', { name: /Name/ }), 'Friday social')
+    await userEvent.click(dialog.getByRole('checkbox', { name: /Slow ones/ }))
+    await userEvent.click(dialog.getByRole('checkbox', { name: /WCS/ }))
+    await userEvent.click(dialog.getByRole('button', { name: 'Create set' }))
+
+    expect(await dialog.findByText('“Friday social” is ready.')).toBeInTheDocument()
+    expect(dialog.getByText(/can’t be mixed and were left out/)).toBeInTheDocument()
+    // Only the playlist that had such items is named.
+    expect(dialog.getAllByRole('listitem').map((item) => item.textContent.trim())).toEqual([
+      'Slow ones: 1 local file, 1 episode',
+    ])
+
+    await userEvent.click(dialog.getByRole('button', { name: 'Open the set' }))
+    expect(await screen.findByRole('heading', { level: 1, name: 'Friday social' })).toBeVisible()
+    // In the order they were chosen.
+    expect(screen.getAllByRole('listitem').map((item) => item.textContent)).toEqual([
+      'Slow ones4 tracks',
+      'WCS20 tracks',
+    ])
+  })
+
+  it('can’t take a followed playlist', async () => {
+    server.use(...spotifyHandlers())
+    const { dialog } = await openDialog()
+    expect(dialog.getByRole('checkbox', { name: /Top Hits/ })).toBeDisabled()
+    expect(dialog.getByText(/Followed, can’t be mixed/)).toBeInTheDocument()
+  })
+
+  it('shows which playlist is being read', async () => {
+    let release: () => void = () => undefined
+    const held = new Promise<void>((resolve) => (release = resolve))
+    server.use(
+      http.get(`${SPOTIFY}/playlists/slow/items`, async () => {
+        await held
+        return HttpResponse.json({ items: slowItems(), next: null })
+      }),
+      ...spotifyHandlers(),
+    )
+    const { dialog } = await openDialog()
+    await userEvent.click(dialog.getByRole('checkbox', { name: /WCS/ }))
+    await userEvent.click(dialog.getByRole('checkbox', { name: /Slow ones/ }))
+    await userEvent.click(dialog.getByRole('button', { name: 'Create set' }))
+
+    const status = await dialog.findByText(/Reading “Slow ones”…/)
+    expect(status).toHaveTextContent('2 of 2')
+    expect(dialog.getByRole('progressbar', { name: 'Playlists read' })).toHaveValue(1)
+    expect(dialog.queryByRole('button', { name: 'Create set' })).toBeNull()
+
+    release()
+    expect(await dialog.findByRole('button', { name: 'Open the set' })).toBeInTheDocument()
+  })
+
+  it('creates nothing when a playlist can’t be read, and tries again without re-reading', async () => {
+    const reads = { wcs: 0, slow: 0 }
+    let slowWorks = false
+    server.use(
+      http.get(`${SPOTIFY}/playlists/:id/items`, ({ params }) => {
+        if (params.id === 'wcs') reads.wcs++
+        if (params.id !== 'slow') return undefined
+        reads.slow++
+        return slowWorks
+          ? undefined
+          : HttpResponse.json({ error: { status: 502, message: 'Bad gateway' } }, { status: 502 })
+      }),
+      ...spotifyHandlers(),
+    )
+    const storage = setsStorage([])
+    const { dialog } = await openDialog(storage)
+    await userEvent.type(dialog.getByRole('textbox', { name: /Name/ }), 'Friday social')
+    await userEvent.click(dialog.getByRole('checkbox', { name: /WCS/ }))
+    await userEvent.click(dialog.getByRole('checkbox', { name: /Slow ones/ }))
+    await userEvent.click(dialog.getByRole('button', { name: 'Create set' }))
+
+    expect(await dialog.findByRole('alert')).toHaveTextContent(
+      'Couldn’t read “Slow ones”: Bad gateway. No set was created.',
+    )
+    expect(await storedNames(storage)).toEqual([])
+    // The choices are still there.
+    expect(dialog.getByRole('textbox', { name: /Name/ })).toHaveValue('Friday social')
+    expect(dialog.getByRole('checkbox', { name: /Slow ones/ })).toBeChecked()
+
+    slowWorks = true
+    await userEvent.click(dialog.getByRole('button', { name: 'Try again' }))
+    await userEvent.click(await dialog.findByRole('button', { name: 'Open the set' }))
+    expect(await screen.findByRole('heading', { level: 1, name: 'Friday social' })).toBeVisible()
+    expect(reads).toEqual({ wcs: 1, slow: 2 })
+    expect(await storedNames(storage)).toEqual(['Friday social'])
+  })
+
+  it('creates nothing when the dialog is closed while reading', async () => {
+    let release: () => void = () => undefined
+    const held = new Promise<void>((resolve) => (release = resolve))
+    server.use(
+      http.get(`${SPOTIFY}/playlists/wcs/items`, async () => {
+        await held
+        return undefined
+      }),
+      ...spotifyHandlers(),
+    )
+    const storage = setsStorage([])
+    const { dialog, router } = await openDialog(storage)
+    await userEvent.click(dialog.getByRole('checkbox', { name: /WCS/ }))
+    await userEvent.click(dialog.getByRole('button', { name: 'Create set' }))
+    await userEvent.click(await dialog.findByRole('button', { name: 'Cancel' }))
+    expect(screen.queryByRole('dialog')).toBeNull()
+
+    release()
+    await new Promise((resolve) => setTimeout(resolve, 50))
+    expect(router.currentRoute.value.name).toBe('home')
+    expect(await storedNames(storage)).toEqual([])
+    expect(screen.getByRole('heading', { name: 'No sets yet' })).toBeInTheDocument()
   })
 })
