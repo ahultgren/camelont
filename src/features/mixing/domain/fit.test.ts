@@ -542,7 +542,7 @@ describe('pickBestFit on a multi-playlist pool (synthetic, 78–184 BPM)', () =>
     expect(c.cost).toBeLessThan(Math.min(...c.random))
   })
 
-  // Known limit (decision 29): the singalongs have four tempo clusters and a dear mix
+  // Known limit (decision 31): the singalongs have four tempo clusters and a dear mix
   // (cost 100). The picks add 0.2 to it, as scored, but a draw that happens to join a
   // cluster lets the solver rearrange the whole mix for less. Only solving once per
   // candidate would see that.

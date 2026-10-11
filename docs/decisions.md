@@ -169,7 +169,7 @@ playlist's choices change; the app says which.
 page scroll" promise holds from 1280 × 720 up. Phone width keeps every tool reachable
 as tabs under a compact chart, without that promise.
 
-### 29. Best fit: a place in one solved order, then an order-free added cost (2026-10-11)
+### 31. Best fit: a place in one solved order, then an order-free added cost (2026-10-11)
 **Context:** 27 left the best-fit score open. Two were compared, as the plan asked:
 (a) cheapest legal insertion into the solver's best order of the fixed tracks, and
 (b) a plain neighbour score (cheapest move in + cheapest move out, no ordering). Measured

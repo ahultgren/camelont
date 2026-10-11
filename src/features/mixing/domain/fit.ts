@@ -5,7 +5,7 @@ import { solveMix } from './solver/solve'
 import type { MixTrack } from './types'
 
 /**
- * Best fit (spec §8.4, decision 29): which `count` of the candidates fit the set best.
+ * Best fit (spec §8.4, decision 31): which `count` of the candidates fit the set best.
  * The picks are made before the solver orders anything and one at a time, so each pick
  * sees the earlier ones. A candidate is ranked by
  *
@@ -74,7 +74,7 @@ export interface FitResult {
  * A slot `a → b` earns its detour credit when b is among a's NEAR cheapest legal
  * successors or a among b's NEAR cheapest legal predecessors: a track has one neighbour
  * on each side in a mix, and a good mix draws them from its nearest few. Tuned on the
- * WCS hold-outs (1, 2, 3 and "any legal pair" were tried; decision 29).
+ * WCS hold-outs (1, 2, 3 and "any legal pair" were tried; decision 31).
  */
 const NEAR = 2
 /** Solver runs spent per call on tracks that have no slot in the order but would win on cost. */

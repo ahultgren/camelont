@@ -200,7 +200,7 @@ The heart of the app, pure TS and fully unit tested.
   exclusion candidates.
 - `fit.ts`: `pickBestFit({ fixed, candidates, count, profile, constraints?, order? })`
   → the picks, a score for every candidate, and the order used. It chooses a limited
-  playlist's best-fit tracks before the solver orders anything (spec §8.4, decision 29).
+  playlist's best-fit tracks before the solver orders anything (spec §8.4, decision 31).
   Picks are made one at a time, each seeing the earlier ones, by: (1) *a place*: the
   clashes the track's best slot adds to one clash-free order of the fixed tracks
   (`solveMix` with k = 1, or the caller's `order` when playlists pick in turn), so a
