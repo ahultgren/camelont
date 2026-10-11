@@ -106,6 +106,15 @@ export function diffPlaylist(
   }
 }
 
+/** The change notice in words, e.g. "3 new, 1 removed"; null when no track came or went. */
+export function describeChange(diff: Pick<PlaylistDiff, 'added' | 'removed'>): string | null {
+  const parts = [
+    ...(diff.added.length > 0 ? [`${diff.added.length} new`] : []),
+    ...(diff.removed.length > 0 ? [`${diff.removed.length} removed`] : []),
+  ]
+  return parts.length > 0 ? parts.join(', ') : null
+}
+
 /**
  * Update (§8.2): the freshly read copy replaces the stored one, keeping the playlist's
  * place and track choices. Marks and rules of tracks that left the pool are dropped,
