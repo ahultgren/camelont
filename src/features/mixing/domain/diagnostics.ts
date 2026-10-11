@@ -259,7 +259,7 @@ export function describeDiagnostic(
   }
 }
 
-/** A namer over a track list, e.g. "Bloodstream (2A · E♭ minor)". */
+/** A namer over a track list, e.g. "Bloodstream (2A)". */
 export function trackNamer(tracks: readonly MixTrack[]): TrackNamer {
   const byId = new Map(tracks.map((t) => [t.id, t]))
   return (id) => describeTrack(byId.get(id), id)

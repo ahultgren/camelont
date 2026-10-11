@@ -713,7 +713,7 @@ describe('problems, in place of the mix', () => {
     expect(problems).toHaveLength(1)
     expect(problems[0]).toMatchObject({ kind: 'rule', error: { kind: 'clash-pair' } })
     expect(problems[0]?.message).toBe(
-      'Bloodstream (2A · E♭ minor) → I Wanna Dance with Somebody (Who Loves Me) (3B · D♭ major) is a clash on the chart, so it can’t be a required pair.',
+      'Bloodstream (2A) → I Wanna Dance with Somebody (Who Loves Me) (3B) is a clash on the chart, so it can’t be a required pair.',
     )
     expect(solver.runs()).toBe(1)
     expect(workspace.summary.value).toMatchObject({ cost: { after: null }, changed: true })
@@ -735,14 +735,14 @@ describe('problems, in place of the mix', () => {
         trackId: opener,
         rule: { kind: 'opener', trackId: opener },
         message:
-          'Brother (12B · E major) is excluded, but it is the opening track. Remove the exclusion or choose another opening track.',
+          'Brother (12B) is excluded, but it is the opening track. Remove the exclusion or choose another opening track.',
       },
       {
         kind: 'excludedInRule',
         trackId: to,
         rule: { kind: 'follow', from, to },
         message:
-          'Girl on Fire (11B · A major) is excluded, but Love Is (11B · A major) must be followed by Girl on Fire (11B · A major). Remove the exclusion or the pair.',
+          'Girl on Fire (11B) is excluded, but Love Is (11B) must be followed by Girl on Fire (11B). Remove the exclusion or the pair.',
       },
     ])
     expect(statusOf(workspace, opener ?? '')).toBe('excluded')
@@ -775,10 +775,10 @@ describe('problems, in place of the mix', () => {
       diagnostic: { id: bloodstream, excludedOptions: [stolen, counting] },
     })
     expect(isolated?.message).toMatch(
-      /^Bloodstream \(2A · E♭ minor\) can’t follow or precede any other included track/,
+      /^Bloodstream \(2A\) can’t follow or precede any other included track/,
     )
     expect(isolated?.message).toContain(
-      'Left-out tracks that would fit: Stolen Dance (1B · B major) and Counting Stars (12A · C♯ minor).',
+      'Left-out tracks that would fit: Stolen Dance (1B) and Counting Stars (12A).',
     )
   })
 })

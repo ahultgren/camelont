@@ -235,7 +235,7 @@ describe('problems where the mix would be (W9)', () => {
     const problems = within(await screen.findByTestId('problems'))
     expect(
       await problems.findByText(
-        /Bloodstream \(2A · E♭ minor\) can’t follow or precede any other included track/,
+        /Bloodstream \(2A\) can’t follow or precede any other included track/,
       ),
     ).toHaveTextContent(/Left-out tracks that would fit: /)
     expect(change()).toHaveTextContent('no mix')

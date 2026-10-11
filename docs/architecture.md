@@ -584,7 +584,8 @@ WorkspaceScreen          useSetWorkspace + provideWorkspaceUi; top bar (back, na
 - **`TrackRow`.** Title and artist; a reason tag only when the app decided (outside
   range, not picked, picked, needs key/BPM, in ‹playlist›; "looking up" while a new
   track has no status); the pairs it is in ("after …", "then …"; pointing at one
-  highlights the partner, a click shows it); key (`KeyChip`) and BPM as buttons into
+  highlights the partner, a click shows it); key (`KeyChip`: the Camelot code, with
+  the key name in the tooltip) and BPM as buttons into
   the edit dialog (a pointer, a frame on hover, "Edit key and BPM" in the tooltip and
   the accessible name), with a pencil only on a value set by hand; the energy
   (`EnergyMeter`, display only, hidden at phone width); one group of four toggles
@@ -714,6 +715,6 @@ coverage, not a number.
   files.
 - Errors: typed `Result`-style returns in domain code where failure is expected
   (infeasible, invalid constraints). Exceptions only for programmer errors and I/O.
-- UI text: sentence case, plain English, and keys always in both notations via
-  `KeyChip`.
+- UI text: sentence case, plain English, and a key always as its Camelot code via
+  `KeyChip`, which carries the key name as tooltip and sr-only text (decision 43).
 - Accessibility: every interactive SVG element is focusable with an `aria-label`.

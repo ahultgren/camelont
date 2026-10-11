@@ -49,14 +49,16 @@ describe('the workspace: opening a set', () => {
     )
   })
 
-  it('shows a track on one line: title, artist, key in both notations, BPM and energy', async () => {
+  it('shows a track on one line: title, artist, key as its Camelot code, BPM and energy', async () => {
     await openWorkspace(setOf([core()]))
     await settled()
     const pompeii = inRow('WCS', 'Pompeii')
     expect(pompeii.getByText('Bastille')).toBeInTheDocument()
-    expect(pompeii.getByRole('button', { name: /^Key of Pompeii:/ })).toHaveTextContent(
-      '11B · A major',
-    )
+    const key = pompeii.getByRole('button', { name: /^Key of Pompeii:/ })
+    expect(key).toHaveTextContent('11B · A major')
+    // The key name is the tooltip, and is there for assistive tech only.
+    expect(within(key).getByText('· A major')).toHaveClass('sr-only')
+    expect(within(key).getByTestId('key')).toHaveAttribute('title', 'A major. Edit key and BPM')
     expect(pompeii.getByRole('button', { name: /^BPM of Pompeii:/ })).toHaveTextContent('127.4')
     expect(pompeii.getByTestId('energy')).toHaveTextContent('Energy 50 of 100')
     // Every row says in words whether it is in the set.
@@ -304,8 +306,11 @@ describe('the workspace: key and BPM from the row', () => {
     const bpm = inRow('WCS', 'Pompeii').getByRole('button', { name: /^BPM of Pompeii/ })
     expect(key).toHaveAccessibleName('Key of Pompeii: 11B · A major . Edit key and BPM')
     expect(bpm).toHaveAccessibleName('BPM of Pompeii: 127.4 . Edit key and BPM')
-    expect(key).toHaveAttribute('title', 'Edit key and BPM')
+    expect(key).toHaveAttribute('title', 'A major. Edit key and BPM')
     expect(bpm).toHaveAttribute('title', 'Edit key and BPM')
+    expect(
+      inRow('Odd ones', 'Lemon Tree').getByRole('button', { name: /^Key of Lemon Tree/ }),
+    ).toHaveAttribute('title', 'Unknown key. Edit key and BPM')
     // A missing value is a way in too.
     expect(
       inRow('Odd ones', 'Lemon Tree').getByRole('button', { name: /^BPM of Lemon Tree/ }),

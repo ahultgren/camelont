@@ -391,3 +391,34 @@ no scoring, arc or solver change.
 - Screenshots retaken (the phone ones didn't change). `pnpm check` green.
 - Not done: energy in the running order (its titles are already cut short), editing
   energy, any use of it in scoring.
+
+
+## Change — Camelot-only keys, and energy as an editable 0–10 level (2026-10-11)
+
+The owner's five points. No change to scoring, the arc, the solver or the chart data:
+energy stays unused by the mix.
+
+Keys (decision 43):
+- [x] `KeyChip` shows the Camelot code only; the key name is its tooltip and sr-only text
+- [x] Track row, running order (track lines and connectors), hover card (key and
+  "from 12B"), edit dialog ("ReccoBeats says"; the select keeps both notations)
+- [x] Problem and rule messages name a track as "Bloodstream (2A)"
+- [x] CLAUDE.md, spec (U3, §7, §9.1), architecture; tests; screenshots
+
+Energy (decision 44):
+- [ ] `shared/music/energy.ts`: the one conversion between stored 0..1 and the shown
+  level 0–10, the words for it, and the hue of a level
+- [ ] `Override.energy` (0..1): `mergeFeatures`, `overridden`, import merge, the store's
+  "nothing left to store" rule
+- [ ] zod: stored overrides and export files without `energy` still load (old-shape tests)
+- [ ] A test that tracks differing only in energy give the same mixes and costs
+- [ ] `EnergyChip` replaces `EnergyMeter`: no bar, a chip whose hue runs with the level,
+  the number always shown; unknown shown as such
+- [ ] Edit dialog: energy field with source and what ReccoBeats said; wording "Key, BPM
+  and energy" everywhere the dialog is named
+- [ ] Track row: energy is a way into the dialog like key and BPM, with the pencil when
+  set by hand; shown at phone width too
+- [ ] Running order: energy on every track line; hover card keeps it
+- [ ] Spec, architecture, README; tests; screenshots looked at in light and dark,
+  laptop and phone (contrast)
+- [ ] `pnpm check` green; merged into `main`

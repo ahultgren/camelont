@@ -6,14 +6,20 @@ import KeyChip from './KeyChip.vue'
 import MoveBadge from './MoveBadge.vue'
 
 describe('KeyChip', () => {
-  it('shows both notations', () => {
-    const { container } = render(KeyChip, { props: { camelot: '11B' } })
-    expect(container.textContent.replace(/\s+/g, ' ').trim()).toBe('11B · A major')
+  it('shows the Camelot code, with the key name as the tooltip and for assistive tech', () => {
+    render(KeyChip, { props: { camelot: '11B' } })
+    const chip = screen.getByTestId('key')
+    expect(chip).toHaveTextContent(/^11B · A major$/)
+    expect(chip).toHaveAttribute('title', 'A major')
+    expect(screen.getByText('· A major')).toHaveClass('sr-only')
   })
 
   it('marks a missing key', () => {
     render(KeyChip, { props: { camelot: null } })
-    expect(screen.getByText(/unknown key/)).toBeInTheDocument()
+    const chip = screen.getByTestId('key')
+    expect(chip).toHaveTextContent(/^\? · unknown key$/)
+    expect(chip).toHaveAttribute('title', 'Unknown key')
+    expect(screen.getByText('· unknown key')).toHaveClass('sr-only')
   })
 })
 

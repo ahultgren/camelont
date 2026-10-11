@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/vue'
+import { fireEvent, render, screen, within } from '@testing-library/vue'
 import { describe, expect, it } from 'vitest'
 import { DEFAULT_PROFILE, evaluateMix, withArc, type MixTrack } from '@/features/mixing'
 import { parseCamelot } from '@/shared/music'
@@ -47,7 +47,7 @@ describe('TempoArcChart', () => {
     expect(screen.getByTestId('point-card')).toHaveTextContent('175 BPM')
   })
 
-  it('labels every point with position, title, both key notations, BPM and the move in', () => {
+  it('labels every point with position, title, key code and name, BPM and the move in', () => {
     render(TempoArcChart, { props: { mix, info } })
     const points = screen.getAllByRole('img')
     expect(points).toHaveLength(20)
@@ -64,10 +64,12 @@ describe('TempoArcChart', () => {
     const card = screen.getByTestId('point-card')
     expect(card).toHaveTextContent('7. Pompeii')
     expect(card).toHaveTextContent('Artist A, B')
-    expect(card).toHaveTextContent('11B · A major')
+    // Keys as Camelot codes: the name is on the point's label, not spelled out here.
+    expect(within(card).getByTestId('key')).toHaveTextContent(/^11B · A major$/)
+    expect(within(card).getByText('· A major')).toHaveClass('sr-only')
     expect(card).toHaveTextContent('127.4 BPM')
     expect(card).toHaveTextContent('Energy 72 of 100')
-    expect(card).toHaveTextContent('− energy − from 12B · E major')
+    expect(card).toHaveTextContent(/− energy − from 12B$/)
     await fireEvent.blur(pompeii)
     expect(screen.queryByTestId('point-card')).toBeNull()
   })
@@ -140,10 +142,18 @@ describe('KeyWheel', () => {
 describe('RunningOrder', () => {
   it('connects each pair with keys, move and BPM change', () => {
     render(RunningOrder, { props: { mix, info } })
-    expect(screen.getAllByText(/12B → 11B · energy −/)[0]).toHaveTextContent('+10 BPM')
+    const connector = screen.getAllByText(/12B → 11B · energy −/)[0]
+    expect(connector).toHaveTextContent('+10 BPM')
     expect(screen.getByRole('list', { name: 'Running order' })).toBeInTheDocument()
-    // Every key in both notations.
-    expect(screen.getAllByText('· A major').length).toBeGreaterThan(0)
+    // Keys are Camelot codes; the names are in the tooltips, and in the text for
+    // assistive tech.
+    expect(connector).toHaveAttribute('title', 'E major → A major')
+    const names = screen.getAllByText('· A major')
+    expect(names.length).toBeGreaterThan(0)
+    for (const name of names) {
+      expect(name).toHaveClass('sr-only')
+      expect(name.parentElement).toHaveAttribute('title', 'A major')
+    }
   })
 
   it('has a pin on every connector, and says which pairs are kept together', async () => {

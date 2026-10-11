@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { computed, nextTick, useTemplateRef, watch } from 'vue'
 import { MOVE_META, type EvaluatedMix } from '@/features/mixing'
+import { keyName } from '@/shared/music'
 import { KeyChip, TONE_TEXT } from '@/shared/ui'
 import { formatBpmDelta, type EntryInfo } from '../domain/layout'
 
 /**
  * The mix as a list: a line per track and a connector between each pair (keys, move,
- * BPM change). A connector can be pinned: "keep these two together".
+ * BPM change). A connector can be pinned: "keep these two together". Keys are Camelot
+ * codes, with the key names in the tooltip.
  */
 const {
   mix,
@@ -74,7 +76,10 @@ function point(trackId: string | null) {
         :class="TONE_TEXT[step.meta.tone]"
       >
         <span class="h-4 w-px bg-rule" aria-hidden="true" />
-        <span class="ml-3 min-w-0 truncate">
+        <span
+          class="ml-3 min-w-0 truncate"
+          :title="`${keyName(step.before.camelot)} → ${keyName(step.track.camelot)}`"
+        >
           {{ step.before.camelot }} → {{ step.track.camelot }} · {{ step.meta.label }}
           <span class="text-muted">{{ step.delta }}</span>
         </span>

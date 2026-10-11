@@ -64,7 +64,8 @@ else. If the spec seems wrong, ask; don't silently diverge.
   `/playlists/{id}/items` and `POST /me/playlists` (Feb 2026 API). No Spotify SDK.
 - Scopes: `playlist-read-private playlist-read-collaborative playlist-modify-private`
   only.
-- Show every key in both notations (`11B · A major`). Mark values set by hand; an
+- Show a key as its Camelot code (`11B`), with the key name (`A major`) in a tooltip and
+  in the text for assistive tech (decision 43). Mark values set by hand; an
   unmarked value came from ReccoBeats, and the edit dialog shows the full source.
 - No secrets in the repo. The Client ID comes from `VITE_SPOTIFY_CLIENT_ID`. `.private/`
   is git-ignored local research; never commit it or copy from it.

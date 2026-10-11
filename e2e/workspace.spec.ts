@@ -79,8 +79,11 @@ test('works on a set from two playlists, finds it as left, and saves it', async 
     expect(resting.cursor).toBe('pointer')
     await button.hover()
     expect((await look(button)).border).not.toBe(resting.border)
-    await expect(button).toHaveAttribute('title', 'Edit key and BPM')
+    await expect(button).toHaveAttribute('title', /Edit key and BPM$/)
   }
+  // The key is its Camelot code; the key name is in the tooltip.
+  await expect(key).toHaveAttribute('title', 'A major. Edit key and BPM')
+  await expect(key.getByText('· A major')).toHaveClass(/sr-only/)
   expect(await rowHeight()).toBe(height)
   await page.mouse.move(0, 0)
 
@@ -380,8 +383,8 @@ test('explains why no mix is possible, with the way out next to it', async ({ pa
 
   // The chart's card, and the keys used.
   await page.getByRole('img', { name: /^7\. Pompeii, 11B, A major, 127.4 BPM/ }).focus()
-  await expect(page.getByTestId('point-card')).toContainText('11B · A major')
-  await expect(page.getByTestId('point-card')).toContainText('energy − from 12B · E major')
+  await expect(page.getByTestId('point-card').getByTestId('key')).toHaveText('11B · A major')
+  await expect(page.getByTestId('point-card')).toContainText(/energy − from 12B$/)
   await expect(row(page, 'WCS', 'Pompeii')).toHaveAttribute('data-highlighted', '')
   await expect(page.getByText('7B×4')).toBeVisible()
 
@@ -391,7 +394,7 @@ test('explains why no mix is possible, with the way out next to it', async ({ pa
   const problems = page.getByTestId('problems')
   await expect(problems.getByRole('heading', { name: 'No mix yet' })).toBeVisible()
   await expect(problems).toContainText(
-    'Bloodstream (2A · E♭ minor) can’t follow or precede any other included track',
+    'Bloodstream (2A) can’t follow or precede any other included track',
   )
   await expect(problems).toContainText('Left-out tracks that would fit: Stolen Dance')
   await expect(page.getByRole('button', { name: 'Save to Spotify' })).toBeDisabled()

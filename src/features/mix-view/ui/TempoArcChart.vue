@@ -282,8 +282,7 @@ const cardStyle = computed(() => {
           <EnergyMeter :energy="activePoint.track.energy" />
         </div>
         <div v-if="into" class="num text-xs" :style="{ color: TONE_COLOR[into.meta.tone] }">
-          {{ into.meta.symbol }} {{ into.meta.label }} from {{ into.from.camelot }} ·
-          {{ keyName(into.from.camelot) }}
+          {{ into.meta.symbol }} {{ into.meta.label }} from {{ into.from.camelot }}
         </div>
       </div>
     </div>

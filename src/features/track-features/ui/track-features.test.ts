@@ -121,7 +121,12 @@ describe('track features', () => {
     await loaded()
     await userEvent.click(rowOf('Price Tag').getByRole('button', { name: /Edit/ }))
     const dialog = await screen.findByRole('dialog')
-    expect(within(dialog).getByText(/ReccoBeats says/)).toHaveTextContent('7B · F major, 175 BPM')
+    const said = within(dialog).getByText(/ReccoBeats says/)
+    expect(said).toHaveTextContent('7B · F major, 175 BPM')
+    // The Camelot code is shown; the name is its tooltip, and in the key's options.
+    expect(within(said).getByTestId('key')).toHaveAttribute('title', 'F major')
+    expect(within(said).getByText('· F major')).toHaveClass('sr-only')
+    expect(within(dialog).getByRole('option', { name: '7B · F major' })).toBeInTheDocument()
     await userEvent.click(within(dialog).getByRole('button', { name: 'Half' }))
     await userEvent.type(within(dialog).getByRole('textbox'), 'half-time')
     await userEvent.click(within(dialog).getByRole('button', { name: 'Save' }))

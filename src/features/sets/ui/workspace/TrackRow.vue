@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { keyName } from '@/shared/music'
 import { EnergyMeter, KeyChip, MoveBadge } from '@/shared/ui'
 import { roleOf, type TrackRole } from '../../domain/edits'
 import { statusLabel, type TrackStatus } from '../../domain/select'
@@ -65,6 +66,11 @@ const changed = computed(() =>
 
 /** What a click on the key or the BPM does: said in their tooltip and to assistive tech. */
 const EDIT = 'Edit key and BPM'
+const keyTitle = computed(() => {
+  const key = camelot.value
+  if (!key) return `Unknown key. ${EDIT}`
+  return `${keyName(key.value)}. ${key.source === 'manual' ? 'Key set by hand. ' : ''}${EDIT}`
+})
 
 const ROLES: { role: TrackRole; icon: IconName; label: string }[] = [
   { role: 'opener', icon: 'opener', label: 'Opener' },
@@ -188,16 +194,22 @@ function onRowClick(event: MouseEvent) {
       </button>
     </span>
 
+    <!-- The key is its Camelot code; the tooltip names it, here and on the chip inside. -->
     <button
       type="button"
-      class="fade value-button col-start-2 w-[132px] justify-self-start sm:col-start-auto"
-      :title="`${camelot?.source === 'manual' ? 'Key set by hand. ' : ''}${EDIT}`"
+      class="fade value-button col-start-2 justify-self-start sm:col-start-auto"
+      :title="keyTitle"
       @click="ui.edit(trackId)"
     >
       <span class="sr-only">Key of {{ title }}: </span>
-      <KeyChip :camelot="camelot?.value ?? null" size="sm" />
-      <span v-if="camelot?.source === 'manual'" class="hand" data-testid="by-hand">
-        <WsIcon name="pencil" :size="10" /><span class="sr-only">set by hand</span>
+      <KeyChip :camelot="camelot?.value ?? null" size="sm" :title="keyTitle" />
+      <!-- A slot of its own, so the chips stay in a column. -->
+      <span class="hand w-2.5">
+        <template v-if="camelot?.source === 'manual'">
+          <WsIcon name="pencil" :size="10" data-testid="by-hand" /><span class="sr-only"
+            >set by hand</span
+          >
+        </template>
       </span>
       <span class="sr-only">. {{ EDIT }}</span>
     </button>

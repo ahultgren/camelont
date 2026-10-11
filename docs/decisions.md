@@ -344,3 +344,15 @@ Research (research.md §4) suggests energy as a second signal next to BPM. **Dec
 (owner):** show each track's energy, out of 100, on the track row and the chart's hover
 card, so its accuracy can be judged on real sets first. It can't be edited, and scoring,
 the arc and the solver are unchanged. Amends the "unreliable" in decision 9.
+
+### 43. A key is shown as its Camelot code; the key name is a tooltip (2026-10-11)
+**Context:** every key was shown in both notations (`11B · A major`), a hard rule since
+the first spec. On a track row and in the running order the name took more room than
+the title could spare, and the energy had nowhere to go. **Decision (owner):** wherever
+a key is shown, show only the Camelot code. The key name is the code's tooltip, and is
+in the text for assistive tech (accessible names, sr-only text), which a tooltip
+doesn't reach. The list of keys to choose from in the edit dialog still spells out both,
+and messages name a track as "Bloodstream (2A)". **Not reachable by tooltip:** the
+chart's hover card, which the pointer can't enter; its point's label, the track row and
+the running order carry the name. Reverses the "both notations" rule of the first spec
+and of CLAUDE.md.

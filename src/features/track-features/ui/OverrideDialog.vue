@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { ALL_CAMELOT_KEYS, formatKey, parseCamelot, type CamelotKey } from '@/shared/music'
-import { AppButton, AppDialog } from '@/shared/ui'
+import { AppButton, AppDialog, KeyChip } from '@/shared/ui'
 import { isValidBpm, MAX_BPM, MIN_BPM, type TrackFeatures } from '../domain/features'
 import { useOverridesStore } from '../model/overrides-store'
 import SourceBadge from './SourceBadge.vue'
@@ -74,8 +74,9 @@ async function reset() {
       <p class="text-sm text-muted">
         <template v-if="fetched">
           ReccoBeats says
-          <span class="num">{{ fetched.camelot ? formatKey(fetched.camelot) : 'no key' }}</span
-          >, <span class="num">{{ fetched.bpm ?? '?' }} BPM</span>.
+          <KeyChip v-if="fetched.camelot" :camelot="fetched.camelot" size="sm" />
+          <span v-else class="num">no key</span>,
+          <span class="num">{{ fetched.bpm ?? '?' }} BPM</span>.
         </template>
         <template v-else>ReccoBeats has no data for this track.</template>
       </p>
