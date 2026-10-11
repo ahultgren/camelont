@@ -315,8 +315,8 @@ no other feature; pages map playlists, track features and mix results to and fro
   half-loaded (spec §6). `put` validates before writing, so nothing is stored that
   couldn't be read back.
 - `model/`: `installSets(app, options)` wires storage and the injectable clock, ID and
-  seed sources (it is not yet called from `app/plugins.ts`; the workspace step adds
-  that). `useSetsStore` (Pinia) holds the sets as immutable values: `list` (newest edit
+  seed sources (called from `app/plugins.ts`; tests get in-memory storage through
+  `src/test/render.ts`). `useSetsStore` (Pinia) holds the sets as immutable values: `list` (newest edit
   first), `get`, `unreadable`, `create({ name, playlists })`, `rename`, `duplicate`,
   `remove`, `addPlaylist`, `reshuffle`, and `update(id, change)` for everything else,
   where `change` is a pure function such as `removePlaylist`. There is no save step

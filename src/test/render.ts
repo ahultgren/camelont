@@ -5,6 +5,7 @@ import { defineComponent, h, type Component } from 'vue'
 import { createMemoryHistory, createRouter, RouterView, type RouteRecordRaw } from 'vue-router'
 import { installAuth, requireLogin } from '@/features/auth'
 import { inlineSolverClient, installMixing } from '@/features/mixing'
+import { installSets } from '@/features/sets'
 import { installTrackFeatures } from '@/features/track-features'
 import { createMemoryStore, type KeyValueStore } from '@/shared/storage'
 import { MemoryStorage } from './storage'
@@ -18,6 +19,8 @@ export interface RenderPageOptions {
   /** Overrides storage; defaults to empty. */
   overridesStore?: KeyValueStore
   cacheStore?: KeyValueStore
+  /** Stored sets; defaults to none. */
+  setsStore?: KeyValueStore
 }
 
 /** Renders routes inside the app's plugins (Pinia, Vue Query, auth, router). */
@@ -48,6 +51,7 @@ export async function renderRoutes(options: RenderPageOptions) {
               overridesStore: options.overridesStore ?? createMemoryStore(),
             })
             installMixing(app, { client: inlineSolverClient })
+            installSets(app, { store: options.setsStore ?? createMemoryStore() })
           },
         },
         router,

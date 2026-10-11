@@ -227,8 +227,17 @@ Three sessions, the first two in parallel:
 - [ ] Remember the chosen alternative (A9)
 
 ### Step 5 — workspace UI (after the layout is picked)
-- [ ] Home = sets list + New set; routes `/sets/:id`; remove `PlaylistPage` and the
-  `/playlists/:id` route
+- [ ] Home = sets list + New set; route `/sets/:id` (5a)
+  - [x] `installSets` in `app/plugins.ts` and `src/test/render.ts`; route `/sets/:id`
+    with a stub `SetPage` (name, playlists, pool sizes, not found / unreadable)
+  - [ ] `PlaylistPicker` selection mode (link mode kept for the old page)
+  - [ ] `sets/ui/SetsList`: rows, rename, duplicate, delete, unreadable sets, load and
+    save errors; the home page shows it when logged in
+  - [ ] `sets/ui/NewSetDialog`: name + playlists, reads the tracks, progress, retry,
+    skipped items; edge `sets → playlists`
+  - [ ] E2E for the sets flow; the old mixer's e2e opens `/playlists/wcs` directly
+  - [ ] Docs: `architecture.md`, `README.md`
+- [ ] Remove `PlaylistPage` and the `/playlists/:id` route (5b)
 - [ ] The chosen layout: playlists panel with track choices and the BPM range control
   (W8), one track list (W7), mix rules, arc, alternatives, mix views, cross-highlight (W6)
 - [ ] Phone variant (W10)

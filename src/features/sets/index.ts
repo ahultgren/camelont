@@ -50,3 +50,4 @@ export {
 export type { UnreadableSet } from './api/repository'
 export { installSets, type SetsOptions } from './model/deps'
 export { useSetsStore } from './model/sets-store'
+export { poolSize } from './ui/set-summary'
