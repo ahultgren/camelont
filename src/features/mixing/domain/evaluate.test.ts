@@ -137,7 +137,7 @@ describe('evaluateMix on the WCS fixture', () => {
     it('sums every term into the total', () => {
       const shaped = profileFor({
         arc: 'twoWaves',
-        arcSignal: 'energy',
+        arcBalance: 1,
         energySteps: true,
         keyLift: true,
         keysFollowArc: false,
@@ -155,7 +155,7 @@ describe('evaluateMix on the WCS fixture', () => {
     const aligned = profileFor({
       ...NO_SHAPING,
       arc: 'twoWaves',
-      arcSignal: 'both',
+      arcBalance: 0.5,
       keysFollowArc: true,
     })
 
@@ -183,7 +183,7 @@ describe('evaluateMix on the WCS fixture', () => {
     })
 
     it('marks nothing when the keys are not asked to follow the arc', () => {
-      const loose = profileFor({ ...NO_SHAPING, arc: 'twoWaves', arcSignal: 'both' })
+      const loose = profileFor({ ...NO_SHAPING, arc: 'twoWaves', arcBalance: 0.5 })
       const mix = evaluateMix(handTuned, loose)
       expect(mix.arc?.against.some(Boolean)).toBe(false)
       expect(mix.arc?.slopeCost).toBe(0)

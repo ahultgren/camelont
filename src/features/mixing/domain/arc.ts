@@ -33,6 +33,11 @@ export interface ArcConfig {
    * and boosts; where it falls, anything but perfect and drops. 0 or absent is off.
    */
   slopeWeight?: number
+  /**
+   * For `both`: 0 is BPM only, 1 energy only, 0.5 (the default) both in full. In
+   * between, the far measure fades out: at 0.25 energy counts half as much as BPM.
+   */
+  balance?: number
 }
 
 export const ARC_PRESETS: Record<ArcPresetId, ArcPreset> = {
@@ -128,6 +133,14 @@ export function normalise(value: number, range: SignalRange): number {
 export const arcPosition = (index: number, count: number): number =>
   count <= 1 ? 0 : index / (count - 1)
 
+/** How much each measure's distance from the line counts. */
+export function measureWeights(arc: ArcConfig): Record<ArcMeasure, number> {
+  if (arc.signal === 'bpm') return { bpm: 1, energy: 0 }
+  if (arc.signal === 'energy') return { bpm: 0, energy: 1 }
+  const balance = arc.balance ?? 0.5
+  return { bpm: Math.min(1, 2 * (1 - balance)), energy: Math.min(1, 2 * balance) }
+}
+
 /** Arc cost of one track at one position: each known measure's distance from the line. */
 export function arcTermCost(
   track: MixTrack,
@@ -137,11 +150,14 @@ export function arcTermCost(
   ranges: ArcRanges,
 ): number {
   const target = arcTarget(ARC_PRESETS[arc.preset], arcPosition(index, count))
+  const weights = measureWeights(arc)
   let deviation = 0
   for (const measure of SIGNAL_MEASURES[arc.signal]) {
     const value = ARC_MEASURES[measure](track)
     const range = ranges[measure]
-    if (value !== null && range) deviation += Math.abs(normalise(value, range) - target)
+    if (value !== null && range) {
+      deviation += weights[measure] * Math.abs(normalise(value, range) - target)
+    }
   }
   return arc.weight * deviation
 }

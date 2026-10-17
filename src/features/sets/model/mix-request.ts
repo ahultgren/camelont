@@ -138,7 +138,7 @@ export function solveRequest(
 /** Two requests with the same key get the same answer: the solver is deterministic. */
 export function solveKey(request: WorkerSolveRequest, shape: MixShape): string {
   const { start, end, follows, excluded } = request.constraints
-  const { arc, arcSignal, energySteps, keyLift, keysFollowArc } = shape
+  const { arc, arcBalance, energySteps, keyLift, keysFollowArc } = shape
   return JSON.stringify([
     'solve',
     request.tracks.map(describe),
@@ -146,6 +146,6 @@ export function solveKey(request: WorkerSolveRequest, shape: MixShape): string {
     end,
     follows,
     excluded,
-    [arc, arcSignal, energySteps, keyLift, keysFollowArc],
+    [arc, arcBalance, energySteps, keyLift, keysFollowArc],
   ])
 }

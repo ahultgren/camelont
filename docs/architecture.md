@@ -204,7 +204,7 @@ The heart of the app, pure TS and fully unit tested.
 - `profile.ts`: `MixProfile { id, name, moveCost: Record<Move, number>, clashCost,
   tempoWeight, arc: ArcConfig | null, energyStep: EnergyStep | null, keyLift }`.
   `DEFAULT_PROFILE` reproduces the reference weights (no arc, no energy terms).
-  `MixShaping { arc, arcSignal, energySteps, keyLift, keysFollowArc }` is what the user
+  `MixShaping { arc, arcBalance, energySteps, keyLift, keysFollowArc }` is what the user
   sets, and
   `profileFor(shaping)` the default profile shaped that way; `describeShaping` puts it
   in words for the saved playlist's description.
@@ -218,7 +218,8 @@ The heart of the app, pure TS and fully unit tested.
 - `arc.ts`: `ArcConfig { preset, signal, weight }`; presets are data (piecewise-linear
   target curves over position 0..1); measures are functions `MixTrack → number | null`
   (BPM and energy), normalised over the set's range, and a signal follows one or both
-  (`SIGNAL_MEASURES`). `arcSlopes` says which way the line goes between neighbours and
+  (`SIGNAL_MEASURES`), each counted by `measureWeights` (for both, by the arc's
+  `balance`). `arcSlopes` says which way the line goes between neighbours and
   `againstSlope(tone, slope)` whether a move goes against it. `arcTermCost` is the per-track term.
   Removing arcs means deleting this file and the one term in `evaluate`.
 - `evaluate.ts`: `evaluateMix(order, profile) → EvaluatedMix` (transitions with move,
@@ -314,11 +315,12 @@ workspace (below) composes them.
 - `mixing/ui`: `CandidateList` (the alternatives as a radio group of small cards:
   number, cost, a tempo sparkline, moves by kind; BPM range, peaks, opener and closer
   are in each card's label and tooltip), `ArcPicker` (a segmented radio group) and
-  `ShapePicker` (the arc picker, what the arc follows, and the two energy switches as
-  toggle buttons; a `MixShaping` as its model).
+  `ShapePicker` (the arc picker, a range slider from BPM to energy for what the arc
+  follows, and the switches as toggle buttons; a `MixShaping` as its model).
 - `mix-view`: `TempoArcChart` (hand-built SVG; key-coloured dots, a move badge per
-  segment, the tracks' energy as a thin line on its own scale, the arc target dashed on
-  the scale of its signal, each point focusable with a full `aria-label`, and a card on
+  segment, the tracks' energy as a thin line and the arc target dashed, both over the
+  span of the set's BPM so that heights compare as the arc compares them, each point
+  focusable with a full `aria-label`, and a card on
   hover/tap/focus with the track's key, BPM and energy), `KeyWheel` and `RunningOrder`
   (a line per track with its key, BPM and energy, and a connector per pair: keys, move,
   BPM change). Pure geometry lives in
@@ -366,8 +368,9 @@ track-features feature (the edit dialog), `mixing`'s alternatives and arc picker
   unavailable tracks the copy leaves out) plus its `TrackChoices { bpmMin, bpmMax, limit,
   pick: 'random' | 'bestFit', seed }`. `marks` (`mustInclude | exclude`) are keyed by
   track ID on the set: a mark belongs to the track, in every playlist that has it. `MixSettings` holds
-  opener, closer, follow pairs and the shaping (arc, `arcSignal`, `energySteps`,
-  `keyLift`; a set stored before the last three reads with them off); `ChosenMix` the track order;
+  opener, closer, follow pairs and the shaping (arc, `arcBalance`, `energySteps`,
+  `keyLift`, `keysFollowArc`; a set stored before them reads with them off, and one stored
+  with the earlier three-way `arcSignal` reads as the balance it meant); `ChosenMix` the track order;
   `LastSave` the link, the time, and the name and order that were written.
 - `domain/set-summary.ts` (`poolSize`, the sets list's track count), `domain/skipped.ts`
   (what a copy leaves out, in words).

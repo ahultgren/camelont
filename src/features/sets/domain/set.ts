@@ -5,7 +5,7 @@ export const NO_MIX_SETTINGS: MixSettings = {
   closer: null,
   follows: [],
   arc: 'none',
-  arcSignal: 'bpm',
+  arcBalance: 0,
   energySteps: false,
   keyLift: false,
   keysFollowArc: false,
@@ -69,7 +69,7 @@ export type MixRules = Pick<MixSettings, 'opener' | 'closer' | 'follows'>
 /** How a set's mix is shaped: the arc, what it follows, and the energy switches. */
 export type MixShape = Pick<
   MixSettings,
-  'arc' | 'arcSignal' | 'energySteps' | 'keyLift' | 'keysFollowArc'
+  'arc' | 'arcBalance' | 'energySteps' | 'keyLift' | 'keysFollowArc'
 >
 
 /** The tracks named in a mix rule. They count as must-include (spec §5.4). */

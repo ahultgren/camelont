@@ -67,8 +67,11 @@ export function withArc(profile: MixProfile, arc: ArcConfig | null): MixProfile 
  */
 export interface MixShaping {
   arc: ArcChoice
-  /** What the arc follows. Means nothing without an arc. */
-  arcSignal: ArcSignalId
+  /**
+   * What the arc follows, from 0 (BPM only) through 0.5 (BPM and energy in full) to 1
+   * (energy only). Means nothing without an arc.
+   */
+  arcBalance: number
   /** Climb in small steps of energy; a fall may be sudden. */
   energySteps: boolean
   /** Key boosts go with rises in energy, key drops with falls. */
@@ -79,7 +82,7 @@ export interface MixShaping {
 
 export const NO_SHAPING: MixShaping = {
   arc: 'none',
-  arcSignal: 'bpm',
+  arcBalance: 0,
   energySteps: false,
   keyLift: false,
   keysFollowArc: false,
@@ -100,7 +103,10 @@ export function profileFor(shaping: MixShaping): MixProfile {
         ? null
         : {
             preset: shaping.arc,
-            signal: shaping.arcSignal,
+            signal: signalOf(shaping.arcBalance),
+            ...(shaping.arcBalance > 0 && shaping.arcBalance < 1
+              ? { balance: shaping.arcBalance }
+              : {}),
             weight: DEFAULT_ARC_WEIGHT,
             ...(shaping.keysFollowArc ? { slopeWeight: SLOPE_WEIGHT } : {}),
           },
@@ -109,14 +115,27 @@ export function profileFor(shaping: MixShaping): MixProfile {
   }
 }
 
-const SIGNAL_WORDS = { bpm: '', energy: ' by energy', both: ' by BPM and energy' } as const
+/** The signal an arc balance means: one measure at either end, both in between. */
+export const signalOf = (balance: number): ArcSignalId =>
+  balance <= 0 ? 'bpm' : balance >= 1 ? 'energy' : 'both'
+
+/** The balance in words, e.g. "BPM and energy, energy at half". */
+export function describeBalance(balance: number): string {
+  if (balance <= 0) return 'BPM'
+  if (balance >= 1) return 'energy'
+  if (balance === 0.5) return 'BPM and energy'
+  const share = Math.round(100 * Math.min(1, 2 * Math.min(balance, 1 - balance)))
+  return `BPM and energy, ${balance < 0.5 ? 'energy' : 'BPM'} at ${String(share)}%`
+}
 
 /** The shaping in a few words, e.g. "Two waves by energy, energy steps"; "none" for none. */
 export function describeShaping(shaping: MixShaping): string {
   const parts = [
     ...(shaping.arc === 'none'
       ? []
-      : [`${ARC_PRESETS[shaping.arc].name}${SIGNAL_WORDS[shaping.arcSignal]}`]),
+      : [
+          `${ARC_PRESETS[shaping.arc].name}${shaping.arcBalance > 0 ? ` by ${describeBalance(shaping.arcBalance)}` : ''}`,
+        ]),
     ...(shaping.arc !== 'none' && shaping.keysFollowArc ? ['keys follow the arc'] : []),
     ...(shaping.energySteps ? ['energy steps'] : []),
     ...(shaping.keyLift ? ['key lift'] : []),

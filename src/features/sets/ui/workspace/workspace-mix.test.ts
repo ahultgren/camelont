@@ -144,24 +144,27 @@ describe('the mix column', () => {
     expect(points()).toHaveLength(7)
   })
 
+  const arcSlider = () =>
+    screen.getByRole('slider', { name: 'What the arc follows, from BPM to energy' })
+
   it('shapes the mix by energy: the arc follows it, and the switches are kept', async () => {
     const { stored, container } = await openWorkspace(core())
     await settled()
-    expect(screen.getByRole('radio', { name: 'Energy' })).toBeDisabled()
+    expect(arcSlider()).toBeDisabled()
     await userEvent.click(screen.getByRole('radio', { name: 'Two waves' }))
-    await userEvent.click(screen.getByRole('radio', { name: 'Energy' }))
+    await fireEvent.input(arcSlider(), { target: { value: '1' } })
     await userEvent.click(screen.getByRole('button', { name: 'Energy steps' }))
     await userEvent.click(screen.getByRole('button', { name: 'Key lift' }))
     await waitFor(async () => {
       expect((await stored())?.mix).toMatchObject({
         arc: 'twoWaves',
-        arcSignal: 'energy',
+        arcBalance: 1,
         energySteps: true,
         keyLift: true,
       })
     })
     await settled()
-    // The target is drawn on the energy scale, in the energy line's colour.
+    // An arc on energy alone is drawn in the energy line's colour.
     await waitFor(() => {
       expect(container.querySelector('polyline[stroke-dasharray]')).toHaveAttribute(
         'stroke',
@@ -175,12 +178,12 @@ describe('the mix column', () => {
     await settled()
     expect(screen.queryByTestId('against-arc')).toBeNull()
     await userEvent.click(screen.getByRole('radio', { name: 'Two waves' }))
-    await userEvent.click(screen.getByRole('radio', { name: 'Both' }))
+    await fireEvent.input(arcSlider(), { target: { value: '0.5' } })
     await userEvent.click(screen.getByRole('button', { name: 'Keys follow arc' }))
     await waitFor(async () => {
       expect((await stored())?.mix).toMatchObject({
         arc: 'twoWaves',
-        arcSignal: 'both',
+        arcBalance: 0.5,
         keysFollowArc: true,
       })
     })

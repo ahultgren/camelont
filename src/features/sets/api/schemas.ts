@@ -38,17 +38,26 @@ const SetPlaylistSchema = z.object({
   choices: TrackChoicesSchema,
 })
 
-const MixSettingsSchema = z.object({
-  opener: TrackId.nullable(),
-  closer: TrackId.nullable(),
-  follows: z.array(z.tuple([TrackId, TrackId])),
-  arc: z.enum(['none', 'twoWaves', 'steadyBuild']),
-  // Later than the first stored sets: one without them has the switches off.
-  arcSignal: z.enum(['bpm', 'energy', 'both']).default('bpm'),
-  energySteps: z.boolean().default(false),
-  keyLift: z.boolean().default(false),
-  keysFollowArc: z.boolean().default(false),
-})
+/** The balance a set stored with a three-way arc signal (before the slider) meant. */
+const SIGNAL_BALANCE = { bpm: 0, energy: 1, both: 0.5 } as const
+
+const MixSettingsSchema = z
+  .object({
+    opener: TrackId.nullable(),
+    closer: TrackId.nullable(),
+    follows: z.array(z.tuple([TrackId, TrackId])),
+    arc: z.enum(['none', 'twoWaves', 'steadyBuild']),
+    // Later than the first stored sets: one without them has the switches off.
+    arcBalance: z.number().min(0).max(1).optional(),
+    arcSignal: z.enum(['bpm', 'energy', 'both']).optional(),
+    energySteps: z.boolean().default(false),
+    keyLift: z.boolean().default(false),
+    keysFollowArc: z.boolean().default(false),
+  })
+  .transform(({ arcSignal, arcBalance, ...mix }) => ({
+    ...mix,
+    arcBalance: arcBalance ?? SIGNAL_BALANCE[arcSignal ?? 'bpm'],
+  }))
 
 export const MixSetSchema = z.object({
   id: z.string().min(1),

@@ -16,7 +16,7 @@ describe('saved playlist text', () => {
   it('says what else shapes the mix', () => {
     const shaped = {
       arc: 'twoWaves',
-      arcSignal: 'energy',
+      arcBalance: 1,
       energySteps: true,
       keyLift: true,
       keysFollowArc: false,
@@ -31,12 +31,20 @@ describe('saved playlist text', () => {
     const aligned = {
       ...NO_SHAPING,
       arc: 'twoWaves',
-      arcSignal: 'both',
+      arcBalance: 0.5,
       keysFollowArc: true,
     } as const
     expect(mixDescription(mix, DEFAULT_PROFILE, aligned, 'WCS')).toMatch(
       /arc: Two waves by BPM and energy, keys follow the arc\.$/,
     )
+    expect(
+      mixDescription(
+        mix,
+        DEFAULT_PROFILE,
+        { ...NO_SHAPING, arc: 'twoWaves', arcBalance: 0.25 },
+        'WCS',
+      ),
+    ).toMatch(/arc: Two waves by BPM and energy, energy at 50%\.$/)
     // Without an arc there is nothing for the keys to follow.
     expect(
       mixDescription(mix, DEFAULT_PROFILE, { ...NO_SHAPING, keysFollowArc: true }, 'WCS'),

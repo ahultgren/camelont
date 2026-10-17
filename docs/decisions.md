@@ -412,3 +412,18 @@ the set has no other order; the mix headline says how many do and the chart mark
 less than "one move against the arc, here". **Known limit:** a track that is high on one
 measure and low on the other (Brother: 78 BPM, energy 9) costs the same anywhere on a
 "both" arc, so the keys and tempo decide where it goes.
+
+### 47. What the arc follows is a slider from BPM to energy (2026-10-17)
+**Context:** the owner wants to change how much energy counts against BPM while
+listening, and saw the energy line swing more than BPM. Measured on the WCS set with the
+arc by both and the keys following it: the two sit about as far from the line (0.21 and
+0.25 of their ranges), but energy moves 0.30 between neighbours against BPM's 0.24,
+because the tempo term smooths BPM and nothing smooths energy unless Energy steps is on.
+The chart also overstated it: energy filled the plot while BPM sat on a padded axis.
+**Decision (owner):** the three-way BPM / Energy / Both choice becomes one slider. In the
+middle both count in full (decision 46's "both"); toward an end the other fades out
+(weight min(1, 2 × its share)), so each end is exactly the single-measure arc. The chart
+draws energy and the arc's target over the span of the set's BPM, so heights compare as
+the arc compares them. The smoothing between neighbours is not part of the slider: tempo
+smoothing stays (BPM decides what is danceable), and energy is smoothed by Energy steps.
+A set stored with the three-way signal reads as the balance it meant.

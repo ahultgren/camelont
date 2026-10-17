@@ -86,35 +86,37 @@ const badges = computed(() =>
 )
 
 /**
- * Energy has no axis of its own to read: the set's lowest energy is drawn at the bottom
- * of the plot and its highest at the top, so the line shows the shape, not the values.
+ * Where a share of the set's range (0 its lowest, 1 its highest) is drawn: the set's
+ * slowest BPM to its fastest. Energy and the arc's target share that span, so a track's
+ * energy and BPM at the same height stand equally high in the set, as the arc sees it.
  */
+const share = computed(() => {
+  const bpms = mix.order.map((t) => t.bpm)
+  const low = Math.min(...bpms)
+  const high = Math.max(...bpms)
+  return (level: number) => y.value(low + level * (high - low))
+})
+
+/** Energy has no axis of its own: the line shows where each track stands in the set. */
 const energy = computed(() => {
   const known = mix.order.flatMap((track, i) =>
     track.energy === null ? [] : [{ i, value: track.energy }],
   )
   if (known.length < 2) return null
   const values = known.map((point) => point.value)
-  const scale = linearY(frame.value, Math.min(...values), Math.max(...values))
-  return {
-    scale,
-    line: known.map((p) => `${String(x.value(p.i))},${String(scale(p.value))}`).join(' '),
-  }
+  const range = { min: Math.min(...values), max: Math.max(...values) }
+  const at = (value: number) =>
+    share.value(range.max === range.min ? 0.5 : (value - range.min) / (range.max - range.min))
+  return known.map((p) => `${String(x.value(p.i))},${String(at(p.value))}`).join(' ')
 })
 
-/** The arc's target, on the scale of the signal it follows. */
+/** The arc's target, as a share of the set's range. */
 const arcLine = computed(() => {
   const arc = mix.arc
   if (!arc) return null
-  const byEnergy = arc.config.signal === 'energy'
-  const scale = byEnergy ? energy.value?.scale : y.value
-  if (!scale) return null
-  const { min, max } = arc.range
   return {
-    byEnergy,
-    points: arc.target
-      .map((t, i) => `${String(x.value(i))},${String(scale(min + t * (max - min)))}`)
-      .join(' '),
+    byEnergy: arc.config.signal === 'energy',
+    points: arc.target.map((t, i) => `${String(x.value(i))},${String(share.value(t))}`).join(' '),
   }
 })
 
@@ -226,7 +228,7 @@ const cardStyle = computed(() => {
           />
           <template v-if="energy">
             <polyline
-              :points="energy.line"
+              :points="energy"
               fill="none"
               stroke="var(--warn)"
               stroke-width="1"

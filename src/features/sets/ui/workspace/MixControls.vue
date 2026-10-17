@@ -21,7 +21,7 @@ const shape = computed<MixShaping>({
     return mix
       ? {
           arc: mix.arc,
-          arcSignal: mix.arcSignal,
+          arcBalance: mix.arcBalance,
           energySteps: mix.energySteps,
           keyLift: mix.keyLift,
           keysFollowArc: mix.keysFollowArc,

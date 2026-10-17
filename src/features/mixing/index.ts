@@ -31,6 +31,7 @@ export {
 export { pickBestFit, type FitRequest, type FitResult, type FitScore } from './domain/fit'
 export {
   DEFAULT_PROFILE,
+  describeBalance,
   describeShaping,
   NO_SHAPING,
   profileById,

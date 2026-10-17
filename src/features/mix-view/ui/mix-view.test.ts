@@ -90,15 +90,18 @@ describe('TempoArcChart', () => {
     expect(container.querySelector('polyline[stroke-dasharray]')).not.toBeNull()
   })
 
-  it('draws the energy of the tracks that have one, on a scale of its own', () => {
+  // The height of a track's dot: Brother (78) is the slowest, Pompeii (127.4) the fastest.
+  const dotY = (i: number) => Number(screen.getAllByRole('img')[i]?.getAttribute('cy'))
+
+  it('draws energy over the span of the set’s BPM, so equal heights stand equally high', () => {
     render(TempoArcChart, { props: { mix, info } })
     const known = order.filter((t) => t.energy !== null)
     const points = pointsOf(screen.getByTestId('energy-line'))
     expect(points).toHaveLength(known.length)
-    // The set's lowest energy sits at the bottom of the plot and its highest at the top.
+    // The lowest energy is level with the slowest track, the highest with the fastest.
     const ys = points.map(([, py]) => py)
-    expect(Math.min(...ys)).toBeCloseTo(28)
-    expect(Math.max(...ys)).toBeCloseTo(190 - 22)
+    expect(Math.max(...ys)).toBeCloseTo(dotY(0))
+    expect(Math.min(...ys)).toBeCloseTo(dotY(6))
   })
 
   it('draws no energy line when fewer than two tracks have an energy', () => {
@@ -122,7 +125,7 @@ describe('TempoArcChart', () => {
     expect(plain.container.querySelectorAll('rect[data-against]')).toHaveLength(0)
   })
 
-  it('draws the target of an arc that follows energy on the energy scale', () => {
+  it('draws the target of an arc that follows energy on the same span', () => {
     const byEnergy = evaluateMix(
       order,
       withArc(DEFAULT_PROFILE, { preset: 'twoWaves', signal: 'energy', weight: 8 }),
@@ -131,10 +134,10 @@ describe('TempoArcChart', () => {
     const target = container.querySelector('polyline[stroke-dasharray]')
     if (!target) throw new Error('no target')
     expect(target).toHaveAttribute('stroke', 'var(--warn)')
-    for (const [, py] of pointsOf(target)) {
-      expect(py).toBeGreaterThanOrEqual(28)
-      expect(py).toBeLessThanOrEqual(190 - 22)
-    }
+    // The same span as everything else: the line's top is level with the fastest track.
+    const ys = pointsOf(target).map(([, py]) => py)
+    expect(Math.min(...ys)).toBeGreaterThanOrEqual(dotY(6) - 1e-6)
+    expect(Math.max(...ys)).toBeLessThanOrEqual(dotY(0) + 1e-6)
   })
 
   it('says which track is pointed at or focused, and when it no longer is', async () => {

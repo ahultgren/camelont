@@ -83,7 +83,7 @@ describe('solveMix on the WCS set', () => {
   it('scores as evaluateMix does when energy shapes the mix, and stays clash-free', () => {
     const profile = profileFor({
       arc: 'twoWaves',
-      arcSignal: 'energy',
+      arcBalance: 1,
       energySteps: true,
       keyLift: true,
       keysFollowArc: false,
@@ -105,7 +105,7 @@ describe('solveMix on the WCS set', () => {
   })
 
   it('keeps the keys with the arc where it can, and scores as evaluateMix does', () => {
-    const shaping = { ...NO_SHAPING, arc: 'twoWaves', arcSignal: 'both' } as const
+    const shaping = { ...NO_SHAPING, arc: 'twoWaves', arcBalance: 0.5 } as const
     const loose = profileFor(shaping)
     const aligned = profileFor({ ...shaping, keysFollowArc: true })
     const outcome = solved(solveMix({ tracks, constraints: NO_CONSTRAINTS, profile: aligned }))
@@ -126,7 +126,7 @@ describe('solveMix on the WCS set', () => {
     const aligned = profileFor({
       ...NO_SHAPING,
       arc: 'twoWaves',
-      arcSignal: 'both',
+      arcBalance: 0.5,
       keysFollowArc: true,
     })
     // Brother → Love Is is a −: kept together, it costs wherever the arc rises.

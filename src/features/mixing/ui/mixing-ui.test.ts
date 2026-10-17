@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/vue'
+import { fireEvent, render, screen } from '@testing-library/vue'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 import { parseCamelot } from '@/shared/music'
@@ -60,37 +60,34 @@ describe('ArcPicker', () => {
 })
 
 describe('ShapePicker', () => {
-  it('offers the arc, what it follows and the two energy switches', async () => {
+  const slider = () =>
+    screen.getByRole('slider', { name: 'What the arc follows, from BPM to energy' })
+
+  it('offers the arc, what it follows and the energy switches', async () => {
     const view = render(ShapePicker, { props: { modelValue: { ...NO_SHAPING, arc: 'twoWaves' } } })
     expect(screen.getByRole('radio', { name: 'Two waves' })).toBeChecked()
-    expect(screen.getByRole('radio', { name: 'BPM' })).toBeChecked()
-    await userEvent.click(screen.getByRole('radio', { name: 'Energy' }))
+    expect(slider()).toHaveValue('0')
+    expect(slider()).toHaveAttribute('aria-valuetext', 'BPM')
+    await fireEvent.input(slider(), { target: { value: '1' } })
     await userEvent.click(screen.getByRole('button', { name: 'Energy steps' }))
     await userEvent.click(screen.getByRole('button', { name: 'Key lift' }))
     await userEvent.click(screen.getByRole('radio', { name: 'Steady build' }))
     // Each change keeps the others.
-    const byEnergy = { ...NO_SHAPING, arc: 'twoWaves', arcSignal: 'energy' }
+    const byEnergy = { ...NO_SHAPING, arc: 'twoWaves', arcBalance: 1 }
     expect(view.emitted('update:modelValue')).toEqual([
       [byEnergy],
       [{ ...byEnergy, energySteps: true }],
       [{ ...byEnergy, energySteps: true, keyLift: true }],
-      [
-        {
-          arc: 'steadyBuild',
-          arcSignal: 'energy',
-          energySteps: true,
-          keyLift: true,
-          keysFollowArc: false,
-        },
-      ],
+      [{ ...byEnergy, arc: 'steadyBuild', energySteps: true, keyLift: true }],
     ])
   })
 
-  it('says which switches are on', () => {
+  it('says how far the arc follows energy, and which switches are on', () => {
     render(ShapePicker, {
-      props: { modelValue: { ...NO_SHAPING, arc: 'twoWaves', arcSignal: 'energy', keyLift: true } },
+      props: { modelValue: { ...NO_SHAPING, arc: 'twoWaves', arcBalance: 0.25, keyLift: true } },
     })
-    expect(screen.getByRole('radio', { name: 'Energy' })).toBeChecked()
+    expect(slider()).toHaveValue('0.25')
+    expect(slider()).toHaveAttribute('aria-valuetext', 'BPM and energy, energy at 50%')
     expect(screen.getByRole('button', { name: 'Key lift' })).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getByRole('button', { name: 'Energy steps' })).toHaveAttribute(
       'aria-pressed',
@@ -100,23 +97,18 @@ describe('ShapePicker', () => {
 
   it('has nothing for the arc to follow while there is no arc', () => {
     render(ShapePicker, { props: { modelValue: NO_SHAPING } })
-    expect(screen.getByRole('radio', { name: 'BPM' })).toBeDisabled()
-    expect(screen.getByRole('radio', { name: 'Energy' })).toBeDisabled()
-    expect(screen.getByRole('radio', { name: 'Both' })).toBeDisabled()
+    expect(slider()).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Keys follow arc' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Energy steps' })).toBeEnabled()
   })
 
   it('lets the arc follow BPM and energy together, and the keys follow the arc', async () => {
     const view = render(ShapePicker, { props: { modelValue: { ...NO_SHAPING, arc: 'twoWaves' } } })
-    await userEvent.click(screen.getByRole('radio', { name: 'Both' }))
+    await fireEvent.input(slider(), { target: { value: '0.5' } })
     await userEvent.click(screen.getByRole('button', { name: 'Keys follow arc' }))
     expect(view.emitted('update:modelValue').at(-1)).toEqual([
-      { ...NO_SHAPING, arc: 'twoWaves', arcSignal: 'both', keysFollowArc: true },
+      { ...NO_SHAPING, arc: 'twoWaves', arcBalance: 0.5, keysFollowArc: true },
     ])
-    expect(screen.getByRole('button', { name: 'Keys follow arc' })).toHaveAttribute(
-      'aria-pressed',
-      'true',
-    )
+    expect(slider()).toHaveAttribute('aria-valuetext', 'BPM and energy')
   })
 })

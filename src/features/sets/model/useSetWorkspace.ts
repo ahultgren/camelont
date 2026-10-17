@@ -200,7 +200,7 @@ export function useSetWorkspace(setId: string, options: SetWorkspaceOptions = {}
   const closer = computed(() => set.value?.mix.closer ?? null)
   const follows = computed(() => set.value?.mix.follows ?? NO_FOLLOWS)
   const arc = computed(() => set.value?.mix.arc ?? NO_MIX_SETTINGS.arc)
-  const arcSignal = computed(() => set.value?.mix.arcSignal ?? NO_MIX_SETTINGS.arcSignal)
+  const arcBalance = computed(() => set.value?.mix.arcBalance ?? NO_MIX_SETTINGS.arcBalance)
   const energySteps = computed(() => set.value?.mix.energySteps ?? NO_MIX_SETTINGS.energySteps)
   const keyLift = computed(() => set.value?.mix.keyLift ?? NO_MIX_SETTINGS.keyLift)
   const keysFollowArc = computed(
@@ -208,7 +208,7 @@ export function useSetWorkspace(setId: string, options: SetWorkspaceOptions = {}
   )
   const shape = computed<MixShape>(() => ({
     arc: arc.value,
-    arcSignal: arcSignal.value,
+    arcBalance: arcBalance.value,
     energySteps: energySteps.value,
     keyLift: keyLift.value,
     keysFollowArc: keysFollowArc.value,

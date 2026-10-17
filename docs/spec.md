@@ -38,7 +38,7 @@ Sets are specified in §8 and the workspace in §9.
 | U7 | understand why no mix is possible | If no clash-free order exists, the app names the blocking tracks or rules in plain language (e.g. "Bloodstream (2A) can only follow 12A and precede 1B; none are in the set"), and names left-out tracks that would unblock it. The user fixes it by changing which tracks are in the set or changing the rules. |
 | U8 | choose between different possible mixes | Several distinct valid mixes of the same tracks, side by side, each with a tempo sparkline and stats: move distribution, peaks, opener and closer, BPM range, total cost. |
 | U9 | explore a mix | Tempo-arc chart with a move badge between points and a hover/tap card per track; a key wheel; a running order with transition connectors (§7). |
-| U10 | choose how the mix is shaped | Default profile = the reference weights (§5.3). Arc presets: none, two waves, steady build; the arc follows BPM, energy, or both. Two switches use the tracks' energy, alone or together: energy steps and key lift. With an arc, the keys can be asked to follow it: only perfect and boosts where it rises, only perfect and drops where it falls; the mix says how many moves still go against it. The energy options are experiments (decisions 45, 46). |
+| U10 | choose how the mix is shaped | Default profile = the reference weights (§5.3). Arc presets: none, two waves, steady build; the arc follows BPM, energy, or a balance of the two, set with a slider (BPM at one end, energy at the other, both in full in the middle). Two switches use the tracks' energy, alone or together: energy steps and key lift. With an arc, the keys can be asked to follow it: only perfect and boosts where it rises, only perfect and drops where it falls; the mix says how many moves still go against it. The energy options are experiments (decisions 45, 46). |
 | U11 | save a set's mix as a playlist in my account | Only when I press the button, and after I confirm the playlist's name: creates a **new private** playlist with the tracks in mix order and links to it. I'm warned when I already have a playlist with that name. Saving again, I choose between replacing the playlist this set saved before and creating another (§8.5). No source playlist is ever modified. |
 | U12 | manage my sets | Rename, duplicate, delete (with confirmation). Everything about a set is saved on this device as I change it; reopening a set shows it as I left it, including the chosen mix. Deleting a set touches nothing in Spotify. |
 | U13 | change a set's playlists | Add or remove playlists at any time. Removing one says what goes with it (its tracks, their marks, rules that name them) before it happens. |
@@ -105,8 +105,10 @@ the chart, so the scoring can change without touching the rules. A profile conta
   `+++`/`−−−` 2; `++`/`−−` 3; `(+++)`/`(−−−)`/mood 4;
 - a tempo weight (default 20, so a 10% gap ≈ one `+++`);
 - an optional **arc**: a target curve over set position (presets: two waves, steady
-  build), the signal it applies to (BPM, energy, or both: each pulled to the line on its
-  own range, so high on the line means both are high), a weight, and optionally a
+  build), what it follows (a balance from BPM to energy: each measure pulled to the line
+  on its own range, so high on the line means both are high; in the middle both count in
+  full, and toward either end the other fades out, e.g. at a quarter of the way to
+  energy, energy counts half as much as BPM), a weight, and optionally a
   **slope weight**: the cost of a move against the arc's slope (a drop or mood change
   where the line rises, a boost or mood change where it falls; default 10, more than any
   move in the chart);
@@ -183,8 +185,10 @@ user already approved:
   keys to choose from in the edit dialog spells out both (`11B · A major`).
 - **Tempo-arc chart** (the primary view): x = set position, y = BPM (auto-ranged), a line
   through the points coloured by key, a move badge above each segment, the tracks'
-  energy as a thin line on a scale of its own (the set's lowest at the bottom, its
-  highest at the top), optional arc target curve on the scale of the signal it follows,
+  energy as a thin line drawn over the span of the set's BPM (the set's lowest energy
+  level with its slowest track, its highest with its fastest), so a track's BPM and
+  energy at the same height stand equally high in the set, as the arc measures them; the
+  optional arc target curve on that same span,
   hover/tap/focus card (position, title, artist, Camelot code, BPM, energy,
   the move into this track and where it came from).
 - **Key wheel:** two rings (outer major, inner minor); used keys filled with their

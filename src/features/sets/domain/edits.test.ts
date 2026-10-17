@@ -136,11 +136,11 @@ describe('mix rules', () => {
   })
 
   it('changes what shapes the mix, a part at a time', () => {
-    const byEnergy = withShape(base, { arc: 'twoWaves', arcSignal: 'energy' })
-    expect(byEnergy.mix).toMatchObject({ arc: 'twoWaves', arcSignal: 'energy', keyLift: false })
+    const byEnergy = withShape(base, { arc: 'twoWaves', arcBalance: 1 })
+    expect(byEnergy.mix).toMatchObject({ arc: 'twoWaves', arcBalance: 1, keyLift: false })
     const lifted = withShape(byEnergy, { keyLift: true })
-    expect(lifted.mix).toMatchObject({ arc: 'twoWaves', arcSignal: 'energy', keyLift: true })
-    expect(withShape(lifted, { keyLift: true, arcSignal: 'energy' })).toBe(lifted)
+    expect(lifted.mix).toMatchObject({ arc: 'twoWaves', arcBalance: 1, keyLift: true })
+    expect(withShape(lifted, { keyLift: true, arcBalance: 1 })).toBe(lifted)
   })
 })
 

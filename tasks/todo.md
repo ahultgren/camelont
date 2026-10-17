@@ -518,3 +518,18 @@ The owner wants to hear a mix where BPM, energy and the key moves all go with th
   the other (Brother) costs the same anywhere, so it lands wherever keys and tempo fit.
 - Not done: weights tuned by ear; anything to stop such a track sitting on a peak.
 
+## Change — a slider from BPM to energy (2026-10-17)
+
+- [x] `ArcConfig.balance` and `measureWeights`; `MixShaping.arcBalance` replaces the
+  three-way signal; stored sets with the old field read as the balance it meant
+- [x] Slider in `ShapePicker` (live; the key of each solve includes the balance)
+- [x] Chart: energy and the target over the span of the set's BPM
+- [x] Tests; spec, architecture, decision 47; `pnpm check` green
+
+### Review (2026-10-17)
+- The owner's "energy fluctuates more" was right, for two reasons: the tempo term
+  smooths BPM between neighbours and nothing smooths energy (0.30 of its range per step
+  against 0.24 for BPM on the WCS set), and the chart stretched energy over the whole
+  plot. The chart now draws both on one span; the smoothing is left as it is, with
+  Energy steps as the way to smooth energy.
+

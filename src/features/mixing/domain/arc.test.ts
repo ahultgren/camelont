@@ -7,6 +7,7 @@ import {
   arcSlopes,
   arcTarget,
   arcTermCost,
+  measureWeights,
   normalise,
   signalRange,
 } from './arc'
@@ -116,5 +117,45 @@ describe('the slope of the arc', () => {
     expect(againstSlope('boost', -1)).toBe(true)
     expect(againstSlope('mood', -1)).toBe(true)
     expect(againstSlope('drop', 0)).toBe(false)
+  })
+})
+
+describe('the balance between BPM and energy', () => {
+  const track2 = (bpm: number, energy: number): MixTrack => ({ ...track(bpm), energy })
+  const ranges = { bpm: { min: 80, max: 120 }, energy: { min: 0.4, max: 0.9 } }
+  const both = (balance?: number) =>
+    ({
+      preset: 'steadyBuild',
+      signal: 'both',
+      weight: 10,
+      ...(balance === undefined ? {} : { balance }),
+    }) as const
+
+  it('counts both fully in the middle, and fades one out toward either end', () => {
+    expect(measureWeights(both())).toEqual({ bpm: 1, energy: 1 })
+    expect(measureWeights(both(0.5))).toEqual({ bpm: 1, energy: 1 })
+    expect(measureWeights(both(0.25))).toEqual({ bpm: 1, energy: 0.5 })
+    expect(measureWeights(both(0.75))).toEqual({ bpm: 0.5, energy: 1 })
+    expect(measureWeights(both(0))).toEqual({ bpm: 1, energy: 0 })
+    expect(measureWeights(both(1))).toEqual({ bpm: 0, energy: 1 })
+  })
+
+  it('is what a single signal is at either end', () => {
+    expect(measureWeights({ preset: 'twoWaves', signal: 'bpm', weight: 8 })).toEqual({
+      bpm: 1,
+      energy: 0,
+    })
+    expect(measureWeights({ preset: 'twoWaves', signal: 'energy', weight: 8 })).toEqual({
+      bpm: 0,
+      energy: 1,
+    })
+  })
+
+  it('weighs each deviation by its share', () => {
+    // Last position: target 1. Fast (on the line) but calm (1 below it).
+    const calm = track2(120, 0.4)
+    expect(arcTermCost(calm, 4, 5, both(0.5), ranges)).toBeCloseTo(10)
+    expect(arcTermCost(calm, 4, 5, both(0.25), ranges)).toBeCloseTo(5)
+    expect(arcTermCost(calm, 4, 5, both(0), ranges)).toBeCloseTo(0)
   })
 })

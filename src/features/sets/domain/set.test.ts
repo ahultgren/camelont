@@ -82,7 +82,7 @@ describe('duplicateSet', () => {
       closer: null,
       follows: [['t1', 't2']],
       arc: 'twoWaves',
-      arcSignal: 'energy',
+      arcBalance: 1,
       energySteps: true,
       keyLift: false,
       keysFollowArc: false,
