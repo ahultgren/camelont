@@ -1,4 +1,4 @@
-import { sameOrder } from './set'
+import { sameOrder, type MixShape } from './set'
 import type { LastSave, MixSet, PickMethod, SetArc, TrackChoices, TrackMark } from './types'
 
 /**
@@ -83,8 +83,15 @@ export function withoutFollow(set: MixSet, from: string, to: string): MixSet {
   return follows.length === set.mix.follows.length ? set : { ...set, mix: { ...set.mix, follows } }
 }
 
-export const withArc = (set: MixSet, arc: SetArc): MixSet =>
-  set.mix.arc === arc ? set : { ...set, mix: { ...set.mix, arc } }
+/** Changes how the mix is shaped; the same set when nothing in `change` differs. */
+export function withShape(set: MixSet, change: Partial<MixShape>): MixSet {
+  const keys = Object.keys(change) as (keyof MixShape)[]
+  return keys.every((key) => set.mix[key] === change[key])
+    ? set
+    : { ...set, mix: { ...set.mix, ...change } }
+}
+
+export const withArc = (set: MixSet, arc: SetArc): MixSet => withShape(set, { arc })
 
 /** The alternative the user chose, by its track order; null forgets the choice (§8.5). */
 export function withChosenMix(set: MixSet, order: readonly string[] | null): MixSet {

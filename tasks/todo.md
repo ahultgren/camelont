@@ -462,3 +462,74 @@ Choices made, for the owner:
 - The hover card writes "· energy" before the chip, since a bare number says little
   there; the card's key name can't be a tooltip (the pointer can't enter the card).
 - An energy saved at the level ReccoBeats' value already shows is not stored.
+
+## Experiment — shaping a mix by energy (2026-10-11)
+
+The owner found ReccoBeats energy matches his ear, and wants to try ways of using it
+quickly, by listening, before settling on one. Three switches next to the arc, each one
+term in the cost, so they can be combined and compared (research.md §4):
+
+- [x] Domain, test first: the arc can follow energy; an energy-step cost (climb in small
+  steps, a fall may be sudden); a key-lift factor (a boost with a rise in energy and a
+  drop with a fall are cheaper, the opposite dearer). Default profile unchanged
+- [x] `MixShaping` (arc, what it follows, steps, lift) → profile; the set stores it; old
+  sets load with the switches off
+- [x] Controls next to the arc; the chart draws energy, and the arc's target on the
+  signal it follows
+- [x] Remove "What a change does to the mix shows here."
+- [x] Sanity-run the WCS set under each switch; docs (spec §5.3, architecture, decision
+  45); `pnpm check` green
+
+### Review (2026-10-11)
+- Built as three terms, not three algorithms: the arc follows BPM or energy, **Energy
+  steps**, **Key lift**. The owner's three are Two waves by Energy; that plus Energy
+  steps; that plus Key lift. Any other combination works too. With everything off the
+  cost is exactly what it was (tested).
+- On the WCS set each gives a different best order (printed while building, not kept).
+  With the arc by energy, Brother (78 BPM, energy 0.93) tends to close the set and tempo
+  jumps get bigger: the tempo term still counts, but it now competes with the arc.
+- Weights are first guesses: arc 8 (as for BPM), a 0.3 climb in energy = one `+++`, a
+  fall a quarter of that, key lift in full from a 0.2 change.
+- The chart draws energy as a thin line on its own scale, and the arc's target on the
+  scale it follows.
+- "What a change does to the mix shows here." is gone; before the first change the
+  summary line takes no room.
+- Not done: sliders for the weights; a rule for runs of fast or slow tracks; any
+  listening. `pnpm check` green; one earlier run timed out in two tests while the
+  machine was under load (load average 57) and passed unchanged on the next run.
+- Merged `main` (Camelot-only keys, editable 0–10 energy) into `mix-experiments` on
+  2026-10-17; the docs and screenshots conflicted and were joined by hand.
+
+## Experiment — an arc everything follows (2026-10-17)
+
+The owner wants to hear a mix where BPM, energy and the key moves all go with the arc
+(decision 46). Branch `aligned-arc`, from `mix-experiments`.
+
+- [x] Arc by **Both**: BPM and energy each pulled to the line on its own range
+- [x] **Keys follow arc**: a move against the slope costs 10 (more than any chart move);
+  in `evaluateMix` and, through `placementCost`, in the solver (follow chains included)
+- [x] Picker: Both, and the switch (needs an arc); headline count and marked badges
+- [x] Tests (arc, evaluate, solver agrees with evaluate, picker, chart, workspace); docs
+
+### Review (2026-10-17)
+- On the WCS set the best mix has no move against the arc in two waves or steady build,
+  by both. The rule leans on perfect moves, which are always allowed.
+- Level alignment is looser than the key rule: a track high on one measure and low on
+  the other (Brother) costs the same anywhere, so it lands wherever keys and tempo fit.
+- Not done: weights tuned by ear; anything to stop such a track sitting on a peak.
+
+## Change — a slider from BPM to energy (2026-10-17)
+
+- [x] `ArcConfig.balance` and `measureWeights`; `MixShaping.arcBalance` replaces the
+  three-way signal; stored sets with the old field read as the balance it meant
+- [x] Slider in `ShapePicker` (live; the key of each solve includes the balance)
+- [x] Chart: energy and the target over the span of the set's BPM
+- [x] Tests; spec, architecture, decision 47; `pnpm check` green
+
+### Review (2026-10-17)
+- The owner's "energy fluctuates more" was right, for two reasons: the tempo term
+  smooths BPM between neighbours and nothing smooths energy (0.30 of its range per step
+  against 0.24 for BPM on the WCS set), and the chart stretched energy over the whole
+  plot. The chart now draws both on one span; the smoothing is left as it is, with
+  Energy steps as the way to smooth energy.
+

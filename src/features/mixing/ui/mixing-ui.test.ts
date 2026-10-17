@@ -1,13 +1,14 @@
-import { render, screen } from '@testing-library/vue'
+import { fireEvent, render, screen } from '@testing-library/vue'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 import { parseCamelot } from '@/shared/music'
 import { wcsOrder } from '@/test/wcs'
 import { evaluateMix } from '../domain/evaluate'
-import { DEFAULT_PROFILE } from '../domain/profile'
+import { DEFAULT_PROFILE, NO_SHAPING } from '../domain/profile'
 import type { MixTrack } from '../domain/types'
 import ArcPicker from './ArcPicker.vue'
 import CandidateList from './CandidateList.vue'
+import ShapePicker from './ShapePicker.vue'
 
 const tracks = (name: 'hand_tuned' | 'script_greedy'): MixTrack[] =>
   wcsOrder(name).map((track) => ({ ...track, camelot: parseCamelot(track.camelot) ?? '8A' }))
@@ -48,12 +49,66 @@ describe('CandidateList', () => {
 describe('ArcPicker', () => {
   it('offers no arc and every preset, one of them chosen', async () => {
     const view = render(ArcPicker, { props: { modelValue: 'none' } })
-    expect(screen.getByRole('group', { name: 'Energy arc (by BPM)' })).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: 'Arc' })).toBeInTheDocument()
     expect(
       screen.getAllByRole('radio').map((radio) => radio.parentElement?.textContent.trim()),
     ).toEqual(['No arc', 'Two waves', 'Steady build'])
     expect(screen.getByRole('radio', { name: 'No arc' })).toBeChecked()
     await userEvent.click(screen.getByRole('radio', { name: 'Steady build' }))
     expect(view.emitted('update:modelValue')).toEqual([['steadyBuild']])
+  })
+})
+
+describe('ShapePicker', () => {
+  const slider = () =>
+    screen.getByRole('slider', { name: 'What the arc follows, from BPM to energy' })
+
+  it('offers the arc, what it follows and the energy switches', async () => {
+    const view = render(ShapePicker, { props: { modelValue: { ...NO_SHAPING, arc: 'twoWaves' } } })
+    expect(screen.getByRole('radio', { name: 'Two waves' })).toBeChecked()
+    expect(slider()).toHaveValue('0')
+    expect(slider()).toHaveAttribute('aria-valuetext', 'BPM')
+    await fireEvent.input(slider(), { target: { value: '1' } })
+    await userEvent.click(screen.getByRole('button', { name: 'Energy steps' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Key lift' }))
+    await userEvent.click(screen.getByRole('radio', { name: 'Steady build' }))
+    // Each change keeps the others.
+    const byEnergy = { ...NO_SHAPING, arc: 'twoWaves', arcBalance: 1 }
+    expect(view.emitted('update:modelValue')).toEqual([
+      [byEnergy],
+      [{ ...byEnergy, energySteps: true }],
+      [{ ...byEnergy, energySteps: true, keyLift: true }],
+      [{ ...byEnergy, arc: 'steadyBuild', energySteps: true, keyLift: true }],
+    ])
+  })
+
+  it('says how far the arc follows energy, and which switches are on', () => {
+    render(ShapePicker, {
+      props: { modelValue: { ...NO_SHAPING, arc: 'twoWaves', arcBalance: 0.25, keyLift: true } },
+    })
+    expect(slider()).toHaveValue('0.25')
+    expect(slider()).toHaveAttribute('aria-valuetext', 'BPM and energy, energy at 50%')
+    expect(screen.getByRole('button', { name: 'Key lift' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: 'Energy steps' })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    )
+  })
+
+  it('has nothing for the arc to follow while there is no arc', () => {
+    render(ShapePicker, { props: { modelValue: NO_SHAPING } })
+    expect(slider()).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Keys follow arc' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Energy steps' })).toBeEnabled()
+  })
+
+  it('lets the arc follow BPM and energy together, and the keys follow the arc', async () => {
+    const view = render(ShapePicker, { props: { modelValue: { ...NO_SHAPING, arc: 'twoWaves' } } })
+    await fireEvent.input(slider(), { target: { value: '0.5' } })
+    await userEvent.click(screen.getByRole('button', { name: 'Keys follow arc' }))
+    expect(view.emitted('update:modelValue').at(-1)).toEqual([
+      { ...NO_SHAPING, arc: 'twoWaves', arcBalance: 0.5, keysFollowArc: true },
+    ])
+    expect(slider()).toHaveAttribute('aria-valuetext', 'BPM and energy')
   })
 })

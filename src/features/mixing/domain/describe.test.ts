@@ -2,18 +2,56 @@ import { describe, expect, it } from 'vitest'
 import { wcsOrder } from '@/test/wcs'
 import { mixDescription } from './describe'
 import { evaluateMix, mixTracks } from './evaluate'
-import { DEFAULT_PROFILE } from './profile'
+import { DEFAULT_PROFILE, NO_SHAPING } from './profile'
 
 describe('saved playlist text', () => {
   const mix = evaluateMix(mixTracks(wcsOrder('hand_tuned')), DEFAULT_PROFILE)
 
   it('describes the moves, tempo range and profile', () => {
-    expect(mixDescription(mix, DEFAULT_PROFILE, 'twoWaves', 'WCS')).toBe(
+    expect(mixDescription(mix, DEFAULT_PROFILE, { ...NO_SHAPING, arc: 'twoWaves' }, 'WCS')).toBe(
       'Harmonic mix of “WCS” made with Camelont: 9 perfect, 7 boost, 3 drop, 78–127.4 BPM. Profile: Balanced; arc: Two waves.',
     )
   })
 
+  it('says what else shapes the mix', () => {
+    const shaped = {
+      arc: 'twoWaves',
+      arcBalance: 1,
+      energySteps: true,
+      keyLift: true,
+      keysFollowArc: false,
+    } as const
+    expect(mixDescription(mix, DEFAULT_PROFILE, shaped, 'WCS')).toMatch(
+      /arc: Two waves by energy, energy steps, key lift\.$/,
+    )
+    expect(mixDescription(mix, DEFAULT_PROFILE, { ...NO_SHAPING, keyLift: true }, 'WCS')).toMatch(
+      /arc: key lift\.$/,
+    )
+    expect(mixDescription(mix, DEFAULT_PROFILE, NO_SHAPING, 'WCS')).toMatch(/arc: none\.$/)
+    const aligned = {
+      ...NO_SHAPING,
+      arc: 'twoWaves',
+      arcBalance: 0.5,
+      keysFollowArc: true,
+    } as const
+    expect(mixDescription(mix, DEFAULT_PROFILE, aligned, 'WCS')).toMatch(
+      /arc: Two waves by BPM and energy, keys follow the arc\.$/,
+    )
+    expect(
+      mixDescription(
+        mix,
+        DEFAULT_PROFILE,
+        { ...NO_SHAPING, arc: 'twoWaves', arcBalance: 0.25 },
+        'WCS',
+      ),
+    ).toMatch(/arc: Two waves by BPM and energy, energy at 50%\.$/)
+    // Without an arc there is nothing for the keys to follow.
+    expect(
+      mixDescription(mix, DEFAULT_PROFILE, { ...NO_SHAPING, keysFollowArc: true }, 'WCS'),
+    ).toMatch(/arc: none\.$/)
+  })
+
   it('stays within Spotify’s 300 characters', () => {
-    expect(mixDescription(mix, DEFAULT_PROFILE, null, 'x'.repeat(400)).length).toBe(300)
+    expect(mixDescription(mix, DEFAULT_PROFILE, NO_SHAPING, 'x'.repeat(400)).length).toBe(300)
   })
 })

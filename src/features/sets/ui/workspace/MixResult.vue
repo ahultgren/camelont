@@ -36,6 +36,11 @@ const range = computed(() => {
 const minutes = computed(() =>
   totalMinutes((mix.value?.order ?? []).map((t) => info.value.get(t.id)?.durationMs ?? 0)),
 )
+/** Moves against the arc's slope; null unless the keys are asked to follow it. */
+const against = computed(() => {
+  const arc = mix.value?.arc
+  return arc && (arc.config.slopeWeight ?? 0) > 0 ? arc.against.filter(Boolean).length : null
+})
 const MOVES = [
   { tone: 'perfect', symbol: '=', word: 'perfect', color: 'text-ok' },
   { tone: 'boost', symbol: '+', word: 'boost', color: 'text-accent' },
@@ -83,6 +88,18 @@ const SLOW_ABOVE = 100
           <div class="flex items-baseline gap-1">
             <dt>cost</dt>
             <dd class="text-[15px] font-medium text-ink">{{ mix.totalCost.toFixed(1) }}</dd>
+          </div>
+          <div
+            v-if="against !== null"
+            class="flex items-baseline gap-1"
+            :class="against > 0 ? 'text-warn' : ''"
+            title="Moves against the arc: a − or ~ where it rises, a + or ~ where it falls."
+            data-testid="against-arc"
+          >
+            <dd class="text-[15px] font-medium" :class="against > 0 ? '' : 'text-ink'">
+              {{ against }}
+            </dd>
+            <dt>against the arc</dt>
           </div>
         </dl>
         <span

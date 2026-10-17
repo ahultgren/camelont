@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { wcsId, wcsOrder } from '@/test/wcs'
 import { DEFAULT_ARC_WEIGHT } from './arc'
-import { evaluateMix, mixTracks } from './evaluate'
-import { DEFAULT_PROFILE, withArc } from './profile'
+import { evaluateMix, mixTracks, transitionCost } from './evaluate'
+import { DEFAULT_PROFILE, NO_SHAPING, profileFor, SLOPE_WEIGHT, withArc } from './profile'
+import type { MixTrack } from './types'
 
 const handTuned = mixTracks(wcsOrder('hand_tuned'))
 const greedy = mixTracks(wcsOrder('script_greedy'))
@@ -92,6 +93,101 @@ describe('evaluateMix on the WCS fixture', () => {
     expect(tuned.totalCost).toBeCloseTo(tuned.transitionCost + (tuned.arc?.cost ?? 0))
     expect(tuned.arc?.cost).toBeLessThan(base.arc?.cost ?? 0)
     expect(tuned.arc?.target).toHaveLength(20)
+  })
+
+  describe('with energy', () => {
+    const pair = (camelot: string, from: number | null, to: number | null) =>
+      mixTracks([
+        { id: 'a', label: 'a', camelot: '8B', bpm: 100, energy: from },
+        { id: 'b', label: 'b', camelot, bpm: 100, energy: to },
+      ]) as [MixTrack, MixTrack]
+
+    it('leaves the default profile as it was: energy changes nothing', () => {
+      const [a, b] = pair('10B', 0.2, 0.9)
+      const plain = transitionCost(a, b, DEFAULT_PROFILE)
+      expect(plain.move).toBe('boost3')
+      expect(plain.moveCost).toBe(2)
+      expect(plain.energyCost).toBe(0)
+      expect(plain.cost).toBe(2)
+      expect(profileFor(NO_SHAPING)).toEqual(DEFAULT_PROFILE)
+    })
+
+    it('charges a climb in energy when steps are scored, and a fall much less', () => {
+      const steps = profileFor({ ...NO_SHAPING, energySteps: true })
+      // 0.4 → 0.8 is 0.3 beyond the free 0.1: 10 × 0.3
+      expect(transitionCost(...pair('8B', 0.4, 0.8), steps).energyCost).toBeCloseTo(3)
+      expect(transitionCost(...pair('8B', 0.8, 0.4), steps).energyCost).toBeCloseTo(0.75)
+      expect(transitionCost(...pair('8B', 0.4, null), steps).energyCost).toBe(0)
+      const t = transitionCost(...pair('9B', 0.4, 0.8), steps)
+      expect(t.cost).toBeCloseTo(t.moveCost + t.tempoCost + t.energyCost)
+    })
+
+    it('makes +++ free into a rise in energy with key lift, and dearer into a fall', () => {
+      const lift = profileFor({ ...NO_SHAPING, keyLift: true })
+      // 8B → 10B is +++ (2); 8B → 6B is −−− (2).
+      expect(transitionCost(...pair('10B', 0.4, 0.8), lift).moveCost).toBeCloseTo(0)
+      expect(transitionCost(...pair('10B', 0.8, 0.4), lift).moveCost).toBeCloseTo(4)
+      expect(transitionCost(...pair('6B', 0.8, 0.4), lift).moveCost).toBeCloseTo(0)
+      expect(transitionCost(...pair('6B', 0.4, 0.8), lift).moveCost).toBeCloseTo(4)
+      // No direction, or no energy: the move costs what it costs.
+      expect(transitionCost(...pair('8B', 0.4, 0.8), lift).moveCost).toBe(0)
+      expect(transitionCost(...pair('10B', null, 0.8), lift).moveCost).toBe(2)
+    })
+
+    it('sums every term into the total', () => {
+      const shaped = profileFor({
+        arc: 'twoWaves',
+        arcBalance: 1,
+        energySteps: true,
+        keyLift: true,
+        keysFollowArc: false,
+      })
+      const mix = evaluateMix(handTuned, shaped)
+      const transitions = mix.transitions.reduce((sum, t) => sum + t.cost, 0)
+      expect(mix.arc?.config.signal).toBe('energy')
+      expect(mix.arc?.range).toEqual({ min: 0.414, max: 0.929 })
+      expect(mix.totalCost).toBeCloseTo(transitions + (mix.arc?.cost ?? 0))
+      expect(mix.transitions.some((t) => t.energyCost > 0)).toBe(true)
+    })
+  })
+
+  describe('aligned with the arc', () => {
+    const aligned = profileFor({
+      ...NO_SHAPING,
+      arc: 'twoWaves',
+      arcBalance: 0.5,
+      keysFollowArc: true,
+    })
+
+    it('pulls BPM and energy to the line, each on its own range', () => {
+      const mix = evaluateMix(handTuned, aligned)
+      expect(mix.arc?.ranges).toEqual({
+        bpm: { min: 78, max: 127.4 },
+        energy: { min: 0.414, max: 0.929 },
+      })
+      // The target is drawn against BPM, the first of the two.
+      expect(mix.arc?.range).toEqual({ min: 78, max: 127.4 })
+    })
+
+    it('marks and charges every move against the slope', () => {
+      const mix = evaluateMix(handTuned, aligned)
+      const against = mix.arc?.against ?? []
+      expect(against).toHaveLength(19)
+      // Brother → Love Is is a − while two waves climbs from the start.
+      expect(mix.transitions[0]?.move).toBe('drop1')
+      expect(against[0]).toBe(true)
+      const count = against.filter(Boolean).length
+      expect(mix.arc?.slopeCost).toBe(count * SLOPE_WEIGHT)
+      const transitions = mix.transitions.reduce((sum, t) => sum + t.cost, 0)
+      expect(mix.totalCost).toBeCloseTo(transitions + (mix.arc?.cost ?? 0))
+    })
+
+    it('marks nothing when the keys are not asked to follow the arc', () => {
+      const loose = profileFor({ ...NO_SHAPING, arc: 'twoWaves', arcBalance: 0.5 })
+      const mix = evaluateMix(handTuned, loose)
+      expect(mix.arc?.against.some(Boolean)).toBe(false)
+      expect(mix.arc?.slopeCost).toBe(0)
+    })
   })
 
   it('handles empty and single-track mixes', () => {

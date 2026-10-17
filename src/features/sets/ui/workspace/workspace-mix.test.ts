@@ -144,10 +144,63 @@ describe('the mix column', () => {
     expect(points()).toHaveLength(7)
   })
 
+  const arcSlider = () =>
+    screen.getByRole('slider', { name: 'What the arc follows, from BPM to energy' })
+
+  it('shapes the mix by energy: the arc follows it, and the switches are kept', async () => {
+    const { stored, container } = await openWorkspace(core())
+    await settled()
+    expect(arcSlider()).toBeDisabled()
+    await userEvent.click(screen.getByRole('radio', { name: 'Two waves' }))
+    await fireEvent.input(arcSlider(), { target: { value: '1' } })
+    await userEvent.click(screen.getByRole('button', { name: 'Energy steps' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Key lift' }))
+    await waitFor(async () => {
+      expect((await stored())?.mix).toMatchObject({
+        arc: 'twoWaves',
+        arcBalance: 1,
+        energySteps: true,
+        keyLift: true,
+      })
+    })
+    await settled()
+    // An arc on energy alone is drawn in the energy line's colour.
+    await waitFor(() => {
+      expect(container.querySelector('polyline[stroke-dasharray]')).toHaveAttribute(
+        'stroke',
+        'var(--warn)',
+      )
+    })
+  })
+
+  it('keeps the keys with the arc, by BPM and energy, and counts what goes against it', async () => {
+    const { stored, container } = await openWorkspace(core())
+    await settled()
+    expect(screen.queryByTestId('against-arc')).toBeNull()
+    await userEvent.click(screen.getByRole('radio', { name: 'Two waves' }))
+    await fireEvent.input(arcSlider(), { target: { value: '0.5' } })
+    await userEvent.click(screen.getByRole('button', { name: 'Keys follow arc' }))
+    await waitFor(async () => {
+      expect((await stored())?.mix).toMatchObject({
+        arc: 'twoWaves',
+        arcBalance: 0.5,
+        keysFollowArc: true,
+      })
+    })
+    await settled()
+    await waitFor(() => {
+      expect(screen.getByTestId('against-arc')).toHaveTextContent(/^\d+\s*against the arc$/)
+    })
+    const count = Number(/\d+/.exec(screen.getByTestId('against-arc').textContent)?.[0])
+    expect(container.querySelectorAll('rect[data-against]')).toHaveLength(count)
+  })
+
   it('says what a change did: tracks out, cost before and after', async () => {
     await openWorkspace(core())
     await settled()
-    expect(change()).toHaveTextContent('What a change does to the mix shows here.')
+    // Before the first change the line says nothing and takes no room.
+    expect(change()).toHaveTextContent('')
+    expect(change()).toHaveClass('sr-only')
     await userEvent.click(inRow('WCS', 'Try').getByRole('button', { name: 'Exclude' }))
     await settled()
     await waitFor(() => {

@@ -5,7 +5,7 @@ import { WCS_TRACKS, wcsId, wcsOrder } from '@/test/wcs'
 import { DEFAULT_ARC_WEIGHT } from '../arc'
 import { NO_CONSTRAINTS, type MixConstraints } from '../constraints'
 import { evaluateMix, mixTracks } from '../evaluate'
-import { DEFAULT_PROFILE, withArc } from '../profile'
+import { DEFAULT_PROFILE, NO_SHAPING, profileFor, withArc } from '../profile'
 import type { MixTrack } from '../types'
 import { adjacencyDifference } from './diversity'
 import { MIN_ADJACENCY_DIFFERENCE, solveMix, type SolveOutcome } from './solve'
@@ -78,6 +78,68 @@ describe('solveMix on the WCS set', () => {
     const outcome = solved(solveMix({ tracks, constraints: NO_CONSTRAINTS, profile }))
     expect(outcome.candidates[0]?.totalCost).toBeLessThanOrEqual(handTuned.totalCost + 1e-9)
     expect(outcome.candidates[0]?.arc).not.toBeNull()
+  })
+
+  it('scores as evaluateMix does when energy shapes the mix, and stays clash-free', () => {
+    const profile = profileFor({
+      arc: 'twoWaves',
+      arcBalance: 1,
+      energySteps: true,
+      keyLift: true,
+      keysFollowArc: false,
+    })
+    const outcome = solved(solveMix({ tracks, constraints: NO_CONSTRAINTS, profile }))
+    expect(outcome.candidates.length).toBeGreaterThan(0)
+    for (const mix of outcome.candidates) {
+      expect(mix.clashCount).toBe(0)
+      expect(mix.order).toHaveLength(tracks.length)
+      expect(mix.totalCost).toBeCloseTo(evaluateMix(mix.order, profile).totalCost)
+    }
+    // The energy terms change which order is best.
+    const plain = solved(
+      solveMix({ tracks, constraints: NO_CONSTRAINTS, profile: DEFAULT_PROFILE }),
+    )
+    expect(outcome.candidates[0]?.order.map((t) => t.id)).not.toEqual(
+      plain.candidates[0]?.order.map((t) => t.id),
+    )
+  })
+
+  it('keeps the keys with the arc where it can, and scores as evaluateMix does', () => {
+    const shaping = { ...NO_SHAPING, arc: 'twoWaves', arcBalance: 0.5 } as const
+    const loose = profileFor(shaping)
+    const aligned = profileFor({ ...shaping, keysFollowArc: true })
+    const outcome = solved(solveMix({ tracks, constraints: NO_CONSTRAINTS, profile: aligned }))
+    for (const mix of outcome.candidates) {
+      expect(mix.clashCount).toBe(0)
+      expect(mix.totalCost).toBeCloseTo(evaluateMix(mix.order, aligned).totalCost)
+    }
+    const best = outcome.candidates[0]
+    const looseBest = solved(solveMix({ tracks, constraints: NO_CONSTRAINTS, profile: loose }))
+      .candidates[0]
+    if (!best || !looseBest) throw new Error('no mix')
+    const against = (order: readonly MixTrack[]) =>
+      evaluateMix(order, aligned).arc?.against.filter(Boolean).length ?? 0
+    expect(against(best.order)).toBeLessThan(against(looseBest.order))
+  })
+
+  it('charges a move against the arc inside a follow chain too', () => {
+    const aligned = profileFor({
+      ...NO_SHAPING,
+      arc: 'twoWaves',
+      arcBalance: 0.5,
+      keysFollowArc: true,
+    })
+    // Brother → Love Is is a −: kept together, it costs wherever the arc rises.
+    const outcome = solved(
+      solveMix({
+        tracks,
+        constraints: { ...NO_CONSTRAINTS, follows: [[brother, wcsId('Love Is')]] },
+        profile: aligned,
+      }),
+    )
+    for (const mix of outcome.candidates) {
+      expect(mix.totalCost).toBeCloseTo(evaluateMix(mix.order, aligned).totalCost)
+    }
   })
 
   it('respects start and end', () => {

@@ -35,6 +35,11 @@ const doubledInfo = new Map<string, EntryInfo>(
   doubled.order.map((t) => [t.id, { title: t.label, artists: ['X'], durationMs: 200_000 }]),
 )
 
+const pointsOf = (line: Element) =>
+  (line.getAttribute('points') ?? '')
+    .split(' ')
+    .map((pair) => pair.split(',').map(Number) as [number, number])
+
 describe('TempoArcChart', () => {
   it('plots the saved BPM, never halved or doubled', async () => {
     render(TempoArcChart, { props: { mix: doubled, info: doubledInfo } })
@@ -83,6 +88,56 @@ describe('TempoArcChart', () => {
     expect(badges).toHaveLength(19)
     expect(badges.filter((b) => b === '=')).toHaveLength(9)
     expect(container.querySelector('polyline[stroke-dasharray]')).not.toBeNull()
+  })
+
+  // The height of a track's dot: Brother (78) is the slowest, Pompeii (127.4) the fastest.
+  const dotY = (i: number) => Number(screen.getAllByRole('img')[i]?.getAttribute('cy'))
+
+  it('draws energy over the span of the set’s BPM, so equal heights stand equally high', () => {
+    render(TempoArcChart, { props: { mix, info } })
+    const known = order.filter((t) => t.energy !== null)
+    const points = pointsOf(screen.getByTestId('energy-line'))
+    expect(points).toHaveLength(known.length)
+    // The lowest energy is level with the slowest track, the highest with the fastest.
+    const ys = points.map(([, py]) => py)
+    expect(Math.max(...ys)).toBeCloseTo(dotY(0))
+    expect(Math.min(...ys)).toBeCloseTo(dotY(6))
+  })
+
+  it('draws no energy line when fewer than two tracks have an energy', () => {
+    render(TempoArcChart, { props: { mix: doubled, info: doubledInfo } })
+    expect(screen.queryByTestId('energy-line')).toBeNull()
+  })
+
+  it('marks the moves against the arc when the keys are to follow it', () => {
+    const aligned = evaluateMix(
+      order,
+      withArc(DEFAULT_PROFILE, { preset: 'twoWaves', signal: 'both', weight: 8, slopeWeight: 10 }),
+    )
+    const { container } = render(TempoArcChart, { props: { mix: aligned, info } })
+    const marked = container.querySelectorAll('rect[data-against]')
+    expect(marked.length).toBe(aligned.arc?.against.filter(Boolean).length)
+    expect(marked.length).toBeGreaterThan(0)
+    // Brother → Love Is: a − where the arc climbs.
+    expect(screen.getAllByRole('img')[1]).toHaveAccessibleName(/from 12B, against the arc$/)
+    // Without the rule nothing is marked.
+    const plain = render(TempoArcChart, { props: { mix, info } })
+    expect(plain.container.querySelectorAll('rect[data-against]')).toHaveLength(0)
+  })
+
+  it('draws the target of an arc that follows energy on the same span', () => {
+    const byEnergy = evaluateMix(
+      order,
+      withArc(DEFAULT_PROFILE, { preset: 'twoWaves', signal: 'energy', weight: 8 }),
+    )
+    const { container } = render(TempoArcChart, { props: { mix: byEnergy, info } })
+    const target = container.querySelector('polyline[stroke-dasharray]')
+    if (!target) throw new Error('no target')
+    expect(target).toHaveAttribute('stroke', 'var(--warn)')
+    // The same span as everything else: the line's top is level with the fastest track.
+    const ys = pointsOf(target).map(([, py]) => py)
+    expect(Math.min(...ys)).toBeGreaterThanOrEqual(dotY(6) - 1e-6)
+    expect(Math.max(...ys)).toBeLessThanOrEqual(dotY(0) + 1e-6)
   })
 
   it('says which track is pointed at or focused, and when it no longer is', async () => {

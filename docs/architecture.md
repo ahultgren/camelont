@@ -202,18 +202,31 @@ The heart of the app, pure TS and fully unit tested.
   `camelot-chart.md`), and `moveBetween(from, to): Move | null`. A test asserts all 576
   pairs equal the JSON.
 - `profile.ts`: `MixProfile { id, name, moveCost: Record<Move, number>, clashCost,
-  tempoWeight, arc: ArcConfig | null }`. `DEFAULT_PROFILE` reproduces the reference
-  weights; `withArc(profile, arc)` applies the user's arc choice.
+  tempoWeight, arc: ArcConfig | null, energyStep: EnergyStep | null, keyLift }`.
+  `DEFAULT_PROFILE` reproduces the reference weights (no arc, no energy terms).
+  `MixShaping { arc, arcBalance, energySteps, keyLift, keysFollowArc }` is what the user
+  sets, and
+  `profileFor(shaping)` the default profile shaped that way; `describeShaping` puts it
+  in words for the saved playlist's description.
+- `energy.ts`: the two terms that use a track's energy (research.md §4, decision 45).
+  `energyStepCost(rise, step)` charges a climb between neighbours beyond a free step,
+  and a fall a share of that; `keyLiftFactor(tone, rise, keyLift)` scales a move's cost
+  by whether its direction goes with the change in energy. Both are neutral when either
+  track's energy is unknown.
 - `tempo.ts`: `tempoGap(a, b)`, the relative gap between two saved BPMs (spec §5.2).
   Nothing halves or doubles a BPM; scoring and every view read `track.bpm`.
 - `arc.ts`: `ArcConfig { preset, signal, weight }`; presets are data (piecewise-linear
-  target curves over position 0..1); signals are functions `MixTrack → number | null`
-  (BPM first), normalised over the set's range. `arcTermCost` is the per-track term.
+  target curves over position 0..1); measures are functions `MixTrack → number | null`
+  (BPM and energy), normalised over the set's range, and a signal follows one or both
+  (`SIGNAL_MEASURES`), each counted by `measureWeights` (for both, by the arc's
+  `balance`). `arcSlopes` says which way the line goes between neighbours and
+  `againstSlope(tone, slope)` whether a move goes against it. `arcTermCost` is the per-track term.
   Removing arcs means deleting this file and the one term in `evaluate`.
-- `evaluate.ts`: `evaluateMix(order, profile) → EvaluatedMix` (transitions with move +
-  cost, transition cost, arc cost + target curve, total cost, clash count, stats: move
+- `evaluate.ts`: `evaluateMix(order, profile) → EvaluatedMix` (transitions with move,
+  move cost times the key-lift factor, tempo cost and energy-step cost, transition cost, arc cost + target curve, total cost, clash count, stats: move
   and tone histograms, peaks, opener, closer, BPM range). `transitionCost` and the arc
-  term are the primitives. **The solver and the UI both use these.** They are the
+  term are the primitives; the arc's evaluation also says which transitions go against
+  its slope (`against`) and what that costs. **The solver and the UI both use these.** They are the
   single source of truth for scoring; a test checks the solver's path cost equals
   `evaluateMix` exactly.
 - `constraints.ts`: `MixConstraints { start, end, follows: [from, to][], excluded }`
@@ -225,12 +238,16 @@ The heart of the app, pure TS and fully unit tested.
   1. `problem.ts`: collapse follow-chains into blocks (a block's in-key is its first
      track, its out-key its last) and build the legal-move digraph between blocks.
      Clashes are never edges. Edge and arc costs are precomputed from `evaluate.ts`.
+     What depends on where a block lands (its arc terms, and moves into and inside it
+     against the arc's slope) is `placementCost(problem, prev, b, pos)`, the one place
+     the search, the local search and `pathCost` add it.
   2. `search.ts`: beam search over partial paths. Each state tracks, per unvisited
      block, how many predecessors and successors are still available; a block that
      can no longer be reached, two blocks that can only follow the current one, or too
      many dead ends prune the state (this is how low-degree tracks like Bloodstream
      get placed instead of stranded). States are ranked by cost so far + a lower bound
-     on the rest (cheapest incoming edges + an exact 1-D bound on the arc term) + a
+     on the rest (cheapest incoming edges + an exact 1-D bound on the arc term when it
+     follows one measure known for every track, else each track's cheapest place) + a
      scarcity penalty (Warnsdorff-style). Extensions are pre-ranked by a cheap
      estimate and only the most promising are materialised. A depth-first search with
      the same pruning is the fallback when the beam loses every path.
@@ -274,8 +291,8 @@ The heart of the app, pure TS and fully unit tested.
   that was superseded; `useMixer` (solve) and `useFitter` (best fit) are that, with
   their client. The worker imports `domain/` only, never a feature's `index.ts`, so no
   UI code ends up in its bundle.
-- `profile.ts` `profileForArc(choice)` is the default profile with the user's arc
-  choice (`ArcChoice`: a preset or none). `describeDiagnostic(d, name, wording?)` can
+- `profile.ts` `profileFor(shaping)` is the default profile shaped as the user chose.
+  `describeDiagnostic(d, name, wording?)` can
   call the tracks kept out of the mix something other than "excluded" and stop naming
   them after a few; a set can leave hundreds out.
 
@@ -297,12 +314,16 @@ workspace (below) composes them.
   fall back to in-process ones where there is no `Worker`.
 - `mixing/ui`: `CandidateList` (the alternatives as a radio group of small cards:
   number, cost, a tempo sparkline, moves by kind; BPM range, peaks, opener and closer
-  are in each card's label and tooltip) and `ArcPicker` (a segmented radio group).
+  are in each card's label and tooltip), `ArcPicker` (a segmented radio group) and
+  `ShapePicker` (the arc picker, a range slider from BPM to energy for what the arc
+  follows, and the switches as toggle buttons; a `MixShaping` as its model).
 - `mix-view`: `TempoArcChart` (hand-built SVG; key-coloured dots, a move badge per
-  segment, the arc target dashed, each point focusable with a full `aria-label`, and a
-  card on hover/tap/focus with the track's key, BPM and energy), `KeyWheel` and
-  `RunningOrder` (a line per track with its key, BPM and energy, and a connector per
-  pair: keys, move, BPM change). Pure geometry lives in
+  segment, the tracks' energy as a thin line and the arc target dashed, both over the
+  span of the set's BPM so that heights compare as the arc compares them, each point
+  focusable with a full `aria-label`, and a card on
+  hover/tap/focus with the track's key, BPM and energy), `KeyWheel` and `RunningOrder`
+  (a line per track with its key, BPM and energy, and a connector per pair: keys, move,
+  BPM change). Pure geometry lives in
   `mix-view/domain/layout.ts`.
   - **One track, everywhere (W6).** Each of the three takes `highlighted` (a track ID)
     and emits `point` (the track under the pointer or with focus, or null); the chart
@@ -347,7 +368,9 @@ track-features feature (the edit dialog), `mixing`'s alternatives and arc picker
   unavailable tracks the copy leaves out) plus its `TrackChoices { bpmMin, bpmMax, limit,
   pick: 'random' | 'bestFit', seed }`. `marks` (`mustInclude | exclude`) are keyed by
   track ID on the set: a mark belongs to the track, in every playlist that has it. `MixSettings` holds
-  opener, closer, follow pairs and the arc choice; `ChosenMix` the track order;
+  opener, closer, follow pairs and the shaping (arc, `arcBalance`, `energySteps`,
+  `keyLift`, `keysFollowArc`; a set stored before them reads with them off, and one stored
+  with the earlier three-way `arcSignal` reads as the balance it meant); `ChosenMix` the track order;
   `LastSave` the link, the time, and the name and order that were written.
 - `domain/set-summary.ts` (`poolSize`, the sets list's track count), `domain/skipped.ts`
   (what a copy leaves out, in words).
@@ -414,7 +437,7 @@ track-features feature (the edit dialog), `mixing`'s alternatives and arc picker
   that needs no pick (and so the blockers) is final.
 - `domain/edits.ts`: every edit the workspace makes, as a function for the store's
   `update`: `withBpmRange`, `withLimit`, `withPickMethod`, `withMark`, `withOpener`,
-  `withCloser`, `withFollow`, `withoutFollow`, `withArc`, `withChosenMix`, `withSave`
+  `withCloser`, `withFollow`, `withoutFollow`, `withArc`, `withShape`, `withChosenMix`, `withSave`
   (the last save, with the saved mix as the chosen one), and
   `roleOf` / `withRole` for the row's toggle group (spec §9.1: at most one of opener,
   closer, must-include, exclude). An edit returns the same set when nothing changes
@@ -491,7 +514,7 @@ belongs to one set for as long as it lives: the page gives its component the set
 | `adding`, `addPlaylists`, `cancelAdd`, `removalOf`, `removePlaylist` | the set's playlists (U13): add (read first, all or none), what a removal takes with it, and the removal |
 | `rename`, `saveInput`, `saveState`, `recordSave`, `recordIncompleteSave` | the set's name; what a save to Spotify would write now (a description, the shown mix's URIs and order); never / saved / changed; recording a save, or one that reached its playlist but fell short |
 | `pointedTrackId` | one shared ref for cross-highlighting (W6) |
-| `setBpmRange`, `setLimit`, `setPickMethod`, `reshuffle`, `setMark`, `setRole`, `setOpener`, `setCloser`, `addFollow`, `setFollower`, `removeFollow`, `setArc`, `chooseAlternative` | edits, each written through the store at once |
+| `setBpmRange`, `setLimit`, `setPickMethod`, `reshuffle`, `setMark`, `setRole`, `setOpener`, `setCloser`, `addFollow`, `setFollower`, `removeFollow`, `setArc`, `setShape`, `chooseAlternative` | edits, each written through the store at once |
 
 How it works:
 
@@ -580,7 +603,7 @@ WorkspaceScreen          useSetWorkspace + provideWorkspaceUi; top bar (back, na
 │     └─ TrackRow        one line per track
 ├─ ChangeSummaryLine     W4
 ├─ MixResult             headline + TempoArcChart, or the problems, or "working"
-├─ MixControls           CandidateList, ArcPicker, the pairs
+├─ MixControls           CandidateList, ShapePicker, the pairs
 ├─ MixOrder              KeyWheel + RunningOrder with pins
 ├─ AddPlaylistsDialog
 └─ SaveDialog            SaveForm on useSaveSet: name, name clash, replace or create

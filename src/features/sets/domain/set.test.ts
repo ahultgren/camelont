@@ -77,7 +77,16 @@ describe('duplicateSet', () => {
   const original: MixSet = {
     ...addPlaylist(newSet({ id: 's1', name: 'Friday social', now: 1 }), copy('a', ['t1', 't2']), 7),
     marks: { t1: 'mustInclude' },
-    mix: { opener: 't1', closer: null, follows: [['t1', 't2']], arc: 'twoWaves' },
+    mix: {
+      opener: 't1',
+      closer: null,
+      follows: [['t1', 't2']],
+      arc: 'twoWaves',
+      arcBalance: 1,
+      energySteps: true,
+      keyLift: false,
+      keysFollowArc: false,
+    },
     chosenMix: { order: ['t1', 't2'] },
     lastSave: {
       playlistId: 'x',

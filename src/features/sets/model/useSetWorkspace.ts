@@ -40,6 +40,7 @@ import {
   withIncompleteSave,
   withRole,
   withSave,
+  withShape,
   type TrackRole,
 } from '../domain/edits'
 import { withFollower } from '../domain/follow'
@@ -53,7 +54,15 @@ import {
 import { playlistRemoval, removePlaylist, type Dropped } from '../domain/playlist-diff'
 import type { PickRequest, Selection } from '../domain/select'
 import { selectForSet } from '../domain/select-set'
-import { chosenIndex, ruleTrackIds, sameOrder, saveState, type MixRules } from '../domain/set'
+import {
+  chosenIndex,
+  NO_MIX_SETTINGS,
+  ruleTrackIds,
+  sameOrder,
+  saveState,
+  type MixRules,
+  type MixShape,
+} from '../domain/set'
 import type { MixSet, PickMethod, SetArc, SetTrack, TrackMark } from '../domain/types'
 import {
   fitKey,
@@ -190,7 +199,20 @@ export function useSetWorkspace(setId: string, options: SetWorkspaceOptions = {}
   const opener = computed(() => set.value?.mix.opener ?? null)
   const closer = computed(() => set.value?.mix.closer ?? null)
   const follows = computed(() => set.value?.mix.follows ?? NO_FOLLOWS)
-  const arc = computed<SetArc>(() => set.value?.mix.arc ?? 'none')
+  const arc = computed(() => set.value?.mix.arc ?? NO_MIX_SETTINGS.arc)
+  const arcBalance = computed(() => set.value?.mix.arcBalance ?? NO_MIX_SETTINGS.arcBalance)
+  const energySteps = computed(() => set.value?.mix.energySteps ?? NO_MIX_SETTINGS.energySteps)
+  const keyLift = computed(() => set.value?.mix.keyLift ?? NO_MIX_SETTINGS.keyLift)
+  const keysFollowArc = computed(
+    () => set.value?.mix.keysFollowArc ?? NO_MIX_SETTINGS.keysFollowArc,
+  )
+  const shape = computed<MixShape>(() => ({
+    arc: arc.value,
+    arcBalance: arcBalance.value,
+    energySteps: energySteps.value,
+    keyLift: keyLift.value,
+    keysFollowArc: keysFollowArc.value,
+  }))
   const rules = computed<MixRules>(() => ({
     opener: opener.value,
     closer: closer.value,
@@ -345,8 +367,8 @@ export function useSetWorkspace(setId: string, options: SetWorkspaceOptions = {}
     const current = resolution.value
     const mixable = mixTracks.value
     if (!current || current.missing || !mixable || inputProblems.value.length > 0) return null
-    const request = solveRequest(mixable.inSet, mixable.leftOut, rules.value, arc.value)
-    return { key: solveKey(request, arc.value), request }
+    const request = solveRequest(mixable.inSet, mixable.leftOut, rules.value, shape.value)
+    return { key: solveKey(request, shape.value), request }
   })
 
   /** What has to be worked out before the current input has its result. */
@@ -615,9 +637,8 @@ export function useSetWorkspace(setId: string, options: SetWorkspaceOptions = {}
     const current = set.value
     const shown = view.value.kind === 'mix' ? view.value.shown : null
     if (!current || !shown) return null
-    const arcChoice = current.mix.arc === 'none' ? null : current.mix.arc
     return {
-      description: mixDescription(shown, DEFAULT_PROFILE, arcChoice, current.name),
+      description: mixDescription(shown, DEFAULT_PROFILE, shape.value, current.name),
       uris: shown.order.flatMap((track) => tracks.value.get(track.id)?.uri ?? []),
       order: orderOf(shown),
     }
@@ -741,6 +762,10 @@ export function useSetWorkspace(setId: string, options: SetWorkspaceOptions = {}
     },
     setArc: (choice: SetArc) => {
       edit((current) => withArc(current, choice))
+    },
+    /** Changes how the mix is shaped: the arc, what it follows, the energy switches. */
+    setShape: (change: Partial<MixShape>) => {
+      edit((current) => withShape(current, change))
     },
     /** Shows another alternative and stores it in the set as the chosen mix (§8.5). */
     chooseAlternative: (index: number) => {

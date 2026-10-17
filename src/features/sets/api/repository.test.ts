@@ -26,7 +26,16 @@ const fullSet = (id: string, name = 'Friday social'): MixSet => ({
     42,
   ),
   marks: { t1: 'mustInclude', t3: 'exclude' },
-  mix: { opener: 't1', closer: null, follows: [['t1', 't2']], arc: 'twoWaves' },
+  mix: {
+    opener: 't1',
+    closer: null,
+    follows: [['t1', 't2']],
+    arc: 'twoWaves',
+    arcBalance: 1,
+    energySteps: true,
+    keyLift: true,
+    keysFollowArc: true,
+  },
   chosenMix: { order: ['t1', 't2'] },
   lastSave: {
     playlistId: 'abc',
@@ -82,6 +91,40 @@ describe('sets repository', () => {
       ...linkless,
       playlistId: null,
     })
+  })
+
+  it('reads a set stored before the energy switches, with them off', async () => {
+    const before = fullSet('old')
+    const { opener, closer, follows, arc } = before.mix
+    const oldMix = { opener, closer, follows, arc }
+    const repo = createSetsRepo(createMemoryStore({ old: stored({ ...before, mix: oldMix }) }))
+    const { sets, unreadable } = await repo.all()
+    expect(unreadable).toEqual([])
+    expect(sets[0]?.mix).toEqual({
+      ...oldMix,
+      arcBalance: 0,
+      energySteps: false,
+      keyLift: false,
+      keysFollowArc: false,
+    })
+  })
+
+  it('reads a set stored with the arc’s three-way signal as the balance it meant', async () => {
+    const before = fullSet('old')
+    const { opener, closer, follows, arc, energySteps, keyLift, keysFollowArc } = before.mix
+    const mix = { opener, closer, follows, arc, energySteps, keyLift, keysFollowArc }
+    const repo = createSetsRepo(
+      createMemoryStore({
+        bpm: stored({ ...before, id: 'bpm', mix: { ...mix, arcSignal: 'bpm' } }),
+        energy: stored({ ...before, id: 'energy', mix: { ...mix, arcSignal: 'energy' } }),
+        both: stored({ ...before, id: 'both', mix: { ...mix, arcSignal: 'both' } }),
+      }),
+    )
+    const { sets, unreadable } = await repo.all()
+    expect(unreadable).toEqual([])
+    const balance = (id: string) => sets.find((set) => set.id === id)?.mix.arcBalance
+    expect([balance('bpm'), balance('energy'), balance('both')]).toEqual([0, 1, 0.5])
+    expect(sets[0]?.mix).not.toHaveProperty('arcSignal')
   })
 
   it('stores records as { v: 1, data } under the set’s ID', async () => {

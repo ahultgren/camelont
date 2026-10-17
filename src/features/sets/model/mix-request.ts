@@ -1,6 +1,6 @@
 import {
   DEFAULT_PROFILE,
-  profileForArc,
+  profileFor,
   toMixInput,
   type FitRequest,
   type MixConstraints,
@@ -9,8 +9,8 @@ import {
 } from '@/features/mixing'
 import type { TrackFeatures } from '@/features/track-features'
 import type { PickRequest, PickTrack, TrackData } from '../domain/select'
-import type { MixRules } from '../domain/set'
-import type { SetArc, SetTrack } from '../domain/types'
+import type { MixRules, MixShape } from '../domain/set'
+import type { SetTrack } from '../domain/types'
 
 /**
  * The set's tracks and rules in the mixing feature's terms. Pure mapping: a set names
@@ -123,7 +123,7 @@ export function solveRequest(
   inSet: readonly MixTrack[],
   leftOut: readonly MixTrack[],
   rules: MixRules,
-  arc: SetArc,
+  shape: MixShape,
 ): WorkerSolveRequest {
   return {
     tracks: [...inSet, ...leftOut],
@@ -131,12 +131,21 @@ export function solveRequest(
       rules,
       leftOut.map((track) => track.id),
     ),
-    profile: profileForArc(arc),
+    profile: profileFor(shape),
   }
 }
 
 /** Two requests with the same key get the same answer: the solver is deterministic. */
-export function solveKey(request: WorkerSolveRequest, arc: SetArc): string {
+export function solveKey(request: WorkerSolveRequest, shape: MixShape): string {
   const { start, end, follows, excluded } = request.constraints
-  return JSON.stringify(['solve', request.tracks.map(describe), start, end, follows, excluded, arc])
+  const { arc, arcBalance, energySteps, keyLift, keysFollowArc } = shape
+  return JSON.stringify([
+    'solve',
+    request.tracks.map(describe),
+    start,
+    end,
+    follows,
+    excluded,
+    [arc, arcBalance, energySteps, keyLift, keysFollowArc],
+  ])
 }

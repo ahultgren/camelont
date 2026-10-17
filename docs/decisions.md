@@ -381,3 +381,49 @@ again and gets the same mixes. **Chosen by the agent, for the owner to confirm:*
 numbers (no decimal); a level is a pill and a key a rounded rectangle, to tell the two
 coloured chips apart; an energy saved at the level ReccoBeats' value already shows is
 not stored as an override. Amends 42.
+
+### 45. Energy shapes a mix through three switches, as experiments (2026-10-11)
+**Context:** the owner checked ReccoBeats energy by ear and it matches; it says more
+about how a set feels than BPM, while BPM still decides what is danceable next to what.
+The chart's `+`/`−` are the key's direction, a property of the transition, not of the
+tracks (research.md §4). Which of these belongs in the cost, and how strongly, can only
+be judged by listening. **Decision (owner):** build the candidates as separate terms the
+user switches on next to the arc, to compare by ear before settling: the arc follows BPM
+or energy; **energy steps** (a climb between neighbours costs, a fall much less); **key
+lift** (a key move that goes with the change in energy is cheaper, one against it
+dearer). Each is one term in `evaluate`, the tempo term stays in every combination, and
+with all of them off the cost is what it was, so decision 44's "no mix uses energy"
+holds until a switch is on. The weights are first guesses.
+**Rejected for now:** separate named algorithms (three terms give eight combinations
+and show which term does what); phases in place of a curve and a budget for big moves
+(larger builds, to be judged after these); sliders for the weights (next, once it is
+known which terms matter). **Open:** whether any of this becomes the default.
+
+### 46. An arc everything follows: BPM and energy together, and the keys (2026-10-17)
+**Context:** the owner wants to hear a mix where every energy variable agrees with the
+arc: where the line rises only perfect and `+` moves, where it falls only perfect and
+`−`, and where it is high both BPM and energy are high. **Decision (owner):** two more
+options next to decision 45's: the arc can follow **both** BPM and energy (each pulled to
+the line on its own range, so a track pays for whichever is off), and **Keys follow
+arc** charges 10 for each move against the slope (a mood change counts as against both
+ways). 10 is more than any move in the chart, so a move goes against the arc only when
+the set has no other order; the mix headline says how many do and the chart marks them.
+**Rejected:** a hard rule. Many sets would then have no mix at all, and "no mix" says
+less than "one move against the arc, here". **Known limit:** a track that is high on one
+measure and low on the other (Brother: 78 BPM, energy 9) costs the same anywhere on a
+"both" arc, so the keys and tempo decide where it goes.
+
+### 47. What the arc follows is a slider from BPM to energy (2026-10-17)
+**Context:** the owner wants to change how much energy counts against BPM while
+listening, and saw the energy line swing more than BPM. Measured on the WCS set with the
+arc by both and the keys following it: the two sit about as far from the line (0.21 and
+0.25 of their ranges), but energy moves 0.30 between neighbours against BPM's 0.24,
+because the tempo term smooths BPM and nothing smooths energy unless Energy steps is on.
+The chart also overstated it: energy filled the plot while BPM sat on a padded axis.
+**Decision (owner):** the three-way BPM / Energy / Both choice becomes one slider. In the
+middle both count in full (decision 46's "both"); toward an end the other fades out
+(weight min(1, 2 × its share)), so each end is exactly the single-measure arc. The chart
+draws energy and the arc's target over the span of the set's BPM, so heights compare as
+the arc compares them. The smoothing between neighbours is not part of the slider: tempo
+smoothing stays (BPM decides what is danceable), and energy is smoothed by Energy steps.
+A set stored with the three-way signal reads as the balance it meant.

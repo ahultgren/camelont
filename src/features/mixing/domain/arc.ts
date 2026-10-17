@@ -1,12 +1,17 @@
+import type { MoveTone } from '@/shared/music'
 import type { MixTrack } from './types'
 
 /**
- * The optional energy arc: a target curve over set position, a signal it applies to,
- * and a weight. Presets are data; signals are functions. Removing arcs means deleting
- * this file and the one term in evaluate.ts.
+ * The optional arc: a target curve over set position, the signal it applies to (BPM,
+ * energy, or both at once), a weight, and optionally a cost for key moves that go
+ * against its slope. Presets are data; measures are functions. Removing arcs means
+ * deleting this file and the one term in evaluate.ts.
  */
 export type ArcPresetId = 'twoWaves' | 'steadyBuild'
-export type ArcSignalId = 'bpm'
+/** What the arc follows; `both` pulls BPM and energy to the line, each on its own range. */
+export type ArcSignalId = 'bpm' | 'energy' | 'both'
+/** A value of a track that an arc can follow. */
+export type ArcMeasure = 'bpm' | 'energy'
 /** What the user picks: one of the presets, or no arc at all. */
 export type ArcChoice = ArcPresetId | 'none'
 
@@ -21,8 +26,18 @@ export interface ArcPreset {
 export interface ArcConfig {
   preset: ArcPresetId
   signal: ArcSignalId
-  /** Cost per unit of deviation per track. */
+  /** Cost per unit of deviation per track, for each measure the signal follows. */
   weight: number
+  /**
+   * Cost of a key move against the arc's slope: where it rises, anything but perfect
+   * and boosts; where it falls, anything but perfect and drops. 0 or absent is off.
+   */
+  slopeWeight?: number
+  /**
+   * For `both`: 0 is BPM only, 1 energy only, 0.5 (the default) both in full. In
+   * between, the far measure fades out: at 0.25 energy counts half as much as BPM.
+   */
+  balance?: number
 }
 
 export const ARC_PRESETS: Record<ArcPresetId, ArcPreset> = {
@@ -73,9 +88,17 @@ export function arcTarget(preset: ArcPreset, position: number): number {
   return last[1]
 }
 
-/** Raw signal value of a track (null when unknown). */
-export const ARC_SIGNALS: Record<ArcSignalId, (track: MixTrack) => number | null> = {
+/** Raw value of a measure for a track (null when unknown). */
+export const ARC_MEASURES: Record<ArcMeasure, (track: MixTrack) => number | null> = {
   bpm: (track) => track.bpm,
+  energy: (track) => track.energy,
+}
+
+/** The measures a signal follows. */
+export const SIGNAL_MEASURES: Record<ArcSignalId, readonly ArcMeasure[]> = {
+  bpm: ['bpm'],
+  energy: ['energy'],
+  both: ['bpm', 'energy'],
 }
 
 export interface SignalRange {
@@ -83,11 +106,23 @@ export interface SignalRange {
   max: number
 }
 
-/** The signal's range over a set of tracks, used to normalise it to 0..1. */
-export function signalRange(tracks: readonly MixTrack[], signal: ArcSignalId): SignalRange | null {
-  const values = tracks.map(ARC_SIGNALS[signal]).filter((v): v is number => v !== null)
+/** A measure's range over a set of tracks, used to normalise it to 0..1. */
+export function signalRange(tracks: readonly MixTrack[], measure: ArcMeasure): SignalRange | null {
+  const values = tracks.map(ARC_MEASURES[measure]).filter((v): v is number => v !== null)
   if (values.length === 0) return null
   return { min: Math.min(...values), max: Math.max(...values) }
+}
+
+/** The range of each measure a signal follows; null when none of them has a value. */
+export type ArcRanges = Partial<Record<ArcMeasure, SignalRange>>
+
+export function arcRanges(tracks: readonly MixTrack[], signal: ArcSignalId): ArcRanges | null {
+  const ranges: ArcRanges = {}
+  for (const measure of SIGNAL_MEASURES[signal]) {
+    const range = signalRange(tracks, measure)
+    if (range) ranges[measure] = range
+  }
+  return Object.keys(ranges).length > 0 ? ranges : null
 }
 
 export function normalise(value: number, range: SignalRange): number {
@@ -98,16 +133,51 @@ export function normalise(value: number, range: SignalRange): number {
 export const arcPosition = (index: number, count: number): number =>
   count <= 1 ? 0 : index / (count - 1)
 
-/** Arc cost of one track at one position (0 when the signal is unknown). */
+/** How much each measure's distance from the line counts. */
+export function measureWeights(arc: ArcConfig): Record<ArcMeasure, number> {
+  if (arc.signal === 'bpm') return { bpm: 1, energy: 0 }
+  if (arc.signal === 'energy') return { bpm: 0, energy: 1 }
+  const balance = arc.balance ?? 0.5
+  return { bpm: Math.min(1, 2 * (1 - balance)), energy: Math.min(1, 2 * balance) }
+}
+
+/** Arc cost of one track at one position: each known measure's distance from the line. */
 export function arcTermCost(
   track: MixTrack,
   index: number,
   count: number,
   arc: ArcConfig,
-  range: SignalRange,
+  ranges: ArcRanges,
 ): number {
-  const value = ARC_SIGNALS[arc.signal](track)
-  if (value === null) return 0
   const target = arcTarget(ARC_PRESETS[arc.preset], arcPosition(index, count))
-  return arc.weight * Math.abs(normalise(value, range) - target)
+  const weights = measureWeights(arc)
+  let deviation = 0
+  for (const measure of SIGNAL_MEASURES[arc.signal]) {
+    const value = ARC_MEASURES[measure](track)
+    const range = ranges[measure]
+    if (value !== null && range) {
+      deviation += weights[measure] * Math.abs(normalise(value, range) - target)
+    }
+  }
+  return arc.weight * deviation
+}
+
+/** A change in the line smaller than this between neighbours counts as level. */
+const FLAT = 0.01
+
+/** Which way the arc goes from each position to the next: 1 up, −1 down, 0 level. */
+export function arcSlopes(preset: ArcPreset, count: number): number[] {
+  const slopes: number[] = []
+  for (let i = 1; i < count; i++) {
+    const rise =
+      arcTarget(preset, arcPosition(i, count)) - arcTarget(preset, arcPosition(i - 1, count))
+    slopes.push(Math.abs(rise) < FLAT ? 0 : Math.sign(rise))
+  }
+  return slopes
+}
+
+/** Whether a move goes against a slope: only perfect and boosts rise, perfect and drops fall. */
+export function againstSlope(tone: MoveTone, slope: number): boolean {
+  if (slope === 0 || tone === 'perfect') return false
+  return !(tone === (slope > 0 ? 'boost' : 'drop'))
 }
