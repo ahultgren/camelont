@@ -12,6 +12,16 @@ const override: Override = {
   trackId: 't1',
   camelot: '6B',
   bpm: 88,
+  energy: 0.4,
+  note: 'Chordify',
+  label: 'Lemon Tree',
+  updatedAt: 5,
+}
+/** An override as it was stored and exported before energy could be set by hand. */
+const withoutEnergy = {
+  trackId: 't1',
+  camelot: '6B',
+  bpm: 88,
   note: 'Chordify',
   label: 'Lemon Tree',
   updatedAt: 5,
@@ -42,12 +52,52 @@ describe('overrides repo', () => {
     await repo.remove('t1')
     expect((await repo.all()).map((o) => o.trackId)).toEqual(['t2'])
   })
+
+  it('keeps an energy set by hand', async () => {
+    const repo = createOverridesRepo(createMemoryStore())
+    await repo.put(override)
+    expect(await repo.all()).toEqual([override])
+  })
+
+  it('loads a record stored before energy could be set, with nothing lost', async () => {
+    const repo = createOverridesRepo(createMemoryStore({ t1: { v: 1, data: withoutEnergy } }))
+    expect(await repo.all()).toEqual([{ ...override, energy: null }])
+  })
+
+  it('reads a record with an energy off the scale as missing', async () => {
+    const repo = createOverridesRepo(
+      createMemoryStore({ t1: { v: 1, data: { ...override, energy: 7 } } }),
+    )
+    expect(await repo.all()).toEqual([])
+  })
 })
 
 describe('import/export', () => {
   it('round-trips an export', () => {
     const text = serialiseOverrides([override], new Date('2026-09-27T00:00:00Z'))
     expect(parseOverridesFile(text)).toEqual({ ok: true, overrides: [override] })
+  })
+
+  it('imports a file exported before energy could be set, with nothing lost', () => {
+    const text = JSON.stringify({
+      app: 'camelont',
+      kind: 'track-overrides',
+      version: 1,
+      exportedAt: '2026-09-27T00:00:00.000Z',
+      overrides: [withoutEnergy],
+    })
+    expect(parseOverridesFile(text)).toEqual({
+      ok: true,
+      overrides: [{ ...override, energy: null }],
+    })
+  })
+
+  it('rejects an energy off the 0..1 scale', () => {
+    const wrong = parseOverridesFile(
+      serialiseOverrides([{ ...override, energy: 7 }], new Date('2026-09-27T00:00:00Z')),
+    )
+    expect(wrong.ok).toBe(false)
+    if (!wrong.ok) expect(wrong.error).toContain('overrides.0.energy')
   })
 
   it('rejects files that are not JSON or not an export', () => {

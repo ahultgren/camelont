@@ -27,10 +27,10 @@ const linkTo = (setId: string) => ({ name: 'set', params: { id: setId } })
   <template v-else>
     <SetsList :link-to="linkTo" @created="(set) => router.push(linkTo(set.id))" />
     <section class="grid gap-2 border-t border-rule pt-5" aria-labelledby="corrections-heading">
-      <h2 id="corrections-heading" class="text-base font-bold">Key and BPM corrections</h2>
+      <h2 id="corrections-heading" class="text-base font-bold">Key, BPM and energy corrections</h2>
       <p class="max-w-[62ch] text-[13px] text-muted">
-        The keys and tempos you set by hand apply in every set and stay on this device. Export them
-        to move them to another browser.
+        The keys, tempos and energies you set by hand apply in every set and stay on this device.
+        Export them to move them to another browser.
       </p>
       <OverridesTransfer />
     </section>

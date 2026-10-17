@@ -42,7 +42,7 @@ src/
     music/             Camelot kernel: CamelotKey type, parse/format, fromPitchClass, keyName, keyHue
     api/               fetch wrapper (base URL, auth header injection, 429 Retry-After, zod parse, typed errors), paginate()
     storage/           KeyValueStore port + IndexedDB adapter + in-memory adapter (tests)
-    ui/                base components: AppButton, AppCard, KeyChip, EnergyMeter, MoveBadge, StatTile, EmptyState, …
+    ui/                base components: AppButton, AppCard, KeyChip, EnergyChip, MoveBadge, StatTile, EmptyState, …
     lib/               seeded PRNG, string hash, assertNever, small pure helpers
 e2e/                   Playwright specs + fixtures + route mocks
 docs/                  spec, architecture, decisions, domain, research, reference
@@ -149,9 +149,17 @@ Spotify ──(playlists/api readPlaylist)──▶ change notice per playlist �
 ## Track features (`features/track-features`)
 
 - `domain/features.ts`: `FetchedFeatures` (the provider's answer, including "not
-  found"), `Override` (null fields are not overridden), and `mergeFeatures` → per-field
-  `Sourced<T> { value, source: 'reccobeats' | 'manual' }`. Overrides always win, field by
-  field. A track is mixable only with both a key and a BPM.
+  found"), `Override` (key, BPM, energy; null fields are not overridden), and
+  `mergeFeatures` → per-field `Sourced<T> { value, source: 'reccobeats' | 'manual' }`.
+  Overrides always win, field by field. A track is mixable only with both a key and a
+  BPM; energy is not needed.
+- **Energy** is 0..1 everywhere in the code (`FetchedFeatures`, `Override`,
+  `TrackFeatures`, `MixTrack`), as ReccoBeats reports it. It is shown and edited as a
+  level, 0–10. `shared/music/energy.ts` is the one implementation of that conversion
+  (`energyLevel`, `energyFromLevel`), of the words for a level (`describeEnergy`) and
+  of its hue (`energyHue`, used by `shared/ui/energy-color.ts`). No mix uses energy
+  (decisions 42 and 44): `solve.test.ts` checks that other energies give the same
+  mixes at the same costs.
 - `api/reccobeats.ts` implements a `FeatureProvider` (the seam for a second opinion):
   batches of 40, rows matched by `href`, each row validated on its own, `key < 0` →
   no key, BPM rounded to 0.1.
@@ -162,6 +170,9 @@ Spotify ──(playlists/api readPlaylist)──▶ change notice per playlist �
 - Export/import: a versioned JSON file (`app: "camelont", kind: "track-overrides",
   version: 1, overrides: [...]`), validated with zod; on import the incoming values
   win, and the report counts added, updated and unchanged overrides.
+- An override's `energy` came after the first stored records and exported files. The
+  schema gives a record without the field `energy: null` ("not overridden"), so both
+  versions stay 1 and nothing stored or exported before is lost.
 - `model/`: `installTrackFeatures(app)` wires storage and the provider;
   `useOverridesStore` (Pinia); `useTrackFeatures(trackIds)` reads the cache, fetches
   the rest per batch (a failed batch degrades to missing data plus a message), and
@@ -169,11 +180,14 @@ Spotify ──(playlists/api readPlaylist)──▶ change notice per playlist �
   changes until the answer for that list is there (an answer says which list it is
   for), so a caller can hold what it showed instead of treating new tracks as lacking
   data.
-- `ui/`: `OverrideDialog` (key, BPM with Half and Double, a note; next to each field a
-  `SourceBadge` says where the value in use came from, and what ReccoBeats answered is
-  quoted above them) and `OverridesTransfer` (export and import, on the home page). The
-  track list itself belongs to the set workspace, which marks only hand-set values on a
-  row (decision 29) and opens this dialog from a row's key or BPM.
+- `ui/`: `OverrideDialog` ("Key, BPM and energy: ‹track›": key, BPM with Half and
+  Double, energy as a level 0–10, a note; next to each field a `SourceBadge` says where
+  the value in use came from, and what ReccoBeats answered is quoted above them) and
+  `OverridesTransfer` (export and import, on the home page). Only a value that differs
+  from the fetched one is stored; energy is compared as the level it is shown as, so
+  saving a track untouched doesn't replace 0.715 with 0.7. The track list itself
+  belongs to the set workspace, which marks only hand-set values on a row (decision 29)
+  and opens this dialog from a row's key, BPM or energy.
 
 ## Mixing engine (`features/mixing/domain`)
 
@@ -296,9 +310,10 @@ workspace (below) composes them.
   toggle buttons; a `MixShaping` as its model).
 - `mix-view`: `TempoArcChart` (hand-built SVG; key-coloured dots, a move badge per
   segment, the tracks' energy as a thin line on its own scale, the arc target dashed on
-  the scale of its signal, each point focusable with a full `aria-label`, and a
-  card on hover/tap/focus with the track's key, BPM and energy), `KeyWheel` and `RunningOrder` (a line per track and a
-  connector per pair: keys, move, BPM change). Pure geometry lives in
+  the scale of its signal, each point focusable with a full `aria-label`, and a card on
+  hover/tap/focus with the track's key, BPM and energy), `KeyWheel` and `RunningOrder`
+  (a line per track with its key, BPM and energy, and a connector per pair: keys, move,
+  BPM change). Pure geometry lives in
   `mix-view/domain/layout.ts`.
   - **One track, everywhere (W6).** Each of the three takes `highlighted` (a track ID)
     and emits `point` (the track under the pointer or with focus, or null); the chart
@@ -596,10 +611,11 @@ WorkspaceScreen          useSetWorkspace + provideWorkspaceUi; top bar (back, na
 - **`TrackRow`.** Title and artist; a reason tag only when the app decided (outside
   range, not picked, picked, needs key/BPM, in ‹playlist›; "looking up" while a new
   track has no status); the pairs it is in ("after …", "then …"; pointing at one
-  highlights the partner, a click shows it); key (`KeyChip`) and BPM as buttons into
-  the edit dialog (a pointer, a frame on hover, "Edit key and BPM" in the tooltip and
-  the accessible name), with a pencil only on a value set by hand; the energy
-  (`EnergyMeter`, display only, hidden at phone width); one group of four toggles
+  highlights the partner, a click shows it); key (`KeyChip`: the Camelot code, with
+  the key name in the tooltip), BPM and energy (`EnergyChip`: the level, 0–10, on a
+  chip coloured by it) as buttons into the edit dialog (a pointer, a frame on hover,
+  "Edit key, BPM and energy" in the tooltip and the accessible name), with a pencil
+  only on a value set by hand, at every width; one group of four toggles
   (`setRole`, at most one on); and the link button. Every row carries its status in
   the spec's words (`statusLabel`) for assistive tech; left-out rows are dimmed, their
   controls are not. Rows use `content-visibility: auto`, so a pool of 1,000 costs
@@ -726,6 +742,6 @@ coverage, not a number.
   files.
 - Errors: typed `Result`-style returns in domain code where failure is expected
   (infeasible, invalid constraints). Exceptions only for programmer errors and I/O.
-- UI text: sentence case, plain English, and keys always in both notations via
-  `KeyChip`.
+- UI text: sentence case, plain English, and a key always as its Camelot code via
+  `KeyChip`, which carries the key name as tooltip and sr-only text (decision 43).
 - Accessibility: every interactive SVG element is focusable with an `aria-label`.

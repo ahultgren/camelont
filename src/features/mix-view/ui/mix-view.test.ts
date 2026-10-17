@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/vue'
+import { fireEvent, render, screen, within } from '@testing-library/vue'
 import { describe, expect, it } from 'vitest'
 import { DEFAULT_PROFILE, evaluateMix, withArc, type MixTrack } from '@/features/mixing'
 import { parseCamelot } from '@/shared/music'
@@ -52,11 +52,12 @@ describe('TempoArcChart', () => {
     expect(screen.getByTestId('point-card')).toHaveTextContent('175 BPM')
   })
 
-  it('labels every point with position, title, both key notations, BPM and the move in', () => {
+  it('labels every point with position, title, key code and name, BPM and the move in', () => {
     render(TempoArcChart, { props: { mix, info } })
     const points = screen.getAllByRole('img')
     expect(points).toHaveLength(20)
-    expect(points[0]).toHaveAccessibleName('1. Brother, 12B, E major, 78 BPM')
+    // Brother's energy is known (0.929); Love Is has none.
+    expect(points[0]).toHaveAccessibleName('1. Brother, 12B, E major, 78 BPM, energy 9 of 10')
     expect(points[1]).toHaveAccessibleName('2. Love Is, 11B, A major, 88 BPM, energy − from 12B')
     for (const p of points) expect(p).toHaveAttribute('tabindex', '0')
   })
@@ -69,10 +70,12 @@ describe('TempoArcChart', () => {
     const card = screen.getByTestId('point-card')
     expect(card).toHaveTextContent('7. Pompeii')
     expect(card).toHaveTextContent('Artist A, B')
-    expect(card).toHaveTextContent('11B · A major')
+    // Keys as Camelot codes: the name is on the point's label, not spelled out here.
+    expect(within(card).getByTestId('key')).toHaveTextContent(/^11B · A major$/)
+    expect(within(card).getByText('· A major')).toHaveClass('sr-only')
     expect(card).toHaveTextContent('127.4 BPM')
-    expect(card).toHaveTextContent('Energy 72 of 100')
-    expect(card).toHaveTextContent('− energy − from 12B · E major')
+    expect(within(card).getByTestId('energy')).toHaveTextContent(/^7Energy 7 of 10$/)
+    expect(card).toHaveTextContent(/− energy − from 12B$/)
     await fireEvent.blur(pompeii)
     expect(screen.queryByTestId('point-card')).toBeNull()
   })
@@ -174,12 +177,39 @@ describe('KeyWheel', () => {
 })
 
 describe('RunningOrder', () => {
+  it('shows each track with its key, BPM and energy', () => {
+    render(RunningOrder, { props: { mix, info } })
+    const line = (title: string) => {
+      const item = screen
+        .getByText(title, { selector: '[data-testid="order-title"]' })
+        .closest('li')
+      if (!item) throw new Error(title)
+      return within(item)
+    }
+    const brother = line('Brother')
+    expect(brother.getByTestId('key')).toHaveTextContent(/^12B · E major$/)
+    expect(brother.getByText('78')).toBeInTheDocument()
+    expect(brother.getByTestId('energy')).toHaveTextContent(/^9Energy 9 of 10$/)
+    expect(brother.getByTestId('energy')).toHaveAttribute('title', 'Energy 9 of 10')
+    // A track without one says so.
+    expect(line('Love Is').getByTestId('energy')).toHaveTextContent(/^–Energy unknown$/)
+    expect(screen.getAllByTestId('energy')).toHaveLength(order.length)
+  })
+
   it('connects each pair with keys, move and BPM change', () => {
     render(RunningOrder, { props: { mix, info } })
-    expect(screen.getAllByText(/12B → 11B · energy −/)[0]).toHaveTextContent('+10 BPM')
+    const connector = screen.getAllByText(/12B → 11B · energy −/)[0]
+    expect(connector).toHaveTextContent('+10 BPM')
     expect(screen.getByRole('list', { name: 'Running order' })).toBeInTheDocument()
-    // Every key in both notations.
-    expect(screen.getAllByText('· A major').length).toBeGreaterThan(0)
+    // Keys are Camelot codes; the names are in the tooltips, and in the text for
+    // assistive tech.
+    expect(connector).toHaveAttribute('title', 'E major → A major')
+    const names = screen.getAllByText('· A major')
+    expect(names.length).toBeGreaterThan(0)
+    for (const name of names) {
+      expect(name).toHaveClass('sr-only')
+      expect(name.parentElement).toHaveAttribute('title', 'A major')
+    }
   })
 
   it('has a pin on every connector, and says which pairs are kept together', async () => {

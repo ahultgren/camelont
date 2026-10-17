@@ -7,7 +7,7 @@ export interface ImportReport {
 }
 
 const same = (a: Override, b: Override) =>
-  a.camelot === b.camelot && a.bpm === b.bpm && a.note === b.note
+  a.camelot === b.camelot && a.bpm === b.bpm && a.energy === b.energy && a.note === b.note
 
 /** Import merge: incoming overrides win; the report says what changed. */
 export function mergeOverrides(

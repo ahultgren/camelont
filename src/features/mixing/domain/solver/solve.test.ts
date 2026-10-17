@@ -164,6 +164,36 @@ describe('solveMix on the WCS set', () => {
   })
 })
 
+describe('solveMix and energy', () => {
+  // Energy is shown and can be set by hand, but no mix uses it: the same tracks with
+  // other energies give the same mixes at the same costs, with and without an arc.
+  it.each([
+    ['no arc', DEFAULT_PROFILE],
+    ['two waves', withArc(DEFAULT_PROFILE, { preset: 'twoWaves', signal: 'bpm', weight: 8 })],
+  ])(
+    'finds the same mixes at the same costs whatever the energies (%s)',
+    { timeout: 60_000 },
+    (_name, profile) => {
+      const mixes = (energyOf: (track: MixTrack, i: number) => number | null) =>
+        solved(
+          solveMix({
+            tracks: tracks.map((track, i) => ({ ...track, energy: energyOf(track, i) })),
+            constraints: NO_CONSTRAINTS,
+            profile,
+            // Keep the safety net out of the way, so a busy machine can't change a result.
+            timeLimitMs: 30_000,
+          }),
+        ).candidates.map((mix) => ({ order: ids(mix.order), cost: mix.totalCost }))
+
+      const asFetched = mixes((track) => track.energy)
+      expect(asFetched.length).toBeGreaterThan(1)
+      expect(mixes(() => null)).toEqual(asFetched)
+      // Every level from 0 to 10, the other way round from track to track.
+      expect(mixes((_track, i) => 1 - (i % 11) / 10)).toEqual(asFetched)
+    },
+  )
+})
+
 describe('solveMix at 100 tracks', () => {
   const rng = createPrng(2026)
   const big: MixTrack[] = Array.from({ length: 100 }, (_, i) => ({

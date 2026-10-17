@@ -64,9 +64,11 @@ test('works on a set from two playlists, finds it as left, and saves it', async 
   // Brother and Lemon Tree are in both playlists: the first that takes a track decides it.
   await expect(row(page, 'Slow ones', 'Brother').getByTestId('reason')).toHaveText('in WCS')
 
-  // Key and BPM look like the way in that they are: a pointer, and a frame on hover.
+  // Key, BPM and energy look like the way in that they are: a pointer, and a frame on
+  // hover.
   const key = row(page, 'WCS', 'Pompeii').getByRole('button', { name: /^Key of Pompeii/ })
   const bpm = row(page, 'WCS', 'Pompeii').getByRole('button', { name: /^BPM of Pompeii/ })
+  const energy = row(page, 'WCS', 'Pompeii').getByRole('button', { name: /^Pompeii: Energy/ })
   const look = (button: typeof key) =>
     button.evaluate((el) => {
       const style = getComputedStyle(el)
@@ -74,13 +76,19 @@ test('works on a set from two playlists, finds it as left, and saves it', async 
     })
   const rowHeight = async () => (await row(page, 'WCS', 'Pompeii').boundingBox())?.height
   const height = await rowHeight()
-  for (const button of [key, bpm]) {
+  for (const button of [key, bpm, energy]) {
     const resting = await look(button)
     expect(resting.cursor).toBe('pointer')
     await button.hover()
     expect((await look(button)).border).not.toBe(resting.border)
-    await expect(button).toHaveAttribute('title', 'Edit key and BPM')
+    await expect(button).toHaveAttribute('title', /Edit key, BPM and energy$/)
   }
+  // The key is its Camelot code; the key name is in the tooltip.
+  await expect(key).toHaveAttribute('title', 'A major. Edit key, BPM and energy')
+  await expect(key.getByText('· A major')).toHaveClass(/sr-only/)
+  // Energy is a level out of 10 (ReccoBeats says 0.715), on a chip coloured by the level.
+  await expect(energy).toHaveAttribute('title', 'Energy 7 of 10. Edit key, BPM and energy')
+  await expect(energy.getByTestId('energy')).toHaveCSS('background-color', 'rgb(206, 218, 98)')
   expect(await rowHeight()).toBe(height)
   await page.mouse.move(0, 0)
 
@@ -88,17 +96,19 @@ test('works on a set from two playlists, finds it as left, and saves it', async 
   await row(page, 'WCS', 'Love Is')
     .getByRole('button', { name: /^Key of Love Is/ })
     .click()
-  const dialog = page.getByRole('dialog', { name: /Key and BPM: Love Is/ })
+  const dialog = page.getByRole('dialog', { name: /Key, BPM and energy: Love Is/ })
   await expect(dialog.getByText('ReccoBeats has no data for this track.')).toBeVisible()
   await dialog.getByLabel('Key').selectOption('11B')
   await dialog.getByLabel('BPM').fill('88')
+  await dialog.getByLabel('Energy').fill('4')
   await dialog.getByLabel(/Note or source/).fill('Chordify')
   await dialog.getByRole('button', { name: 'Save' }).click()
   await expect(dialog).toBeHidden()
   await expect(lastChange(page)).toContainText('17 → 18 tracks')
   await expect(lastChange(page)).toContainText('+ Love Is')
   await expect(row(page, 'WCS', 'Love Is')).toContainText('11B · A major')
-  await expect(row(page, 'WCS', 'Love Is').getByTestId('by-hand')).toHaveCount(2)
+  await expect(row(page, 'WCS', 'Love Is').getByTestId('by-hand')).toHaveCount(3)
+  await expect(row(page, 'WCS', 'Love Is').getByTestId('energy')).toHaveText('4Energy 4 of 10')
   await mixSettled(page)
 
   // A BPM range on WCS: Brother (78) no longer passes there, so Slow ones takes it;
@@ -380,8 +390,9 @@ test('explains why no mix is possible, with the way out next to it', async ({ pa
 
   // The chart's card, and the keys used.
   await page.getByRole('img', { name: /^7\. Pompeii, 11B, A major, 127.4 BPM/ }).focus()
-  await expect(page.getByTestId('point-card')).toContainText('11B · A major')
-  await expect(page.getByTestId('point-card')).toContainText('energy − from 12B · E major')
+  await expect(page.getByTestId('point-card').getByTestId('key')).toHaveText('11B · A major')
+  await expect(page.getByTestId('point-card').getByTestId('energy')).toHaveText('7Energy 7 of 10')
+  await expect(page.getByTestId('point-card')).toContainText(/energy − from 12B$/)
   await expect(row(page, 'WCS', 'Pompeii')).toHaveAttribute('data-highlighted', '')
   await expect(page.getByText('7B×4')).toBeVisible()
 
@@ -391,7 +402,7 @@ test('explains why no mix is possible, with the way out next to it', async ({ pa
   const problems = page.getByTestId('problems')
   await expect(problems.getByRole('heading', { name: 'No mix yet' })).toBeVisible()
   await expect(problems).toContainText(
-    'Bloodstream (2A · E♭ minor) can’t follow or precede any other included track',
+    'Bloodstream (2A) can’t follow or precede any other included track',
   )
   await expect(problems).toContainText('Left-out tracks that would fit: Stolen Dance')
   await expect(page.getByRole('button', { name: 'Save to Spotify' })).toBeDisabled()
@@ -569,6 +580,10 @@ test('the workspace at phone width: tabs under the chart, no sideways scroll', a
   const pompeii = row(page, 'WCS', 'Pompeii')
   await pompeii.scrollIntoViewIfNeeded()
   await expect(pompeii.getByTestId('track-title')).toBeInViewport()
+  // Key, BPM and energy are on the row at this width too.
+  for (const name of [/^Key of Pompeii/, /^BPM of Pompeii/, /^Pompeii: Energy 7 of 10/]) {
+    await expect(pompeii.getByRole('button', { name })).toBeInViewport()
+  }
   await pompeii.getByRole('button', { name: 'Exclude' }).click()
   await expect(pompeii).toHaveAttribute('data-left-out', '')
   expect(await fits()).toBe(true)
@@ -582,6 +597,10 @@ test('the workspace at phone width: tabs under the chart, no sideways scroll', a
   await page.getByRole('tab', { name: 'Order' }).click()
   await expect(page.getByRole('list', { name: 'Running order' })).toBeVisible()
   await expect(page.getByRole('button', { name: /^Keep .+ together$/ }).first()).toBeVisible()
+  // Every track line has its energy.
+  const order = page.getByRole('list', { name: 'Running order' })
+  await expect(order.getByTestId('energy')).toHaveCount(await order.getByTestId('key').count())
+  await expect(order.getByTestId('energy').first()).toBeVisible()
   expect(await fits()).toBe(true)
   // The chart is still on top.
   await expect(page.getByTestId('tempo-chart')).toBeInViewport()

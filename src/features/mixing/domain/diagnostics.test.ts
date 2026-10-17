@@ -29,9 +29,9 @@ describe('diagnose on the WCS set', () => {
     expect(d).toMatchObject({ excludedOptions: [counting] })
     if (!d) return
     const message = describeDiagnostic(d, name)
-    expect(message).toMatch(/^Bloodstream \(2A · E♭ minor\) can’t follow any included track/)
+    expect(message).toMatch(/^Bloodstream \(2A\) can’t follow any included track/)
     expect(message).toContain('12A')
-    expect(message).toContain('Excluded tracks that would fit: Counting Stars (12A · C♯ minor)')
+    expect(message).toContain('Excluded tracks that would fit: Counting Stars (12A)')
   })
 
   it('flags a track with no neighbour at all', () => {

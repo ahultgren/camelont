@@ -6,6 +6,7 @@ const o = (trackId: string, bpm: number | null, extra: Partial<Override> = {}): 
   trackId,
   camelot: null,
   bpm,
+  energy: null,
   note: null,
   label: null,
   updatedAt: 1,
@@ -28,6 +29,18 @@ describe('mergeOverrides', () => {
       ['b', 95],
       ['c', 120],
     ])
+  })
+
+  it('counts a different energy as an update', () => {
+    const existing = new Map([['a', o('a', 100, { energy: 0.4 })]])
+    expect(mergeOverrides(existing, [o('a', 100, { energy: 0.4 })]).report).toEqual({
+      added: 0,
+      updated: 0,
+      unchanged: 1,
+    })
+    const { changed, report } = mergeOverrides(existing, [o('a', 100, { energy: 0.8 })])
+    expect(report).toEqual({ added: 0, updated: 1, unchanged: 0 })
+    expect(changed.map((x) => x.energy)).toEqual([0.8])
   })
 })
 

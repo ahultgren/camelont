@@ -27,6 +27,14 @@ async function prepare(page: Page) {
   await row(page, 'WCS', 'Pompeii').getByRole('button', { name: 'Always include' }).click()
   await row(page, 'WCS', 'Shotgun').getByRole('button', { name: 'Exclude' }).click()
   await row(page, 'WCS', 'Love Is').getByRole('button', { name: 'Opener' }).click()
+  // One energy set by hand, so its mark is in the picture.
+  await row(page, 'WCS', 'Girl on Fire')
+    .getByRole('button', { name: /: Energy/ })
+    .click()
+  const edit = page.getByRole('dialog', { name: /^Key, BPM and energy: Girl on Fire/ })
+  await edit.getByLabel('Energy').fill('8')
+  await edit.getByRole('button', { name: 'Save' }).click()
+  await expect(edit).toBeHidden()
   await page.getByRole('radio', { name: 'Two waves' }).check({ force: true })
   await mixSettled(page)
 }
@@ -86,6 +94,22 @@ test('Save to Spotify: the first save, and saving again', async ({ page }) => {
   await expect(dialog.getByRole('radio', { name: /^Replace/ })).toBeChecked()
   await page.screenshot({ path: `${DIR}/save-again.png` })
 })
+
+for (const scheme of ['light', 'dark'] as const) {
+  test(`the edit dialog, ${scheme}`, async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 720 })
+    await page.emulateMedia({ colorScheme: scheme })
+    await prepare(page)
+    // Price Tag: the key and the energy are ReccoBeats' own, the BPM is set by hand.
+    await row(page, 'WCS', 'Price Tag')
+      .getByRole('button', { name: /^BPM of/ })
+      .click()
+    await expect(
+      page.getByRole('dialog', { name: /^Key, BPM and energy: Price Tag/ }),
+    ).toBeVisible()
+    await page.screenshot({ path: `${DIR}/edit-dialog-${scheme}.png` })
+  })
+}
 
 test('a playlist header with a limit and its pick method', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 })

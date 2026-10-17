@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import { shallowRef } from 'vue'
 import { err, ok, type Result } from '@/shared/lib'
 import { parseOverridesFile, serialiseOverrides } from '../api/repositories'
-import type { Override } from '../domain/features'
+import { overridesValue, type Override } from '../domain/features'
 import { mergeOverrides, type ImportReport } from '../domain/overrides'
 import { useTrackFeatureDeps } from './deps'
 
@@ -27,7 +27,7 @@ export const useOverridesStore = defineStore('overrides', () => {
   }
 
   async function save(input: OverrideInput): Promise<void> {
-    if (input.camelot === null && input.bpm === null && !input.note) return clear(input.trackId)
+    if (!overridesValue(input) && !input.note) return clear(input.trackId)
     const override: Override = { ...input, updatedAt: deps.now() }
     replace([override])
     await deps.overrides.put(override)

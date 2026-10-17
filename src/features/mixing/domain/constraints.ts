@@ -1,4 +1,3 @@
-import { formatKey } from '@/shared/music'
 import { moveBetween } from './chart'
 import type { MixTrack } from './types'
 
@@ -126,9 +125,9 @@ export function validateConstraints(
 
 export type TrackNamer = (id: string) => string
 
-/** "Bloodstream (2A · E♭ minor)"-style name for messages. */
+/** "Bloodstream (2A)"-style name for messages: the key as its Camelot code (decision 43). */
 export function describeTrack(track: MixTrack | undefined, id: string): string {
-  return track ? `${track.label} (${formatKey(track.camelot)})` : `an unknown track (${id})`
+  return track ? `${track.label} (${track.camelot})` : `an unknown track (${id})`
 }
 
 /** Plain-English message for a constraint error. */
