@@ -1,5 +1,15 @@
 import { describe, expect, it } from 'vitest'
-import { ARC_PRESETS, arcPosition, arcTarget, arcTermCost, normalise, signalRange } from './arc'
+import {
+  againstSlope,
+  ARC_PRESETS,
+  arcPosition,
+  arcRanges,
+  arcSlopes,
+  arcTarget,
+  arcTermCost,
+  normalise,
+  signalRange,
+} from './arc'
 import type { MixTrack } from './types'
 
 const track = (bpm: number): MixTrack => ({
@@ -42,7 +52,7 @@ describe('signals', () => {
     const tracks = [withEnergy(0.4), withEnergy(null), withEnergy(0.9)]
     expect(signalRange(tracks, 'energy')).toEqual({ min: 0.4, max: 0.9 })
     const arc = { preset: 'steadyBuild', signal: 'energy', weight: 10 } as const
-    const range = { min: 0.4, max: 0.9 }
+    const range = { energy: { min: 0.4, max: 0.9 } }
     // last position: target 1; energy 0.4 is the lowest in the set
     expect(arcTermCost(withEnergy(0.4), 4, 5, arc, range)).toBeCloseTo(10)
     expect(arcTermCost(withEnergy(null), 4, 5, arc, range)).toBe(0)
@@ -55,8 +65,56 @@ describe('signals', () => {
 
   it('costs weight × deviation', () => {
     const arc = { preset: 'steadyBuild', signal: 'bpm', weight: 10 } as const
-    const range = { min: 80, max: 120 }
+    const range = { bpm: { min: 80, max: 120 } }
     // last position: target 1; bpm 100 normalises to 0.5
     expect(arcTermCost(track(100), 4, 5, arc, range)).toBeCloseTo(5)
+  })
+})
+
+describe('an arc that follows BPM and energy together', () => {
+  const track2 = (bpm: number, energy: number | null): MixTrack => ({ ...track(bpm), energy })
+
+  it('has a range for each, and charges both deviations', () => {
+    const tracks = [track2(80, 0.4), track2(120, 0.9)]
+    const ranges = arcRanges(tracks, 'both')
+    expect(ranges).toEqual({ bpm: { min: 80, max: 120 }, energy: { min: 0.4, max: 0.9 } })
+    const arc = { preset: 'steadyBuild', signal: 'both', weight: 10 } as const
+    if (!ranges) throw new Error('no ranges')
+    // Last position: target 1. Fast and intense: nothing to pay.
+    expect(arcTermCost(track2(120, 0.9), 4, 5, arc, ranges)).toBeCloseTo(0)
+    // Fast but calm (or the reverse) pays for the half that is low.
+    expect(arcTermCost(track2(120, 0.4), 4, 5, arc, ranges)).toBeCloseTo(10)
+    expect(arcTermCost(track2(80, 0.9), 4, 5, arc, ranges)).toBeCloseTo(10)
+    expect(arcTermCost(track2(80, null), 4, 5, arc, ranges)).toBeCloseTo(10)
+  })
+
+  it('has no ranges for a set with nothing to measure', () => {
+    expect(arcRanges([track2(80, null)], 'energy')).toBeNull()
+    expect(arcRanges([track2(80, null)], 'both')).toEqual({ bpm: { min: 80, max: 80 } })
+  })
+})
+
+describe('the slope of the arc', () => {
+  it('rises all the way in a steady build', () => {
+    expect(arcSlopes(ARC_PRESETS.steadyBuild, 5)).toEqual([1, 1, 1, 1])
+  })
+
+  it('rises, falls, rises, falls and rises in two waves', () => {
+    const slopes = arcSlopes(ARC_PRESETS.twoWaves, 20)
+    expect(slopes).toHaveLength(19)
+    const runs = slopes.filter((s, i) => s !== slopes[i - 1])
+    expect(runs).toEqual([1, -1, 1, -1, 1])
+  })
+
+  it('lets only perfect and + moves rise, and only perfect and − moves fall', () => {
+    expect(againstSlope('perfect', 1)).toBe(false)
+    expect(againstSlope('boost', 1)).toBe(false)
+    expect(againstSlope('drop', 1)).toBe(true)
+    expect(againstSlope('mood', 1)).toBe(true)
+    expect(againstSlope('perfect', -1)).toBe(false)
+    expect(againstSlope('drop', -1)).toBe(false)
+    expect(againstSlope('boost', -1)).toBe(true)
+    expect(againstSlope('mood', -1)).toBe(true)
+    expect(againstSlope('drop', 0)).toBe(false)
   })
 })

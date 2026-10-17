@@ -85,6 +85,7 @@ describe('duplicateSet', () => {
       arcSignal: 'energy',
       energySteps: true,
       keyLift: false,
+      keysFollowArc: false,
     },
     chosenMix: { order: ['t1', 't2'] },
     lastSave: {

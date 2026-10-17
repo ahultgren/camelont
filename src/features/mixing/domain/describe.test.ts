@@ -19,6 +19,7 @@ describe('saved playlist text', () => {
       arcSignal: 'energy',
       energySteps: true,
       keyLift: true,
+      keysFollowArc: false,
     } as const
     expect(mixDescription(mix, DEFAULT_PROFILE, shaped, 'WCS')).toMatch(
       /arc: Two waves by energy, energy steps, key lift\.$/,
@@ -27,6 +28,19 @@ describe('saved playlist text', () => {
       /arc: key lift\.$/,
     )
     expect(mixDescription(mix, DEFAULT_PROFILE, NO_SHAPING, 'WCS')).toMatch(/arc: none\.$/)
+    const aligned = {
+      ...NO_SHAPING,
+      arc: 'twoWaves',
+      arcSignal: 'both',
+      keysFollowArc: true,
+    } as const
+    expect(mixDescription(mix, DEFAULT_PROFILE, aligned, 'WCS')).toMatch(
+      /arc: Two waves by BPM and energy, keys follow the arc\.$/,
+    )
+    // Without an arc there is nothing for the keys to follow.
+    expect(
+      mixDescription(mix, DEFAULT_PROFILE, { ...NO_SHAPING, keysFollowArc: true }, 'WCS'),
+    ).toMatch(/arc: none\.$/)
   })
 
   it('stays within Spotify’s 300 characters', () => {

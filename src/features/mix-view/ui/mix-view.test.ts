@@ -106,6 +106,22 @@ describe('TempoArcChart', () => {
     expect(screen.queryByTestId('energy-line')).toBeNull()
   })
 
+  it('marks the moves against the arc when the keys are to follow it', () => {
+    const aligned = evaluateMix(
+      order,
+      withArc(DEFAULT_PROFILE, { preset: 'twoWaves', signal: 'both', weight: 8, slopeWeight: 10 }),
+    )
+    const { container } = render(TempoArcChart, { props: { mix: aligned, info } })
+    const marked = container.querySelectorAll('rect[data-against]')
+    expect(marked.length).toBe(aligned.arc?.against.filter(Boolean).length)
+    expect(marked.length).toBeGreaterThan(0)
+    // Brother → Love Is: a − where the arc climbs.
+    expect(screen.getAllByRole('img')[1]).toHaveAccessibleName(/from 12B, against the arc$/)
+    // Without the rule nothing is marked.
+    const plain = render(TempoArcChart, { props: { mix, info } })
+    expect(plain.container.querySelectorAll('rect[data-against]')).toHaveLength(0)
+  })
+
   it('draws the target of an arc that follows energy on the energy scale', () => {
     const byEnergy = evaluateMix(
       order,

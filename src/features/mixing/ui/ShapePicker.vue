@@ -18,6 +18,11 @@ const change = (part: Partial<MixShaping>) => {
 const SIGNALS: { value: ArcSignalId; name: string; description: string }[] = [
   { value: 'bpm', name: 'BPM', description: 'The arc follows the tempo.' },
   { value: 'energy', name: 'Energy', description: 'The arc follows the tracks’ energy.' },
+  {
+    value: 'both',
+    name: 'Both',
+    description: 'The arc follows tempo and energy together: high on the line means both are high.',
+  },
 ]
 const SWITCHES = [
   {
@@ -69,6 +74,25 @@ const SWITCHES = [
         </label>
       </div>
     </fieldset>
+    <button
+      type="button"
+      class="rounded-md border px-2 py-1 text-xs disabled:cursor-not-allowed disabled:opacity-50"
+      :class="
+        model.keysFollowArc && model.arc !== 'none'
+          ? 'border-accent bg-accent font-medium text-surface'
+          : 'border-rule text-ink enabled:hover:bg-band'
+      "
+      :disabled="model.arc === 'none'"
+      :aria-pressed="model.keysFollowArc"
+      :title="
+        model.arc === 'none'
+          ? 'Choose an arc first.'
+          : 'Where the arc rises, only perfect and + moves; where it falls, only perfect and − moves.'
+      "
+      @click="change({ keysFollowArc: !model.keysFollowArc })"
+    >
+      Keys follow arc
+    </button>
     <button
       v-for="option in SWITCHES"
       :key="option.key"

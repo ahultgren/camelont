@@ -24,6 +24,7 @@ const shape = computed<MixShaping>({
           arcSignal: mix.arcSignal,
           energySteps: mix.energySteps,
           keyLift: mix.keyLift,
+          keysFollowArc: mix.keysFollowArc,
         }
       : NO_SHAPING
   },

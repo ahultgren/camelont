@@ -34,6 +34,7 @@ const fullSet = (id: string, name = 'Friday social'): MixSet => ({
     arcSignal: 'energy',
     energySteps: true,
     keyLift: true,
+    keysFollowArc: true,
   },
   chosenMix: { order: ['t1', 't2'] },
   lastSave: {
@@ -104,6 +105,7 @@ describe('sets repository', () => {
       arcSignal: 'bpm',
       energySteps: false,
       keyLift: false,
+      keysFollowArc: false,
     })
   })
 

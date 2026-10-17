@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { wcsId, wcsOrder } from '@/test/wcs'
 import { DEFAULT_ARC_WEIGHT } from './arc'
 import { evaluateMix, mixTracks, transitionCost } from './evaluate'
-import { DEFAULT_PROFILE, NO_SHAPING, profileFor, withArc } from './profile'
+import { DEFAULT_PROFILE, NO_SHAPING, profileFor, SLOPE_WEIGHT, withArc } from './profile'
 import type { MixTrack } from './types'
 
 const handTuned = mixTracks(wcsOrder('hand_tuned'))
@@ -140,6 +140,7 @@ describe('evaluateMix on the WCS fixture', () => {
         arcSignal: 'energy',
         energySteps: true,
         keyLift: true,
+        keysFollowArc: false,
       })
       const mix = evaluateMix(handTuned, shaped)
       const transitions = mix.transitions.reduce((sum, t) => sum + t.cost, 0)
@@ -147,6 +148,45 @@ describe('evaluateMix on the WCS fixture', () => {
       expect(mix.arc?.range).toEqual({ min: 0.414, max: 0.929 })
       expect(mix.totalCost).toBeCloseTo(transitions + (mix.arc?.cost ?? 0))
       expect(mix.transitions.some((t) => t.energyCost > 0)).toBe(true)
+    })
+  })
+
+  describe('aligned with the arc', () => {
+    const aligned = profileFor({
+      ...NO_SHAPING,
+      arc: 'twoWaves',
+      arcSignal: 'both',
+      keysFollowArc: true,
+    })
+
+    it('pulls BPM and energy to the line, each on its own range', () => {
+      const mix = evaluateMix(handTuned, aligned)
+      expect(mix.arc?.ranges).toEqual({
+        bpm: { min: 78, max: 127.4 },
+        energy: { min: 0.414, max: 0.929 },
+      })
+      // The target is drawn against BPM, the first of the two.
+      expect(mix.arc?.range).toEqual({ min: 78, max: 127.4 })
+    })
+
+    it('marks and charges every move against the slope', () => {
+      const mix = evaluateMix(handTuned, aligned)
+      const against = mix.arc?.against ?? []
+      expect(against).toHaveLength(19)
+      // Brother → Love Is is a − while two waves climbs from the start.
+      expect(mix.transitions[0]?.move).toBe('drop1')
+      expect(against[0]).toBe(true)
+      const count = against.filter(Boolean).length
+      expect(mix.arc?.slopeCost).toBe(count * SLOPE_WEIGHT)
+      const transitions = mix.transitions.reduce((sum, t) => sum + t.cost, 0)
+      expect(mix.totalCost).toBeCloseTo(transitions + (mix.arc?.cost ?? 0))
+    })
+
+    it('marks nothing when the keys are not asked to follow the arc', () => {
+      const loose = profileFor({ ...NO_SHAPING, arc: 'twoWaves', arcSignal: 'both' })
+      const mix = evaluateMix(handTuned, loose)
+      expect(mix.arc?.against.some(Boolean)).toBe(false)
+      expect(mix.arc?.slopeCost).toBe(0)
     })
   })
 

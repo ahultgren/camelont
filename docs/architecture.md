@@ -204,7 +204,8 @@ The heart of the app, pure TS and fully unit tested.
 - `profile.ts`: `MixProfile { id, name, moveCost: Record<Move, number>, clashCost,
   tempoWeight, arc: ArcConfig | null, energyStep: EnergyStep | null, keyLift }`.
   `DEFAULT_PROFILE` reproduces the reference weights (no arc, no energy terms).
-  `MixShaping { arc, arcSignal, energySteps, keyLift }` is what the user sets, and
+  `MixShaping { arc, arcSignal, energySteps, keyLift, keysFollowArc }` is what the user
+  sets, and
   `profileFor(shaping)` the default profile shaped that way; `describeShaping` puts it
   in words for the saved playlist's description.
 - `energy.ts`: the two terms that use a track's energy (research.md §4, decision 45).
@@ -215,13 +216,16 @@ The heart of the app, pure TS and fully unit tested.
 - `tempo.ts`: `tempoGap(a, b)`, the relative gap between two saved BPMs (spec §5.2).
   Nothing halves or doubles a BPM; scoring and every view read `track.bpm`.
 - `arc.ts`: `ArcConfig { preset, signal, weight }`; presets are data (piecewise-linear
-  target curves over position 0..1); signals are functions `MixTrack → number | null`
-  (BPM and energy), normalised over the set's range. `arcTermCost` is the per-track term.
+  target curves over position 0..1); measures are functions `MixTrack → number | null`
+  (BPM and energy), normalised over the set's range, and a signal follows one or both
+  (`SIGNAL_MEASURES`). `arcSlopes` says which way the line goes between neighbours and
+  `againstSlope(tone, slope)` whether a move goes against it. `arcTermCost` is the per-track term.
   Removing arcs means deleting this file and the one term in `evaluate`.
 - `evaluate.ts`: `evaluateMix(order, profile) → EvaluatedMix` (transitions with move,
   move cost times the key-lift factor, tempo cost and energy-step cost, transition cost, arc cost + target curve, total cost, clash count, stats: move
   and tone histograms, peaks, opener, closer, BPM range). `transitionCost` and the arc
-  term are the primitives. **The solver and the UI both use these.** They are the
+  term are the primitives; the arc's evaluation also says which transitions go against
+  its slope (`against`) and what that costs. **The solver and the UI both use these.** They are the
   single source of truth for scoring; a test checks the solver's path cost equals
   `evaluateMix` exactly.
 - `constraints.ts`: `MixConstraints { start, end, follows: [from, to][], excluded }`
@@ -233,12 +237,16 @@ The heart of the app, pure TS and fully unit tested.
   1. `problem.ts`: collapse follow-chains into blocks (a block's in-key is its first
      track, its out-key its last) and build the legal-move digraph between blocks.
      Clashes are never edges. Edge and arc costs are precomputed from `evaluate.ts`.
+     What depends on where a block lands (its arc terms, and moves into and inside it
+     against the arc's slope) is `placementCost(problem, prev, b, pos)`, the one place
+     the search, the local search and `pathCost` add it.
   2. `search.ts`: beam search over partial paths. Each state tracks, per unvisited
      block, how many predecessors and successors are still available; a block that
      can no longer be reached, two blocks that can only follow the current one, or too
      many dead ends prune the state (this is how low-degree tracks like Bloodstream
      get placed instead of stranded). States are ranked by cost so far + a lower bound
-     on the rest (cheapest incoming edges + an exact 1-D bound on the arc term) + a
+     on the rest (cheapest incoming edges + an exact 1-D bound on the arc term when it
+     follows one measure known for every track, else each track's cheapest place) + a
      scarcity penalty (Warnsdorff-style). Extensions are pre-ranked by a cheap
      estimate and only the most promising are materialised. A depth-first search with
      the same pruning is the fallback when the beam loses every path.

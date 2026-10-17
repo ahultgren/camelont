@@ -1,11 +1,15 @@
 import { parseCamelot, type MoveTone } from '@/shared/music'
 import {
+  againstSlope,
   ARC_PRESETS,
   arcPosition,
+  arcRanges,
+  arcSlopes,
   arcTarget,
   arcTermCost,
-  signalRange,
+  SIGNAL_MEASURES,
   type ArcConfig,
+  type ArcRanges,
   type SignalRange,
 } from './arc'
 import { MOVE_META, moveBetween, type MoveOrClash } from './chart'
@@ -45,10 +49,17 @@ export interface MixStats {
 
 export interface ArcEvaluation {
   config: ArcConfig
+  /** Distance from the line, plus `slopeCost`. */
   cost: number
+  /** The range the target is drawn against: the first measure the signal follows. */
   range: SignalRange
+  ranges: ArcRanges
   /** Target level (0..1) at each position. */
   target: number[]
+  /** Per transition: a key move against the arc's slope, when the profile scores that. */
+  against: boolean[]
+  /** What the moves against the slope cost. */
+  slopeCost: number
 }
 
 export interface EvaluatedMix {
@@ -83,9 +94,15 @@ export function transitionCost(from: MixTrack, to: MixTrack, profile: MixProfile
   }
 }
 
-/** The arc's signal range over the whole set being mixed (the solver uses it too). */
-export function arcRange(tracks: readonly MixTrack[], profile: MixProfile): SignalRange | null {
-  return profile.arc ? signalRange(tracks, profile.arc.signal) : null
+/** The arc's ranges over the whole set being mixed (the solver uses them too). */
+export function arcRangesOf(tracks: readonly MixTrack[], profile: MixProfile): ArcRanges | null {
+  return profile.arc ? arcRanges(tracks, profile.arc.signal) : null
+}
+
+/** Which way the profile's arc goes between neighbours, if moves are to follow it. */
+export function slopesOf(profile: MixProfile, count: number): number[] | null {
+  const arc = profile.arc
+  return arc && (arc.slopeWeight ?? 0) > 0 ? arcSlopes(ARC_PRESETS[arc.preset], count) : null
 }
 
 function emptyCounts<K extends string>(keys: readonly K[]): Record<K, number> {
@@ -144,17 +161,26 @@ export function evaluateMix(order: readonly MixTrack[], profile: MixProfile): Ev
   const transitionTotal = transitions.reduce((sum, t) => sum + t.cost, 0)
 
   let arc: ArcEvaluation | null = null
-  const range = arcRange(order, profile)
-  if (profile.arc && range) {
-    const config = profile.arc
-    const cost = order.reduce(
-      (sum, track, i) => sum + arcTermCost(track, i, order.length, config, range),
+  const ranges = arcRangesOf(order, profile)
+  const config = profile.arc
+  const range =
+    ranges && config
+      ? SIGNAL_MEASURES[config.signal].map((m) => ranges[m]).find(Boolean)
+      : undefined
+  if (config && ranges && range) {
+    const levelCost = order.reduce(
+      (sum, track, i) => sum + arcTermCost(track, i, order.length, config, ranges),
       0,
     )
+    const slopes = slopesOf(profile, order.length)
+    const against = transitions.map((t, i) =>
+      slopes ? againstSlope(MOVE_META[t.move].tone, slopes[i] ?? 0) : false,
+    )
+    const slopeCost = against.filter(Boolean).length * (config.slopeWeight ?? 0)
     const target = order.map((_, i) =>
       arcTarget(ARC_PRESETS[config.preset], arcPosition(i, order.length)),
     )
-    arc = { config, cost, range, target }
+    arc = { config, cost: levelCost + slopeCost, range, ranges, target, against, slopeCost }
   }
 
   const moveCounts = emptyCounts(ALL_MOVES)

@@ -203,11 +203,15 @@ export function useSetWorkspace(setId: string, options: SetWorkspaceOptions = {}
   const arcSignal = computed(() => set.value?.mix.arcSignal ?? NO_MIX_SETTINGS.arcSignal)
   const energySteps = computed(() => set.value?.mix.energySteps ?? NO_MIX_SETTINGS.energySteps)
   const keyLift = computed(() => set.value?.mix.keyLift ?? NO_MIX_SETTINGS.keyLift)
+  const keysFollowArc = computed(
+    () => set.value?.mix.keysFollowArc ?? NO_MIX_SETTINGS.keysFollowArc,
+  )
   const shape = computed<MixShape>(() => ({
     arc: arc.value,
     arcSignal: arcSignal.value,
     energySteps: energySteps.value,
     keyLift: keyLift.value,
+    keysFollowArc: keysFollowArc.value,
   }))
   const rules = computed<MixRules>(() => ({
     opener: opener.value,

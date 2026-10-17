@@ -35,6 +35,7 @@ export {
   NO_SHAPING,
   profileById,
   profileFor,
+  SLOPE_WEIGHT,
   PROFILES,
   withArc,
   type MixProfile,

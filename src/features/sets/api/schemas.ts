@@ -44,9 +44,10 @@ const MixSettingsSchema = z.object({
   follows: z.array(z.tuple([TrackId, TrackId])),
   arc: z.enum(['none', 'twoWaves', 'steadyBuild']),
   // Later than the first stored sets: one without them has the switches off.
-  arcSignal: z.enum(['bpm', 'energy']).default('bpm'),
+  arcSignal: z.enum(['bpm', 'energy', 'both']).default('bpm'),
   energySteps: z.boolean().default(false),
   keyLift: z.boolean().default(false),
+  keysFollowArc: z.boolean().default(false),
 })
 
 export const MixSetSchema = z.object({

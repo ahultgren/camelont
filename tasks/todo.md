@@ -499,3 +499,22 @@ term in the cost, so they can be combined and compared (research.md §4):
   machine was under load (load average 57) and passed unchanged on the next run.
 - Merged `main` (Camelot-only keys, editable 0–10 energy) into `mix-experiments` on
   2026-10-17; the docs and screenshots conflicted and were joined by hand.
+
+## Experiment — an arc everything follows (2026-10-17)
+
+The owner wants to hear a mix where BPM, energy and the key moves all go with the arc
+(decision 46). Branch `aligned-arc`, from `mix-experiments`.
+
+- [x] Arc by **Both**: BPM and energy each pulled to the line on its own range
+- [x] **Keys follow arc**: a move against the slope costs 10 (more than any chart move);
+  in `evaluateMix` and, through `placementCost`, in the solver (follow chains included)
+- [x] Picker: Both, and the switch (needs an arc); headline count and marked badges
+- [x] Tests (arc, evaluate, solver agrees with evaluate, picker, chart, workspace); docs
+
+### Review (2026-10-17)
+- On the WCS set the best mix has no move against the arc in two waves or steady build,
+  by both. The rule leans on perfect moves, which are always allowed.
+- Level alignment is looser than the key rule: a track high on one measure and low on
+  the other (Brother) costs the same anywhere, so it lands wherever keys and tempo fit.
+- Not done: weights tuned by ear; anything to stop such a track sitting on a peak.
+

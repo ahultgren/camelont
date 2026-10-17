@@ -38,7 +38,7 @@ Sets are specified in §8 and the workspace in §9.
 | U7 | understand why no mix is possible | If no clash-free order exists, the app names the blocking tracks or rules in plain language (e.g. "Bloodstream (2A) can only follow 12A and precede 1B; none are in the set"), and names left-out tracks that would unblock it. The user fixes it by changing which tracks are in the set or changing the rules. |
 | U8 | choose between different possible mixes | Several distinct valid mixes of the same tracks, side by side, each with a tempo sparkline and stats: move distribution, peaks, opener and closer, BPM range, total cost. |
 | U9 | explore a mix | Tempo-arc chart with a move badge between points and a hover/tap card per track; a key wheel; a running order with transition connectors (§7). |
-| U10 | choose how the mix is shaped | Default profile = the reference weights (§5.3). Arc presets: none, two waves, steady build; the arc follows BPM or energy. Two switches use the tracks' energy, alone or together: energy steps and key lift. The energy options are experiments (decision 45). |
+| U10 | choose how the mix is shaped | Default profile = the reference weights (§5.3). Arc presets: none, two waves, steady build; the arc follows BPM, energy, or both. Two switches use the tracks' energy, alone or together: energy steps and key lift. With an arc, the keys can be asked to follow it: only perfect and boosts where it rises, only perfect and drops where it falls; the mix says how many moves still go against it. The energy options are experiments (decisions 45, 46). |
 | U11 | save a set's mix as a playlist in my account | Only when I press the button, and after I confirm the playlist's name: creates a **new private** playlist with the tracks in mix order and links to it. I'm warned when I already have a playlist with that name. Saving again, I choose between replacing the playlist this set saved before and creating another (§8.5). No source playlist is ever modified. |
 | U12 | manage my sets | Rename, duplicate, delete (with confirmation). Everything about a set is saved on this device as I change it; reopening a set shows it as I left it, including the chosen mix. Deleting a set touches nothing in Spotify. |
 | U13 | change a set's playlists | Add or remove playlists at any time. Removing one says what goes with it (its tracks, their marks, rules that name them) before it happens. |
@@ -105,7 +105,11 @@ the chart, so the scoring can change without touching the rules. A profile conta
   `+++`/`−−−` 2; `++`/`−−` 3; `(+++)`/`(−−−)`/mood 4;
 - a tempo weight (default 20, so a 10% gap ≈ one `+++`);
 - an optional **arc**: a target curve over set position (presets: two waves, steady
-  build), the signal it applies to (BPM or energy), and a weight;
+  build), the signal it applies to (BPM, energy, or both: each pulled to the line on its
+  own range, so high on the line means both are high), a weight, and optionally a
+  **slope weight**: the cost of a move against the arc's slope (a drop or mood change
+  where the line rises, a boost or mood change where it falls; default 10, more than any
+  move in the chart);
 - an optional **energy step** cost: a climb in energy between neighbours beyond a small
   free step costs in proportion (default: a 0.3 climb ≈ one `+++`), and a fall a quarter
   of the same climb, so a build is gradual and a reset may be sudden;
@@ -116,7 +120,8 @@ the chart, so the scoring can change without touching the rules. A profile conta
 A track whose energy is unknown takes no part in the energy terms.
 
 Mix cost = Σ transitions (move cost × key-lift factor + tempo weight × gap + energy step
-cost) + arc weight × Σ deviation of the signal from the target curve. The user doesn't
+cost) + arc weight × Σ deviation of each measure from the target curve + slope weight ×
+moves against the slope. The user doesn't
 pick a profile: they set the arc, what it follows, and the two energy switches, which
 together shape the default profile. The design must allow more profiles later (e.g.
 "favour +++") without changing the chart or the solver.

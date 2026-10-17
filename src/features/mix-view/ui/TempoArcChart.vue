@@ -72,7 +72,16 @@ const badges = computed(() =>
     const meta = MOVE_META[t.move]
     const cx = ((a?.cx ?? 0) + (b?.cx ?? 0)) / 2
     const cy = Math.min(a?.cy ?? 0, b?.cy ?? 0) - 12
-    return { meta, cx, cy, w: meta.symbol.length * 5.6 + 6, color: TONE_COLOR[meta.tone] }
+    // A move against the arc's slope stands out, when the keys are asked to follow it.
+    const against = mix.arc?.against[j] ?? false
+    return {
+      meta,
+      cx,
+      cy,
+      w: meta.symbol.length * 5.6 + 6,
+      color: TONE_COLOR[meta.tone],
+      against,
+    }
   }),
 )
 
@@ -135,8 +144,9 @@ const pointLabel = (i: number) => {
   const t = mix.order[i]
   if (!t) return ''
   const move = i > 0 ? mix.transitions[i - 1] : undefined
+  const againstText = mix.arc?.against[i - 1] ? ', against the arc' : ''
   const moveText = move
-    ? `, ${MOVE_META[move.move].label} from ${mix.order[i - 1]?.camelot ?? ''}`
+    ? `, ${MOVE_META[move.move].label} from ${mix.order[i - 1]?.camelot ?? ''}${againstText}`
     : ''
   const energyText = t.energy === null ? '' : `, ${describeEnergy(t.energy).toLowerCase()}`
   return `${String(i + 1)}. ${t.label}, ${t.camelot}, ${keyName(t.camelot)}, ${String(t.bpm)} BPM${energyText}${moveText}`
@@ -250,8 +260,10 @@ const cardStyle = computed(() => {
               :width="b.w"
               height="13"
               rx="3.5"
-              fill="var(--surface)"
-              :stroke="b.color"
+              :fill="b.against ? 'var(--warn-bg)' : 'var(--surface)'"
+              :stroke="b.against ? 'var(--warn)' : b.color"
+              :stroke-width="b.against ? 1.75 : 1"
+              :data-against="b.against ? '' : undefined"
             />
             <text
               :x="b.cx"

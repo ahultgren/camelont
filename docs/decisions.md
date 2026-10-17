@@ -398,3 +398,17 @@ holds until a switch is on. The weights are first guesses.
 and show which term does what); phases in place of a curve and a budget for big moves
 (larger builds, to be judged after these); sliders for the weights (next, once it is
 known which terms matter). **Open:** whether any of this becomes the default.
+
+### 46. An arc everything follows: BPM and energy together, and the keys (2026-10-17)
+**Context:** the owner wants to hear a mix where every energy variable agrees with the
+arc: where the line rises only perfect and `+` moves, where it falls only perfect and
+`−`, and where it is high both BPM and energy are high. **Decision (owner):** two more
+options next to decision 45's: the arc can follow **both** BPM and energy (each pulled to
+the line on its own range, so a track pays for whichever is off), and **Keys follow
+arc** charges 10 for each move against the slope (a mood change counts as against both
+ways). 10 is more than any move in the chart, so a move goes against the arc only when
+the set has no other order; the mix headline says how many do and the chart marks them.
+**Rejected:** a hard rule. Many sets would then have no mix at all, and "no mix" says
+less than "one move against the arc, here". **Known limit:** a track that is high on one
+measure and low on the other (Brother: 78 BPM, energy 9) costs the same anywhere on a
+"both" arc, so the keys and tempo decide where it goes.

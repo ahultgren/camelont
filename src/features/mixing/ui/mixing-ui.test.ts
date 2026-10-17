@@ -74,7 +74,15 @@ describe('ShapePicker', () => {
       [byEnergy],
       [{ ...byEnergy, energySteps: true }],
       [{ ...byEnergy, energySteps: true, keyLift: true }],
-      [{ arc: 'steadyBuild', arcSignal: 'energy', energySteps: true, keyLift: true }],
+      [
+        {
+          arc: 'steadyBuild',
+          arcSignal: 'energy',
+          energySteps: true,
+          keyLift: true,
+          keysFollowArc: false,
+        },
+      ],
     ])
   })
 
@@ -94,6 +102,21 @@ describe('ShapePicker', () => {
     render(ShapePicker, { props: { modelValue: NO_SHAPING } })
     expect(screen.getByRole('radio', { name: 'BPM' })).toBeDisabled()
     expect(screen.getByRole('radio', { name: 'Energy' })).toBeDisabled()
+    expect(screen.getByRole('radio', { name: 'Both' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Keys follow arc' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Energy steps' })).toBeEnabled()
+  })
+
+  it('lets the arc follow BPM and energy together, and the keys follow the arc', async () => {
+    const view = render(ShapePicker, { props: { modelValue: { ...NO_SHAPING, arc: 'twoWaves' } } })
+    await userEvent.click(screen.getByRole('radio', { name: 'Both' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Keys follow arc' }))
+    expect(view.emitted('update:modelValue').at(-1)).toEqual([
+      { ...NO_SHAPING, arc: 'twoWaves', arcSignal: 'both', keysFollowArc: true },
+    ])
+    expect(screen.getByRole('button', { name: 'Keys follow arc' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
   })
 })

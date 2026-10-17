@@ -73,6 +73,8 @@ export interface MixShaping {
   energySteps: boolean
   /** Key boosts go with rises in energy, key drops with falls. */
   keyLift: boolean
+  /** Where the arc rises only perfect and + moves, where it falls only perfect and −. */
+  keysFollowArc: boolean
 }
 
 export const NO_SHAPING: MixShaping = {
@@ -80,7 +82,14 @@ export const NO_SHAPING: MixShaping = {
   arcSignal: 'bpm',
   energySteps: false,
   keyLift: false,
+  keysFollowArc: false,
 }
+
+/**
+ * A move against the arc costs more than any move in the chart (4 at most) and about as
+ * much as a 50% tempo gap: it happens only when the set has no other way.
+ */
+export const SLOPE_WEIGHT = 10
 
 /** The default profile, shaped as the user chose. */
 export function profileFor(shaping: MixShaping): MixProfile {
@@ -89,18 +98,26 @@ export function profileFor(shaping: MixShaping): MixProfile {
     arc:
       shaping.arc === 'none'
         ? null
-        : { preset: shaping.arc, signal: shaping.arcSignal, weight: DEFAULT_ARC_WEIGHT },
+        : {
+            preset: shaping.arc,
+            signal: shaping.arcSignal,
+            weight: DEFAULT_ARC_WEIGHT,
+            ...(shaping.keysFollowArc ? { slopeWeight: SLOPE_WEIGHT } : {}),
+          },
     energyStep: shaping.energySteps ? DEFAULT_ENERGY_STEP : null,
     keyLift: shaping.keyLift ? 1 : 0,
   }
 }
+
+const SIGNAL_WORDS = { bpm: '', energy: ' by energy', both: ' by BPM and energy' } as const
 
 /** The shaping in a few words, e.g. "Two waves by energy, energy steps"; "none" for none. */
 export function describeShaping(shaping: MixShaping): string {
   const parts = [
     ...(shaping.arc === 'none'
       ? []
-      : [`${ARC_PRESETS[shaping.arc].name}${shaping.arcSignal === 'energy' ? ' by energy' : ''}`]),
+      : [`${ARC_PRESETS[shaping.arc].name}${SIGNAL_WORDS[shaping.arcSignal]}`]),
+    ...(shaping.arc !== 'none' && shaping.keysFollowArc ? ['keys follow the arc'] : []),
     ...(shaping.energySteps ? ['energy steps'] : []),
     ...(shaping.keyLift ? ['key lift'] : []),
   ]

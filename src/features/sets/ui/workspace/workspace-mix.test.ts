@@ -170,6 +170,28 @@ describe('the mix column', () => {
     })
   })
 
+  it('keeps the keys with the arc, by BPM and energy, and counts what goes against it', async () => {
+    const { stored, container } = await openWorkspace(core())
+    await settled()
+    expect(screen.queryByTestId('against-arc')).toBeNull()
+    await userEvent.click(screen.getByRole('radio', { name: 'Two waves' }))
+    await userEvent.click(screen.getByRole('radio', { name: 'Both' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Keys follow arc' }))
+    await waitFor(async () => {
+      expect((await stored())?.mix).toMatchObject({
+        arc: 'twoWaves',
+        arcSignal: 'both',
+        keysFollowArc: true,
+      })
+    })
+    await settled()
+    await waitFor(() => {
+      expect(screen.getByTestId('against-arc')).toHaveTextContent(/^\d+\s*against the arc$/)
+    })
+    const count = Number(/\d+/.exec(screen.getByTestId('against-arc').textContent)?.[0])
+    expect(container.querySelectorAll('rect[data-against]')).toHaveLength(count)
+  })
+
   it('says what a change did: tracks out, cost before and after', async () => {
     await openWorkspace(core())
     await settled()

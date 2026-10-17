@@ -1,5 +1,5 @@
 import type { Prng } from '@/shared/lib'
-import { NO_BLOCK, type ArcBoundInput, type Problem } from './problem'
+import { NO_BLOCK, placementCost, type ArcBoundInput, type Problem } from './problem'
 
 /**
  * Partial path in the search. Paths are stored as parent links; the arrays hold the
@@ -185,7 +185,7 @@ function openers(ctx: SearchContext, root: State): number[] | null {
 
 /** Place block `b` after `state`; null if that makes the rest impossible. */
 export function expand(ctx: SearchContext, state: State, b: number): State | null {
-  const { problem, B, n } = ctx
+  const { problem, B } = ctx
   const end = problem.endBlock
   const remaining = B - state.depth - 1
   if (b === end && remaining > 0) return null
@@ -232,10 +232,7 @@ export function expand(ctx: SearchContext, state: State, b: number): State | nul
     child.cost += problem.edgeCost[last * B + b] ?? NaN
     child.penalty += ctx.penalties?.[last * B + b] ?? 0
   }
-  if (problem.arcCost) {
-    let pos = state.pos
-    for (const t of problem.blocks[b] ?? []) child.cost += problem.arcCost[t * n + pos++] ?? 0
-  }
+  child.cost += placementCost(problem, state.block, b, state.pos)
 
   if (remaining > 0) {
     let onward = 0
@@ -278,7 +275,7 @@ export function beamSearch(
   prng: Prng,
   timedOut: () => boolean,
 ): SearchResult {
-  const { problem, B, n } = ctx
+  const { problem, B } = ctx
   const root = rootState(ctx)
   const first = openers(ctx, root)
   if (!first) return { paths: [], expansions: 0, timedOut: false }
@@ -306,10 +303,7 @@ export function beamSearch(
             (problem.edgeCost[state.block * B + b] ?? 0) +
             (ctx.penalties?.[state.block * B + b] ?? 0)
         }
-        if (problem.arcCost) {
-          let pos = state.pos
-          for (const t of problem.blocks[b] ?? []) estimate += problem.arcCost[t * n + pos++] ?? 0
-        }
+        estimate += placementCost(problem, state.block, b, state.pos)
         options.push({ parent: state, parentScore, b, estimate, tie: prng.next() })
       }
     }
